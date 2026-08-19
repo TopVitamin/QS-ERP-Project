@@ -1,0 +1,164 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  font-family: 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', 'Helvetica Neue', Arial, sans-serif;
+  --erp-brand-50: 240 244 255;
+  --erp-brand-500: 54 113 243;
+  --erp-brand-600: 36 88 212;
+  --erp-text-primary: 7 7 63;
+  --erp-text-title: 5 5 47;
+  --erp-text-section: 32 32 68;
+  --erp-text-secondary: 85 88 113;
+  --erp-text-tertiary: 146 148 174;
+  --erp-text-placeholder: 160 161 180;
+  --erp-surface-canvas: 238 240 244;
+  --erp-surface-header: 243 244 249;
+  --erp-surface-panel: 255 255 255;
+  --erp-surface-muted: 250 251 254;
+  --erp-surface-table-head: 231 233 241;
+  --erp-surface-table-zebra: 251 251 253;
+  --erp-surface-hover: 242 246 255;
+  --erp-surface-selected: 234 242 255;
+  --erp-surface-disabled: 245 246 250;
+  --erp-overlay: 34 37 45;
+  --erp-border-default: 222 222 232;
+  --erp-border-subtle: 232 232 239;
+  --erp-border-card: 224 225 234;
+  --erp-border-header: 238 238 243;
+  --erp-border-control: 210 208 228;
+  --erp-border-strong: 215 217 228;
+  --erp-border-table-header: 205 207 222;
+  --erp-border-table-row: 232 232 239;
+  --erp-border-table-column: 240 240 246;
+  --erp-success: 82 196 26;
+  --erp-success-hover: 10 88 65;
+  --erp-success-soft: 236 253 245;
+  --erp-warning: 255 122 0;
+  --erp-warning-soft: 255 244 232;
+  --erp-info: 22 119 255;
+  --erp-danger: 224 82 82;
+  --erp-danger-hover: 192 54 54;
+  --erp-danger-soft: 255 241 241;
+  --erp-info-soft: 245 248 255;
+  --erp-sidebar-text: 193 202 220;
+  --erp-sidebar-icon: 195 204 224;
+  --erp-sidebar-active-bg: 17 18 42;
+  --erp-sidebar-active-text: 226 231 244;
+  --erp-sidebar-hover-bg: 46 50 69;
+  --erp-sidebar-border: 72 77 93;
+  --erp-sidebar-brand: 49 50 82;
+  --erp-sidebar-surface: 31 32 62;
+  --erp-sidebar-flyout-border: 45 49 80;
+  --erp-sidebar-flyout-hover: 43 45 76;
+  --erp-sidebar-flyout-text: 197 202 222;
+  --erp-sidebar-flyout-muted: 216 220 237;
+  --erp-radius-control: 4px;
+  --erp-radius-section: 6px;
+  --erp-radius-overlay: 6px;
+  --erp-radius-dialog: 8px;
+  --erp-radius-status: 3px;
+  --erp-shadow-overlay: 0 8px 24px rgb(30 35 80 / 0.16);
+  --erp-shadow-dialog: 0 16px 48px rgb(31 35 45 / 0.2);
+  --erp-shadow-flyout: 0 12px 28px rgb(18 20 42 / 0.28);
+  --erp-sidebar-gradient: linear-gradient(180deg, #1f1f3f 48px, #49495a 100%);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+[data-theme='green'] {
+  --erp-brand-50: 236 253 245;
+  --erp-brand-500: 15 118 85;
+  --erp-brand-600: 10 88 65;
+  --erp-surface-hover: 240 252 247;
+  --erp-surface-selected: 232 249 240;
+  --erp-sidebar-gradient: linear-gradient(180deg, #183d3a 48px, #345f59 100%);
+}
+
+[data-theme='violet'] {
+  --erp-brand-50: 245 243 255;
+  --erp-brand-500: 95 65 180;
+  --erp-brand-600: 73 46 145;
+  --erp-surface-hover: 247 245 255;
+  --erp-surface-selected: 239 235 255;
+  --erp-sidebar-gradient: linear-gradient(180deg, #292348 48px, #594f78 100%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  color: rgb(var(--erp-text-primary));
+  background: rgb(var(--erp-surface-canvas));
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.sidebar-shell {
+  background: var(--erp-sidebar-gradient);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 11px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgb(var(--erp-surface-muted));
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid rgb(var(--erp-surface-muted));
+  border-radius: var(--erp-radius-control);
+  background: rgb(var(--erp-text-tertiary));
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--erp-text-secondary));
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.table-scroll {
+  scrollbar-color: rgb(var(--erp-text-tertiary)) rgb(var(--erp-surface-muted));
+}
+
+.table-operation-sticky {
+  isolation: isolate;
+  overflow: visible;
+  position: sticky;
+  box-shadow: none;
+}
+
+.table-operation-sticky::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -8px;
+  width: 8px;
+  background: linear-gradient(90deg, rgb(30 35 80 / 0), rgb(30 35 80 / 0.14));
+  content: '';
+  pointer-events: none;
+}
