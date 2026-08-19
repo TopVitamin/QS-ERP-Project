@@ -1,0 +1,38 @@
+name: Deploy to server
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        working-directory: 09-产品原型
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install
+
+      - name: Build
+        working-directory: 09-产品原型
+        run: npx vite build --base=/projects/QS-ERP-Project/
+
+      - name: Deploy via webhook
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        run: |
+          cd "09-产品原型/dist/client"
+          tar czf ../../deploy.tar.gz .
+          cd ../..
+          curl -sf -X POST https://pmvitamin.com/deploy/QS-ERP-Project \
+            -H "Authorization: Bearer $DEPLOY_TOKEN" \
+            --data-binary @deploy.tar.gz
