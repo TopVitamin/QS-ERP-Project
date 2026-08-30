@@ -1,10 +1,6 @@
-import { useMemo } from 'react';
-import { DetailField, DocumentDetailFrame, EditorCard } from '../components/erp/DocumentDetailFrame.jsx';
-import { DocumentSummaryBar } from '../components/erp/DocumentSummaryBar.jsx';
-import { LineItemTable } from '../components/erp/LineItemTable.jsx';
-import { defaultInboundForm, getEditableInbound } from '../data/purchaseFormData.js';
+import { DocumentDetailPage } from '../components/erp/DocumentDetailPage.jsx';
+import { defaultInboundForm, getEditableInbound, purchaseLineEditorOptions } from '../data/purchaseFormData.js';
 import { inboundStatusLabels } from '../data/inboundData.js';
-import { erpFieldGridClassName } from '../styles/typography.js';
 
 function getInboundDetail(row) {
   const source = getEditableInbound(row);
@@ -26,44 +22,32 @@ function getInboundDetail(row) {
   };
 }
 
-export function PurchaseInboundDetailPage({ context, onOpenPage }) {
-  const row = context?.row || {};
-  const detail = useMemo(() => getInboundDetail(row), [row]);
-  const totalQuantity = detail.lines.reduce((sum, line) => sum + Number(line.quantity || 0), 0);
-  const totalAmount = detail.lines.reduce((sum, line) => sum + Number(line.quantity || 0) * Number(line.price || 0), 0);
-  const status = inboundStatusLabels[row.status] || detail.status;
+const inboundDetailConfig = {
+  listPageId: 'purchase-inbound',
+  editPageId: 'purchase-inbound-edit',
+  infoSectionTitle: '入库信息',
+  lineSectionTitle: '入库明细',
+  lineVariant: 'inbound',
+  lineEditorOptions: purchaseLineEditorOptions,
+  getDetail: getInboundDetail,
+  title: (detail) => `采购入库单详情${detail.inboundNo && detail.inboundNo !== '保存后自动生成' ? ` · ${detail.inboundNo}` : ''}`,
+  getStatus: (row, detail) => inboundStatusLabels[row.status] || detail.status,
+  canEdit: (row) => row.status !== 'completed',
+  rowKey: (detail) => detail.inboundNo,
+  infoFields: ({ detail, status }) => [
+    { key: 'inboundNo', label: '入库单号', value: detail.inboundNo },
+    { key: 'date', label: '单据日期', value: detail.date },
+    { key: 'inboundType', label: '入库类型', value: detail.inboundType },
+    { key: 'relatedOrderNo', label: '关联采购订单', value: detail.relatedOrderNo },
+    { key: 'supplier', label: '供应商', value: detail.supplier },
+    { key: 'warehouse', label: '入库仓库', value: detail.warehouse },
+    { key: 'operator', label: '经办人', value: detail.operator },
+    { key: 'status', label: '入库状态', value: status },
+    { key: 'remark', label: '备注', value: detail.remark, className: 'col-span-3' },
+  ],
+  summary: { quantityLabel: '入库数量', amountLabel: '入库金额' },
+};
 
-  return (
-    <DocumentDetailFrame
-      title={`采购入库单详情${detail.inboundNo && detail.inboundNo !== '保存后自动生成' ? ` · ${detail.inboundNo}` : ''}`}
-      status={status}
-      onBack={() => onOpenPage?.('purchase-inbound')}
-      onEdit={row.status !== 'completed' ? () => onOpenPage?.('purchase-inbound-edit', { row }) : undefined}
-      editLabel="修改"
-    >
-      <EditorCard title="入库信息">
-        <div className={erpFieldGridClassName}>
-          <DetailField label="入库单号" value={detail.inboundNo} />
-          <DetailField label="单据日期" value={detail.date} />
-          <DetailField label="入库类型" value={detail.inboundType} />
-          <DetailField label="关联采购订单" value={detail.relatedOrderNo} />
-          <DetailField label="供应商" value={detail.supplier} />
-          <DetailField label="入库仓库" value={detail.warehouse} />
-          <DetailField label="经办人" value={detail.operator} />
-          <DetailField label="入库状态" value={status} />
-          <DetailField label="备注" value={detail.remark} className="col-span-6" />
-        </div>
-      </EditorCard>
-
-      <EditorCard title="入库明细">
-        <LineItemTable variant="inbound" lines={detail.lines} rowKeyPrefix={detail.inboundNo} />
-        <DocumentSummaryBar
-          quantityLabel="入库数量"
-          quantity={totalQuantity}
-          amountLabel="入库金额"
-          amount={totalAmount}
-        />
-      </EditorCard>
-    </DocumentDetailFrame>
-  );
+export function PurchaseInboundDetailPage(props) {
+  return <DocumentDetailPage {...props} config={inboundDetailConfig} />;
 }

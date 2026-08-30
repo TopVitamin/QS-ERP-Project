@@ -38,6 +38,7 @@ export default {
           'surface-header': 'rgb(var(--erp-surface-header) / <alpha-value>)',
           'surface-panel': 'rgb(var(--erp-surface-panel) / <alpha-value>)',
           'surface-muted': 'rgb(var(--erp-surface-muted) / <alpha-value>)',
+          'surface-summary': 'rgb(var(--erp-surface-summary) / <alpha-value>)',
           'surface-table-head': 'rgb(var(--erp-surface-table-head) / <alpha-value>)',
           'surface-table-zebra': 'rgb(var(--erp-surface-table-zebra) / <alpha-value>)',
           'surface-hover': 'rgb(var(--erp-surface-hover) / <alpha-value>)',

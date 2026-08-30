@@ -3,13 +3,19 @@ import { forwardRef } from 'react';
 import { cn } from '../../lib/utils.js';
 import { getFieldSizeTokens } from '../../styles/typography.js';
 
-const fieldControlShellClassName =
-  'flex w-full min-w-0 items-center gap-2 rounded-erp-control border border-erp-border-control bg-erp-surface-panel px-2.5 text-left outline-none transition-colors hover:border-erp-primary/70 focus-visible:border-erp-primary focus-visible:ring-1 focus-visible:ring-erp-primary/15 aria-expanded:border-erp-primary data-[state=open]:border-erp-primary disabled:cursor-not-allowed disabled:border-erp-border-control disabled:bg-erp-surface-disabled disabled:opacity-100';
+const fieldControlBaseClassName =
+  'flex w-full min-w-0 items-center gap-2 text-left outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-100';
+
+const fieldControlUnderlineClassName =
+  `${fieldControlBaseClassName} rounded-none border-x-0 border-t-0 border-b border-erp-border-control bg-transparent px-2.5 hover:border-b-erp-primary/70 focus-visible:border-b-erp-primary aria-expanded:border-b-erp-primary data-[state=open]:border-b-erp-primary disabled:border-b-erp-border-light disabled:bg-transparent disabled:text-erp-text-subtle`;
+
+const fieldControlBoxedClassName =
+  `${fieldControlBaseClassName} rounded-erp-control border border-erp-border-control bg-erp-surface-panel px-2.5 hover:border-erp-primary/70 focus-visible:border-erp-primary focus-visible:ring-1 focus-visible:ring-erp-primary/15 aria-expanded:border-erp-primary data-[state=open]:border-erp-primary disabled:border-erp-border-light disabled:bg-transparent disabled:text-erp-text-subtle`;
 
 /** @param {'compact' | 'comfortable'} [size] */
-export function getFieldControlClassName(size = 'compact') {
+export function getFieldControlClassName(size = 'compact', variant = 'underline') {
   const tokens = getFieldSizeTokens(size);
-  return cn(fieldControlShellClassName, tokens.control);
+  return cn(variant === 'boxed' ? fieldControlBoxedClassName : fieldControlUnderlineClassName, tokens.control);
 }
 
 export const fieldControlClassName = getFieldControlClassName('compact');
@@ -91,7 +97,7 @@ export function FieldAffordance({
 }
 
 export const FieldTrigger = forwardRef(function FieldTrigger(
-  { className, hasValue = false, disabled = false, textSize = 'compact', children, ...props },
+  { className, hasValue = false, disabled = false, textSize = 'compact', variant = 'underline', children, ...props },
   ref,
 ) {
   return (
@@ -100,7 +106,7 @@ export const FieldTrigger = forwardRef(function FieldTrigger(
       type="button"
       disabled={disabled}
       className={cn(
-        getFieldControlClassName(textSize),
+        getFieldControlClassName(textSize, variant),
         'relative pr-8',
         hasValue ? 'text-erp-text' : 'text-erp-placeholder',
         className,

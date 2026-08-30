@@ -10,13 +10,13 @@ import {
   Settings2,
   Upload,
   UserRound,
-  X,
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu.jsx';
+import { PageTabs } from './PageTabs.jsx';
 import { cn } from '../../lib/utils.js';
 import { erpThemePresets } from '../../styles/tokens.js';
 
-export function TopHeader({ tabs = [], activeView, onTabSelect, onTabClose, onAction, theme = 'blue', onThemeChange }) {
+export function TopHeader({ tabs = [], activeView, onTabSelect, onTabClose, onTabAction, onAction, theme = 'blue', onThemeChange }) {
   function showAction(message) {
     onAction?.(message);
   }
@@ -36,53 +36,7 @@ export function TopHeader({ tabs = [], activeView, onTabSelect, onTabClose, onAc
           <Home className="h-[18px] w-[18px]" strokeWidth={1.8} />
         </button>
 
-        <div className="no-scrollbar flex min-w-0 flex-1 items-stretch overflow-x-auto">
-          {tabs.map((tab) => {
-            const isActive = activeView === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                className={cn(
-                  'group flex h-12 max-w-[168px] shrink-0 items-center gap-0 border-r border-erp-border-light px-2.5 text-[13px] transition-colors',
-                  isActive
-                    ? 'rounded-t-erp-section bg-erp-surface-panel text-erp-primary'
-                    : 'bg-transparent text-erp-text-muted hover:bg-erp-surface-panel/60 hover:text-erp-text',
-                )}
-                onClick={() => onTabSelect?.(tab.id)}
-              >
-                <span className="min-w-0 truncate">{tab.title}</span>
-                {tabs.length > 1 && (
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`关闭 ${tab.title}`}
-                    className={cn(
-                      'inline-flex max-w-0 shrink-0 overflow-hidden opacity-0 transition-all duration-150',
-                      'group-hover:ml-1 group-hover:max-w-4 group-hover:opacity-100',
-                      'group-focus-within:ml-1 group-focus-within:max-w-4 group-focus-within:opacity-100',
-                      'rounded-erp-control p-0.5',
-                      isActive ? 'text-erp-text-subtle hover:bg-erp-primary-soft hover:text-erp-primary' : 'text-erp-text-placeholder hover:bg-erp-surface-panel/70 hover:text-erp-text-muted',
-                    )}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onTabClose?.(tab.id);
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        onTabClose?.(tab.id);
-                      }
-                    }}
-                  >
-                    <X className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden="true" />
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+        <PageTabs tabs={tabs} activeView={activeView} onTabSelect={onTabSelect} onTabClose={onTabClose} onTabAction={onTabAction} />
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5 px-3 text-[12px]">

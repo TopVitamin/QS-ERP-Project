@@ -1,4 +1,4 @@
-import { formatFormDate, parseFormDate } from '../../data/purchaseFormData.js';
+import { formatFormDate, parseFormDate } from '../../lib/formDate.js';
 import { DatePicker } from '../ui/date-picker.jsx';
 import { FormField } from '../ui/form-field.jsx';
 import { Input } from '../ui/input.jsx';

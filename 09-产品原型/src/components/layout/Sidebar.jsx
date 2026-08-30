@@ -8,10 +8,11 @@ import {
   Warehouse,
   Wrench,
 } from 'lucide-react';
-import { PurchaseFlyout, getPurchaseFlyoutLayout } from './PurchaseFlyout.jsx';
+import { NavigationFlyout, getNavigationFlyoutLayout } from './NavigationFlyout.jsx';
+import { purchaseGroups } from './PurchaseFlyout.jsx';
 
-const navItems = [
-  { id: 'purchase', label: '采购管理', icon: ShoppingCart, submenu: true },
+export const defaultNavItems = [
+  { id: 'purchase', label: '采购管理', icon: ShoppingCart, groups: purchaseGroups },
   { id: 'sales', label: '销售管理', icon: BarChart3 },
   { id: 'inventory', label: '库存管理', icon: Warehouse },
   { id: 'settings', label: '系统设置', icon: FileCog },
@@ -19,15 +20,17 @@ const navItems = [
   { id: 'custom', label: '自定义中心', icon: Wrench },
 ];
 
-export function Sidebar({ activeItem, onSelect }) {
+export function Sidebar({ activeItem, activePageId, onSelect, items = defaultNavItems }) {
   const [collapsed, setCollapsed] = useState(false);
   const [openFlyout, setOpenFlyout] = useState(false);
+  const [openGroups, setOpenGroups] = useState(items[0]?.groups ?? []);
   const [flyoutLayout, setFlyoutLayout] = useState({ top: 52, maxHeight: 400 });
   const sidebarWidth = collapsed ? 52 : 141;
 
-  function showPurchaseMenu(event) {
-    const layout = getPurchaseFlyoutLayout(event.currentTarget.getBoundingClientRect());
+  function showNavigationMenu(event, groups) {
+    const layout = getNavigationFlyoutLayout(event.currentTarget.getBoundingClientRect());
     setFlyoutLayout(layout);
+    setOpenGroups(groups);
     setOpenFlyout(true);
   }
 
@@ -50,8 +53,9 @@ export function Sidebar({ activeItem, onSelect }) {
         )}
       </div>
 
-      <nav className="no-scrollbar flex-1 overflow-y-auto py-1">
-        {navItems.map(({ id, label, icon: Icon, submenu }) => {
+      <nav aria-label="主导航" className="no-scrollbar flex-1 overflow-y-auto overscroll-contain py-1">
+        {items.map(({ id, label, icon: Icon, groups }) => {
+          const hasSubmenu = Boolean(groups?.length);
           const isActive = activeItem === id;
           return (
             <button
@@ -60,11 +64,12 @@ export function Sidebar({ activeItem, onSelect }) {
               aria-current={isActive ? 'page' : undefined}
               aria-label={label}
               className={`group relative flex h-10 w-full items-center text-left text-[13px] ${collapsed ? 'justify-center' : 'px-2'}`}
-              onMouseEnter={submenu ? showPurchaseMenu : undefined}
-              onFocus={submenu ? showPurchaseMenu : undefined}
+              title={collapsed ? label : undefined}
+              onMouseEnter={hasSubmenu ? (event) => showNavigationMenu(event, groups) : undefined}
+              onFocus={hasSubmenu ? (event) => showNavigationMenu(event, groups) : undefined}
               onClick={() => {
                 onSelect(id);
-                if (submenu) setOpenFlyout(true);
+                if (hasSubmenu) setOpenFlyout(true);
               }}
             >
               <span
@@ -76,7 +81,7 @@ export function Sidebar({ activeItem, onSelect }) {
               >
                 <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-erp-primary' : 'text-erp-sidebar-icon group-hover:text-erp-sidebar-active-text'}`} strokeWidth={1.8} />
                 {!collapsed && <span className="truncate whitespace-nowrap">{label}</span>}
-                {submenu && !collapsed && !isActive && <span className="ml-auto text-erp-sidebar-text/80">›</span>}
+                {hasSubmenu && !collapsed && !isActive && <span className="ml-auto text-erp-sidebar-text/80">›</span>}
               </span>
             </button>
           );
@@ -98,10 +103,12 @@ export function Sidebar({ activeItem, onSelect }) {
       </button>
 
       {openFlyout && (
-        <PurchaseFlyout
+        <NavigationFlyout
+          groups={openGroups}
           left={sidebarWidth}
           top={flyoutLayout.top}
           maxHeight={flyoutLayout.maxHeight}
+          activePageId={activePageId}
           onSelect={(pageId) => {
             onSelect(pageId);
             setOpenFlyout(false);

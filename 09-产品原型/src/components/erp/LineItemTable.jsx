@@ -1,11 +1,14 @@
 import { Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '../ui/button.jsx';
 import { Input } from '../ui/input.jsx';
 import { SelectField } from '../ui/select-field.jsx';
 import { calculateLineAmount, formatAmount, productLabel } from '../../lib/format.js';
-import { productOptions, taxRateOptions, unitOptions } from '../../data/purchaseFormData.js';
+import { FieldAffordance, FieldTrigger } from '../ui/field.jsx';
 import { FieldLabelContent } from '../ui/form-field.jsx';
 import { cn } from '../../lib/utils.js';
+import { DocumentSummaryBar } from './DocumentSummaryBar.jsx';
+import { SkuSelectionDialog } from './SkuSelectionDialog.jsx';
 
 const tableShellClassName = 'overflow-x-auto';
 const tableClassName = 'w-full table-fixed border-collapse text-left text-[12px]';
@@ -83,36 +86,59 @@ function alignClassName(align) {
   return 'text-left';
 }
 
-function renderEditCell({ column, line, index, onLineChange, onLineRemove }) {
+const emptyEditorOptions = {
+  productOptions: [],
+  unitOptions: [],
+  taxRateOptions: [],
+};
+
+function renderEditCell({ column, line, index, onLineChange, onLineRemove, onProductSelect, skuPickerEnabled, editorOptions }) {
   const rowLabel = `第${index + 1}行`;
 
   switch (column.key) {
     case 'index':
       return <span className="text-erp-text-subtle">{index + 1}</span>;
     case 'product':
+      if (skuPickerEnabled && editorOptions.skuOptions?.length) {
+        return (
+          <FieldTrigger
+            aria-label={`${rowLabel}商品`}
+            aria-haspopup="dialog"
+            hasValue={Boolean(line.product)}
+            variant="boxed"
+            onClick={() => onProductSelect?.(line.id)}
+          >
+            <span className="truncate">{productLabel(line.product, editorOptions.productOptions)}</span>
+            <FieldAffordance hasValue={false} />
+          </FieldTrigger>
+        );
+      }
       return (
         <SelectField
-          options={productOptions}
+          options={editorOptions.productOptions}
           value={line.product}
           onValueChange={(value) => onLineChange(line.id, 'product', value)}
           placeholder="请选择商品"
           ariaLabel={`${rowLabel}商品`}
+          variant="boxed"
         />
       );
     case 'spec':
-      return <Input value={line.spec} onChange={(event) => onLineChange(line.id, 'spec', event.target.value)} placeholder="规格型号" />;
+      return <Input variant="boxed" value={line.spec} onChange={(event) => onLineChange(line.id, 'spec', event.target.value)} placeholder="规格型号" />;
     case 'unit':
       return (
         <SelectField
-          options={unitOptions}
+          options={editorOptions.unitOptions}
           value={line.unit}
           onValueChange={(value) => onLineChange(line.id, 'unit', value)}
           ariaLabel={`${rowLabel}单位`}
+          variant="boxed"
         />
       );
     case 'quantity':
       return (
         <Input
+          variant="boxed"
           type="number"
           min="0"
           max={line.orderQuantity || undefined}
@@ -127,6 +153,7 @@ function renderEditCell({ column, line, index, onLineChange, onLineRemove }) {
     case 'price':
       return (
         <Input
+          variant="boxed"
           type="number"
           min="0"
           step="0.01"
@@ -138,16 +165,17 @@ function renderEditCell({ column, line, index, onLineChange, onLineRemove }) {
     case 'taxRate':
       return (
         <SelectField
-          options={taxRateOptions}
+          options={editorOptions.taxRateOptions}
           value={line.taxRate}
           onValueChange={(value) => onLineChange(line.id, 'taxRate', value)}
           ariaLabel={`${rowLabel}税率`}
+          variant="boxed"
         />
       );
     case 'amount':
       return <span className="font-medium text-erp-text-section">{formatAmount(calculateLineAmount(line))}</span>;
     case 'remark':
-      return <Input value={line.remark} onChange={(event) => onLineChange(line.id, 'remark', event.target.value)} placeholder="—" />;
+      return <Input variant="boxed" value={line.remark} onChange={(event) => onLineChange(line.id, 'remark', event.target.value)} placeholder="—" />;
     case 'actions':
       return (
         <Button variant="danger" size="icon" aria-label={`删除${rowLabel}`} title="删除明细" onClick={() => onLineRemove(line.id)}>
@@ -159,10 +187,10 @@ function renderEditCell({ column, line, index, onLineChange, onLineRemove }) {
   }
 }
 
-function renderViewCell({ column, line }) {
+function renderViewCell({ column, line, editorOptions }) {
   switch (column.key) {
     case 'product':
-      return productLabel(line.product);
+      return productLabel(line.product, editorOptions.productOptions);
     case 'spec':
     case 'unit':
     case 'remark':
@@ -189,11 +217,18 @@ export function LineItemTable({
   rowKeyPrefix = 'line',
   onLineChange,
   onLineRemove,
+  onLineSkusSelect,
+  enableSkuPicker = false,
+  editorOptions = emptyEditorOptions,
+  summary,
 }) {
+  const [skuDialogLineId, setSkuDialogLineId] = useState(null);
   const config = variants[variant];
   const isEdit = mode === 'edit';
   const columns = isEdit ? config.editColumns : config.viewColumns;
   const colgroup = isEdit ? config.colgroup : (config.viewColgroup || config.colgroup.slice(0, -1));
+  const activeSkuLine = lines.find((line) => line.id === skuDialogLineId);
+  const skuOptions = enableSkuPicker ? (editorOptions.skuOptions || []) : [];
 
   return (
     <div className={tableShellClassName}>
@@ -221,10 +256,10 @@ export function LineItemTable({
                 const isActionCell = column.key === 'actions';
                 const isEditableCell = isEdit && !column.readOnly && !isActionCell && column.key !== 'index' && column.key !== 'amount';
                 const content = isEdit
-                  ? renderEditCell({ column, line, index, onLineChange, onLineRemove })
+                  ? renderEditCell({ column, line, index, onLineChange, onLineRemove, onProductSelect: setSkuDialogLineId, skuPickerEnabled: enableSkuPicker, editorOptions })
                   : column.key === 'index'
                     ? index + 1
-                    : renderViewCell({ column, line });
+                    : renderViewCell({ column, line, editorOptions });
 
                 return (
                   <td
@@ -245,7 +280,22 @@ export function LineItemTable({
             </tr>
           ))}
         </tbody>
+        {summary && <DocumentSummaryBar columns={columns} summary={summary} />}
       </table>
+      {isEdit && skuOptions.length > 0 && (
+        <SkuSelectionDialog
+          open={Boolean(activeSkuLine)}
+          onOpenChange={(open) => {
+            if (!open) setSkuDialogLineId(null);
+          }}
+          options={skuOptions}
+          selectedValues={activeSkuLine?.product ? [activeSkuLine.product] : []}
+          onConfirm={(selectedSkus) => {
+            if (activeSkuLine) onLineSkusSelect?.(activeSkuLine.id, selectedSkus);
+            setSkuDialogLineId(null);
+          }}
+        />
+      )}
     </div>
   );
 }

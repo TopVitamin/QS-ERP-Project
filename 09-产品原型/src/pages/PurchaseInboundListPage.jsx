@@ -1,8 +1,5 @@
 import { CircleCheck, Download, PackageCheck, Plus, Printer, RefreshCw, Trash2, Upload, XCircle } from 'lucide-react';
-import { useMemo } from 'react';
-import { ListPageFrame } from '../components/erp/ListPageFrame.jsx';
-import { useListPageActions } from '../hooks/useListPageActions.js';
-import { useListPageState } from '../hooks/useListPageState.js';
+import { DocumentListPage } from '../components/erp/DocumentListPage.jsx';
 import { toSelectOptions } from '../lib/options.js';
 import { inboundColumns, inboundOrders, inboundStatusLabels } from '../data/inboundData.js';
 import { orders } from '../data/orderData.js';
@@ -50,135 +47,110 @@ function filterRows(row, filters) {
     && matchesKeyword;
 }
 
-export function PurchaseInboundListPage({ onFeedback, onOpenPage }) {
-  const state = useListPageState({ initialRows: inboundOrders, initialFilters, filterRows, initialVisibility });
-  const visibleColumns = useMemo(() => inboundColumns.filter((column) => state.visibility[column.key] !== false), [state.visibility]);
-  const { notify, getSelectedRows, getSelectedIds } = useListPageActions({ onFeedback, state });
-
-  function handleHeaderAction(id) {
-    if (id === 'create') {
-      onOpenPage?.('purchase-inbound-create');
-      return;
-    }
-    const messages = { create: '已打开新增采购入库单', import: '已打开采购入库单导入', export: '已导出当前采购入库单' };
-    notify(messages[id] || id, 'info');
+function handleHeaderAction(id, { notify, onOpenPage }) {
+  if (id === 'create') {
+    onOpenPage?.('purchase-inbound-create');
+    return;
   }
+  const messages = { create: '已打开新增采购入库单', import: '已打开采购入库单导入', export: '已导出当前采购入库单' };
+  notify(messages[id] || id, 'info');
+}
 
-  function handleToolbarAction(id) {
-    const selectedRows = getSelectedRows();
-    const selectedIds = getSelectedIds();
+function handleToolbarAction(id, { state, notify, getSelectedRows, getSelectedIds }) {
+  const selectedRows = getSelectedRows();
+  const selectedIds = getSelectedIds();
 
-    if (id === 'confirm-inbound') {
-      const pendingRows = selectedRows.filter((row) => row.status !== 'completed');
-      if (!pendingRows.length) {
-        notify('所选入库单均已完成，无需重复确认', 'warning');
-        return;
-      }
-      state.updateRows(pendingRows.map((row) => row.id), (row) => ({ ...row, status: 'completed' }));
-      notify(`已成功确认 ${pendingRows.length} 张采购入库单`, 'success');
+  if (id === 'confirm-inbound') {
+    const pendingRows = selectedRows.filter((row) => row.status !== 'completed');
+    if (!pendingRows.length) {
+      notify('所选入库单均已完成，无需重复确认', 'warning');
       return;
     }
-    if (id === 'void') {
-      if (!selectedIds.length) {
-        notify('请先选择要作废的入库单', 'warning');
-        return;
-      }
-      state.removeRows(selectedIds);
-      notify(`已成功作废 ${selectedIds.length} 张采购入库单`, 'success');
-      return;
-    }
-    if (id === 'print-inbound' || id === 'print-detail') {
-      notify('已生成采购入库单打印预览', 'info');
-      return;
-    }
-    if (id === 'refresh') notify('采购入库单列表已更新', 'success');
+    state.updateRows(pendingRows.map((row) => row.id), (row) => ({ ...row, status: 'completed' }));
+    notify(`已成功确认 ${pendingRows.length} 张采购入库单`, 'success');
+    return;
   }
-
-  function handleCellClick(column, row) {
-    if (column.key === 'inboundNo') {
-      onOpenPage?.('purchase-inbound-detail', { row });
+  if (id === 'void') {
+    if (!selectedIds.length) {
+      notify('请先选择要作废的入库单', 'warning');
       return;
     }
-    if (column.key === 'relatedOrderNo') {
-      const relatedOrder = orders.find((order) => order.orderNo === row.relatedOrderNo);
-      onOpenPage?.('purchase-order-detail', { row: relatedOrder || { orderNo: row.relatedOrderNo } });
-    }
+    state.removeRows(selectedIds);
+    notify(`已成功作废 ${selectedIds.length} 张采购入库单`, 'success');
+    return;
   }
-
-  function handleRowAction(id, row) {
-    if (id === 'edit') {
-      onOpenPage?.('purchase-inbound-edit', { row });
-      return;
-    }
-    if (id === 'view') {
-      onOpenPage?.('purchase-inbound-detail', { row });
-      return;
-    }
-    if (id === 'confirm') {
-      if (row.status === 'completed') {
-        notify(`${row.inboundNo} 已完成入库，无需重复确认`, 'warning');
-        return;
-      }
-      state.updateRow(row.id, (current) => ({ ...current, status: 'completed' }));
-      notify(`${row.inboundNo} 已成功确认入库`, 'success');
-      return;
-    }
-    if (id === 'void') {
-      if (row.status === 'completed') {
-        notify(`${row.inboundNo} 已完成入库，无法作废`, 'error');
-        return;
-      }
-      state.removeRows([row.id]);
-      notify(`${row.inboundNo} 已成功作废`, 'success');
-    }
+  if (id === 'print-inbound' || id === 'print-detail') {
+    notify('已生成采购入库单打印预览', 'info');
+    return;
   }
+  if (id === 'refresh') notify('采购入库单列表已更新', 'success');
+}
 
-  return (
-    <ListPageFrame
-      header={{
-        title: '采购入库单列表',
-        actions: [{ id: 'create', label: '新增', icon: Plus, variant: 'primary' }, { id: 'import', label: '导入', icon: Upload }, { id: 'export', label: '导出', icon: Download }],
-        filters: filterFields,
-        filterValues: state.draftFilters,
-        onFilterChange: state.setFilter,
-        onReset: () => { state.resetFilters(); notify('筛选条件已重置', 'info'); },
-        onQuery: () => { state.applyFilters(); notify('已执行采购入库单查询', 'success'); },
-        onAction: handleHeaderAction,
-      }}
-      toolbar={{
-        selectedCount: state.filteredSelectedIds.length,
-        actions: toolbarActions,
-        onAction: handleToolbarAction,
-        columnOptions,
-        columnVisibility: state.visibility,
-        onColumnVisibilityChange: state.setVisibility,
-      }}
-      table={{
-        rows: state.pageRows,
-        autoFitRows: state.filteredRows,
-        columns: visibleColumns,
-        selectedIds: state.selectedIds,
-        onToggleRow: state.toggleRow,
-        onToggleAll: state.togglePage,
-        onFeedback,
-        onCellClick: handleCellClick,
-        onRowAction: handleRowAction,
-        rowActions: [
-          { id: 'view', label: '查看' },
-          { id: 'edit', label: '修改', visibleWhen: (row) => row.status !== 'completed' },
-          { id: 'confirm', label: '确认', icon: CircleCheck, visibleWhen: (row) => row.status !== 'completed', confirm: { title: '确认此采购入库单？', description: '确认后，入库单状态会更新为已入库。', confirmLabel: '确认入库' } },
-          { id: 'void', label: '作废', icon: Trash2, variant: 'danger', visibleWhen: (row) => row.status !== 'completed', confirm: { title: '确认作废此采购入库单？', description: '作废后该入库单会从当前列表移除。', confirmLabel: '确认作废', confirmVariant: 'danger' } },
-        ],
-      }}
-      pagination={{
-        total: state.filteredRows.length,
-        selectedCount: state.filteredSelectedIds.length,
-        currentPage: state.currentPage,
-        pageCount: state.pageCount,
-        pageSize: state.pageSize,
-        onPageChange: state.setPage,
-        onPageSizeChange: state.setPageSize,
-      }}
-    />
-  );
+function handleCellClick(column, row, { onOpenPage }) {
+  if (column.key === 'inboundNo') {
+    onOpenPage?.('purchase-inbound-detail', { row });
+    return;
+  }
+  if (column.key === 'relatedOrderNo') {
+    const relatedOrder = orders.find((order) => order.orderNo === row.relatedOrderNo);
+    onOpenPage?.('purchase-order-detail', { row: relatedOrder || { orderNo: row.relatedOrderNo } });
+  }
+}
+
+function handleRowAction(id, row, { state, notify, onOpenPage }) {
+  if (id === 'edit') {
+    onOpenPage?.('purchase-inbound-edit', { row });
+    return;
+  }
+  if (id === 'view') {
+    onOpenPage?.('purchase-inbound-detail', { row });
+    return;
+  }
+  if (id === 'confirm') {
+    if (row.status === 'completed') {
+      notify(`${row.inboundNo} 已完成入库，无需重复确认`, 'warning');
+      return;
+    }
+    state.updateRow(row.id, (current) => ({ ...current, status: 'completed' }));
+    notify(`${row.inboundNo} 已成功确认入库`, 'success');
+    return;
+  }
+  if (id === 'void') {
+    if (row.status === 'completed') {
+      notify(`${row.inboundNo} 已完成入库，无法作废`, 'error');
+      return;
+    }
+    state.removeRows([row.id]);
+    notify(`${row.inboundNo} 已成功作废`, 'success');
+  }
+}
+
+const inboundListConfig = {
+  title: '采购入库单列表',
+  rows: inboundOrders,
+  storageKey: 'qs-erp:purchase-inbounds:v1',
+  initialFilters,
+  filterRows,
+  initialVisibility,
+  columns: inboundColumns,
+  columnOptions,
+  filterFields,
+  headerActions: [{ id: 'create', label: '新增', icon: Plus, variant: 'primary' }, { id: 'import', label: '导入', icon: Upload }, { id: 'export', label: '导出', icon: Download }],
+  toolbarActions,
+  rowActions: [
+    { id: 'view', label: '查看' },
+    { id: 'edit', label: '修改', visibleWhen: (row) => row.status !== 'completed' },
+    { id: 'confirm', label: '确认', icon: CircleCheck, visibleWhen: (row) => row.status !== 'completed', confirm: { title: '确认此采购入库单？', description: '确认后，入库单状态会更新为已入库。', confirmLabel: '确认入库' } },
+    { id: 'void', label: '作废', icon: Trash2, variant: 'danger', visibleWhen: (row) => row.status !== 'completed', confirm: { title: '确认作废此采购入库单？', description: '作废后该入库单会从当前列表移除。', confirmLabel: '确认作废', confirmVariant: 'danger' } },
+  ],
+  resetMessage: '筛选条件已重置',
+  queryMessage: '已执行采购入库单查询',
+  onHeaderAction: handleHeaderAction,
+  onToolbarAction: handleToolbarAction,
+  onCellClick: handleCellClick,
+  onRowAction: handleRowAction,
+};
+
+export function PurchaseInboundListPage(props) {
+  return <DocumentListPage {...props} config={inboundListConfig} />;
 }

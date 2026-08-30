@@ -14,6 +14,7 @@ export function SelectField({
   ariaLabel,
   className,
   textSize = 'compact',
+  variant = 'underline',
 }) {
   const selectableOptions = getSelectableOptions(options);
   const hasValue = value !== '' && value != null;
@@ -25,7 +26,7 @@ export function SelectField({
         onValueChange={onValueChange}
         disabled={disabled}
       >
-        <SelectTrigger aria-label={ariaLabel} hideIcon={hasValue} textSize={textSize} className={className}>
+        <SelectTrigger aria-label={ariaLabel} hideIcon={hasValue} textSize={textSize} variant={variant} className={className}>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent align="start">

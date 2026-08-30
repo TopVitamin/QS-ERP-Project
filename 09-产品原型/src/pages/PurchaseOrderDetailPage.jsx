@@ -1,11 +1,7 @@
-import { useMemo } from 'react';
-import { DetailField, DocumentDetailFrame, EditorCard } from '../components/erp/DocumentDetailFrame.jsx';
-import { DocumentSummaryBar } from '../components/erp/DocumentSummaryBar.jsx';
-import { LineItemTable } from '../components/erp/LineItemTable.jsx';
-import { defaultOrderForm, getEditableOrder } from '../data/purchaseFormData.js';
+import { DocumentDetailPage } from '../components/erp/DocumentDetailPage.jsx';
+import { defaultOrderForm, getEditableOrder, purchaseLineEditorOptions } from '../data/purchaseFormData.js';
 import { orderStatusLabels } from '../data/orderData.js';
 import { formatAmount } from '../lib/format.js';
-import { erpFieldGridClassName } from '../styles/typography.js';
 
 function getOrderDetail(row) {
   const source = getEditableOrder(row);
@@ -27,57 +23,44 @@ function getOrderDetail(row) {
   };
 }
 
-export function PurchaseOrderDetailPage({ context, onOpenPage }) {
-  const row = context?.row || {};
-  const detail = useMemo(() => getOrderDetail(row), [row]);
-  const totalQuantity = detail.lines.reduce((sum, line) => sum + Number(line.quantity || 0), 0);
-  const totalAmount = detail.lines.reduce((sum, line) => sum + Number(line.quantity || 0) * Number(line.price || 0), 0);
-  const status = orderStatusLabels.auditStatus[row.auditStatus] || detail.status;
+const orderDetailConfig = {
+  listPageId: 'purchase-order',
+  editPageId: 'purchase-order-edit',
+  infoSectionTitle: '基础信息',
+  lineSectionTitle: '采购明细',
+  lineVariant: 'order',
+  lineEditorOptions: purchaseLineEditorOptions,
+  getDetail: getOrderDetail,
+  title: (detail) => `采购订单详情${detail.orderNo && detail.orderNo !== '保存后自动生成' ? ` · ${detail.orderNo}` : ''}`,
+  getStatus: (row, detail) => orderStatusLabels.auditStatus[row.auditStatus] || detail.status,
+  canEdit: (row) => row.closeStatus !== 'closed',
+  rowKey: (detail) => detail.orderNo,
+  infoFields: ({ detail, status }) => [
+    { key: 'orderNo', label: '单据编号', value: detail.orderNo },
+    { key: 'date', label: '单据日期', value: detail.date },
+    { key: 'mode', label: '采购模式', value: detail.mode },
+    { key: 'supplier', label: '供应商', value: detail.supplier },
+    { key: 'settleSupplier', label: '结算供应商', value: detail.settleSupplier },
+    { key: 'settlePeriod', label: '结算期限', value: detail.settlePeriod },
+    { key: 'salesman', label: '业务员', value: detail.salesman },
+    { key: 'department', label: '部门', value: detail.department },
+    { key: 'deliveryDate', label: '预计交货日期', value: detail.deliveryDate },
+    { key: 'creator', label: '制单人', value: '当前用户' },
+    { key: 'status', label: '审核状态', value: status },
+    { key: 'remark', label: '备注', value: detail.remark, className: 'col-span-3' },
+  ],
+  statusSectionTitle: '状态与金额',
+  statusFields: ({ row, totalAmount }) => [
+    { key: 'executionStatus', label: '执行状态', value: orderStatusLabels.executionStatus[row.executionStatus] || '未执行' },
+    { key: 'inboundStatus', label: '入库状态', value: orderStatusLabels.inboundStatus[row.inboundStatus] || '未入库' },
+    { key: 'closeStatus', label: '关闭状态', value: orderStatusLabels.closeStatus[row.closeStatus] || '未关闭' },
+    { key: 'paymentStatus', label: '付款状态', value: orderStatusLabels.paymentStatus[row.paymentStatus] || '未核销' },
+    { key: 'amount', label: '成交金额', value: `¥ ${formatAmount(totalAmount)}` },
+    { key: 'executedAmount', label: '已执行金额', value: `¥ ${formatAmount(row.executedAmount)}` },
+  ],
+  summary: { quantityLabel: '采购数量', amountLabel: '含税金额' },
+};
 
-  return (
-    <DocumentDetailFrame
-      title={`采购订单详情${detail.orderNo && detail.orderNo !== '保存后自动生成' ? ` · ${detail.orderNo}` : ''}`}
-      status={status}
-      onBack={() => onOpenPage?.('purchase-order')}
-      onEdit={row.closeStatus !== 'closed' ? () => onOpenPage?.('purchase-order-edit', { row }) : undefined}
-    >
-      <EditorCard title="基础信息">
-        <div className={erpFieldGridClassName}>
-          <DetailField label="单据编号" value={detail.orderNo} />
-          <DetailField label="单据日期" value={detail.date} />
-          <DetailField label="采购模式" value={detail.mode} />
-          <DetailField label="供应商" value={detail.supplier} />
-          <DetailField label="结算供应商" value={detail.settleSupplier} />
-          <DetailField label="结算期限" value={detail.settlePeriod} />
-          <DetailField label="业务员" value={detail.salesman} />
-          <DetailField label="部门" value={detail.department} />
-          <DetailField label="预计交货日期" value={detail.deliveryDate} />
-          <DetailField label="制单人" value="当前用户" />
-          <DetailField label="审核状态" value={status} />
-          <DetailField label="备注" value={detail.remark} className="col-span-6" />
-        </div>
-      </EditorCard>
-
-      <EditorCard title="采购明细">
-        <LineItemTable variant="order" lines={detail.lines} rowKeyPrefix={detail.orderNo} />
-        <DocumentSummaryBar
-          quantityLabel="采购数量"
-          quantity={totalQuantity}
-          amountLabel="含税金额"
-          amount={totalAmount}
-        />
-      </EditorCard>
-
-      <EditorCard title="状态与金额">
-        <div className={erpFieldGridClassName}>
-          <DetailField label="执行状态" value={orderStatusLabels.executionStatus[row.executionStatus] || '未执行'} />
-          <DetailField label="入库状态" value={orderStatusLabels.inboundStatus[row.inboundStatus] || '未入库'} />
-          <DetailField label="关闭状态" value={orderStatusLabels.closeStatus[row.closeStatus] || '未关闭'} />
-          <DetailField label="付款状态" value={orderStatusLabels.paymentStatus[row.paymentStatus] || '未核销'} />
-          <DetailField label="成交金额" value={`¥ ${formatAmount(totalAmount)}`} />
-          <DetailField label="已执行金额" value={`¥ ${formatAmount(row.executedAmount)}`} />
-        </div>
-      </EditorCard>
-    </DocumentDetailFrame>
-  );
+export function PurchaseOrderDetailPage(props) {
+  return <DocumentDetailPage {...props} config={orderDetailConfig} />;
 }

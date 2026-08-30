@@ -18,6 +18,7 @@
   --erp-surface-header: 243 244 249;
   --erp-surface-panel: 255 255 255;
   --erp-surface-muted: 250 251 254;
+  --erp-surface-summary: 255 248 224;
   --erp-surface-table-head: 231 233 241;
   --erp-surface-table-zebra: 251 251 253;
   --erp-surface-hover: 242 246 255;
@@ -104,6 +105,16 @@ button,
 input,
 select {
   font: inherit;
+}
+
+input[type='number'] {
+  appearance: textfield;
+}
+
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
 }
 
 button {

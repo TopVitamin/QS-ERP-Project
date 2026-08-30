@@ -118,6 +118,14 @@ export function MultiSelect({
     onValueChange?.(nextValues);
   }
 
+  const allValues = selectableOptions.map((option) => option.value);
+  const allSelected = allValues.length > 0 && allValues.every((optionValue) => selectedValues.includes(optionValue));
+  const someSelected = selectedValues.some((selectedValue) => allValues.includes(selectedValue));
+
+  function toggleAll() {
+    onValueChange?.(allSelected ? [] : allValues);
+  }
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -168,6 +176,30 @@ export function MultiSelect({
               })}
             </CommandGroup>
           </CommandList>
+          <div className="shrink-0 border-t border-erp-border-light bg-erp-surface-panel p-1">
+            <div
+              role="button"
+              tabIndex={selectableOptions.length > 0 ? 0 : -1}
+              aria-disabled={selectableOptions.length === 0}
+              className="flex h-8 items-center rounded-erp-control px-2 text-[12px] outline-none transition-colors hover:bg-erp-primary-soft focus-visible:bg-erp-primary-soft aria-disabled:pointer-events-none aria-disabled:opacity-45"
+              onClick={toggleAll}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  toggleAll();
+                }
+              }}
+            >
+              <Checkbox
+                checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+                className="pointer-events-none mr-2"
+                aria-hidden="true"
+                tabIndex={-1}
+              />
+              <span className="font-medium text-erp-text-section">全选</span>
+              <span className="ml-2 text-erp-text-muted">已选 <span className="font-medium text-erp-primary">{selectedOptions.length}</span> 项</span>
+            </div>
+          </div>
         </Command>
       </PopoverContent>
     </Popover>

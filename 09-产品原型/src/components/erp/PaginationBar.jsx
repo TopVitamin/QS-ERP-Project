@@ -24,14 +24,14 @@ export function PaginationBar({ total, selectedCount, currentPage, pageCount, pa
       <div className="flex items-center gap-2 text-erp-text-muted">
         <span>共{safePageCount}页</span>
         <span>第</span>
-        <Input aria-label="当前页码" value={currentPage} onChange={handlePageInput} className="h-7 w-10 px-1 text-center" />
+        <Input variant="boxed" aria-label="当前页码" value={currentPage} onChange={handlePageInput} className="h-7 w-10 px-1 text-center" />
         <span>页</span>
         <Button variant="outline" size="icon" aria-label="第一页" disabled={currentPage <= 1} onClick={() => setPage(1)}><ChevronsLeft className="h-4 w-4" /></Button>
         <Button variant="outline" size="icon" aria-label="上一页" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}><ChevronLeft className="h-4 w-4" /></Button>
         <Button variant="outline" size="icon" aria-label="下一页" disabled={currentPage >= safePageCount} onClick={() => setPage(currentPage + 1)}><ChevronRight className="h-4 w-4" /></Button>
         <Button variant="outline" size="icon" aria-label="最后一页" disabled={currentPage >= safePageCount} onClick={() => setPage(safePageCount)}><ChevronsRight className="h-4 w-4" /></Button>
         <Select value={String(pageSize)} onValueChange={(value) => onPageSizeChange(Number(value))}>
-          <SelectTrigger className="ml-2 w-28"><SelectValue /></SelectTrigger>
+          <SelectTrigger variant="boxed" className="ml-2 w-28"><SelectValue /></SelectTrigger>
           <SelectContent align="end">
             <SelectItem value="10">10条/页</SelectItem>
             <SelectItem value="20">20条/页</SelectItem>

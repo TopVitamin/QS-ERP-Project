@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { readMockRows, subscribeMockRows, writeMockRows } from '../lib/mockStorage.js';
 
-export function useListPageState({ initialRows, initialFilters, filterRows, initialVisibility }) {
-  const [rows, setRows] = useState(initialRows);
+export function useListPageState({ initialRows, initialFilters, filterRows, initialVisibility, storageKey }) {
+  const [rows, setRows] = useState(() => readMockRows(storageKey, initialRows));
+  const skipPersistRef = useRef(false);
   const [draftFilters, setDraftFilters] = useState(initialFilters);
   const [appliedFilters, setAppliedFilters] = useState(initialFilters);
   const [visibility, setVisibility] = useState(initialVisibility);
@@ -18,6 +20,23 @@ export function useListPageState({ initialRows, initialFilters, filterRows, init
   useEffect(() => {
     setCurrentPage((page) => Math.min(page, pageCount));
   }, [pageCount]);
+
+  useEffect(() => {
+    if (!storageKey) return undefined;
+    return subscribeMockRows(storageKey, (nextRows) => {
+      skipPersistRef.current = true;
+      setRows(nextRows);
+    });
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (!storageKey) return;
+    if (skipPersistRef.current) {
+      skipPersistRef.current = false;
+      return;
+    }
+    writeMockRows(storageKey, rows);
+  }, [rows, storageKey]);
 
   function setFilter(key, value) {
     setDraftFilters((current) => ({ ...current, [key]: value }));

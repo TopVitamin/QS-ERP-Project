@@ -8,6 +8,8 @@ export function useDocumentForm({
   getInitialForm,
   validate,
   transformOnSubmit,
+  prepareOnSave,
+  onPersist,
   onFeedback,
   onNavigate,
 }) {
@@ -29,7 +31,7 @@ export function useDocumentForm({
     const nextForm = getInitialForm(mode, context);
     setForm(nextForm);
     setSavedSnapshot(JSON.stringify(nextForm));
-  }, [mode, contextId]);
+  }, [mode, contextId, context, getInitialForm]);
 
   function updateField(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -56,15 +58,34 @@ export function useDocumentForm({
     }));
   }
 
+  function replaceLineWithItems(id, items, createLine) {
+    setForm((current) => {
+      const targetIndex = current.lines.findIndex((line) => line.id === id);
+      if (targetIndex < 0) return current;
+
+      const targetLine = current.lines[targetIndex];
+      const nextLines = items.length
+        ? items.map((item) => createLine(item, targetLine))
+        : [createLine()];
+
+      return {
+        ...current,
+        lines: [...current.lines.slice(0, targetIndex), ...nextLines, ...current.lines.slice(targetIndex + 1)],
+      };
+    });
+  }
+
   function save(message, shouldSubmit = false) {
     const error = validate?.(form);
     if (error) {
       onFeedback?.(error, 'warning');
       return;
     }
-    const nextForm = shouldSubmit && transformOnSubmit ? transformOnSubmit(form) : form;
+    const transformedForm = shouldSubmit && transformOnSubmit ? transformOnSubmit(form) : form;
+    const nextForm = prepareOnSave ? prepareOnSave(transformedForm, { mode, shouldSubmit, context }) : transformedForm;
     setForm(nextForm);
     setSavedSnapshot(JSON.stringify(nextForm));
+    onPersist?.(nextForm, { mode, shouldSubmit, context });
     onFeedback?.(message, 'success');
     onNavigate?.();
   }
@@ -78,6 +99,7 @@ export function useDocumentForm({
     updateLine,
     addLine,
     removeLine,
+    replaceLineWithItems,
     save,
   };
 }

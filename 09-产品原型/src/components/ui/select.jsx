@@ -7,11 +7,11 @@ export const Select = SelectPrimitive.Root;
 export const SelectGroup = SelectPrimitive.Group;
 export const SelectValue = SelectPrimitive.Value;
 
-export function SelectTrigger({ className, children, hideIcon = false, textSize = 'compact', ...props }) {
+export function SelectTrigger({ className, children, hideIcon = false, textSize = 'compact', variant = 'underline', ...props }) {
   return (
     <SelectPrimitive.Trigger
       className={cn(
-        getFieldControlClassName(textSize),
+        getFieldControlClassName(textSize, variant),
         'relative justify-between pr-8 text-erp-text data-[placeholder]:text-erp-placeholder [&>span]:line-clamp-1 [&>span]:flex-1 [&>span]:text-left',
         className,
       )}

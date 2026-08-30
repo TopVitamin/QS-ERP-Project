@@ -1,17 +1,13 @@
-import { Plus } from 'lucide-react';
-import { DocumentEditorFrame, EditorCard } from '../components/erp/DocumentEditorFrame.jsx';
-import { DocumentSummaryBar } from '../components/erp/DocumentSummaryBar.jsx';
-import { FormFields } from '../components/erp/FormControl.jsx';
-import { LineItemTable } from '../components/erp/LineItemTable.jsx';
-import { Button } from '../components/ui/button.jsx';
-import { erpFieldGridClassName } from '../styles/typography.js';
-import { useDocumentForm } from '../hooks/useDocumentForm.js';
+import { DocumentFormPage } from '../components/erp/DocumentFormPage.jsx';
+import { calculateLineAmount } from '../lib/format.js';
+import { upsertMockRow } from '../lib/mockStorage.js';
 import {
   departmentOptions,
   defaultOrderForm,
   employeeOptions,
   getEditableOrder,
   paymentTermOptions,
+  purchaseLineEditorOptions,
   supplierOptions,
 } from '../data/purchaseFormData.js';
 
@@ -25,9 +21,11 @@ function getInitialForm(mode, context) {
   return { ...source, lines: source.lines.map((line) => ({ ...line })) };
 }
 
+let orderLineSequence = 0;
+
 function createOrderLine() {
   return {
-    id: `order-line-${Date.now()}`,
+    id: `order-line-${Date.now()}-${orderLineSequence++}`,
     product: '',
     spec: '',
     unit: '个',
@@ -36,6 +34,22 @@ function createOrderLine() {
     price: 0,
     taxRate: '13',
     remark: '',
+  };
+}
+
+function createOrderLineFromSku(sku, template) {
+  const sameSku = template?.product === sku?.value;
+  const line = createOrderLine();
+  return {
+    ...line,
+    product: sku?.value || '',
+    spec: sku?.spec === '—' ? '' : sku?.spec || '',
+    unit: sku?.unit === '—' ? template?.unit || '个' : sku?.unit || template?.unit || '个',
+    quantity: sameSku ? template.quantity : 1,
+    received: sameSku ? template.received : 0,
+    price: sameSku ? template.price : sku?.referencePrice ?? 0,
+    taxRate: sameSku ? template.taxRate : '13',
+    remark: sameSku ? template.remark : '',
   };
 }
 
@@ -51,8 +65,41 @@ const orderFormFields = [
   { key: 'deliveryDate', label: '预计交货日期', type: 'date' },
   { key: 'creatorDisplay', label: '制单人', type: 'disabled', value: '当前用户' },
   { key: 'status', label: '审核状态', type: 'disabled' },
-  { key: 'remark', label: '备注', type: 'textarea', className: 'col-span-6', placeholder: '填写本单的补充说明' },
+  { key: 'remark', label: '备注', type: 'textarea', className: 'col-span-3', placeholder: '填写本单的补充说明' },
 ];
+
+const orderStorageKey = 'qs-erp:purchase-orders:v1';
+
+function prepareOrderForm(form) {
+  if (form.orderNo && form.orderNo !== '保存后自动生成') return form;
+  const date = String(form.date || '20260819').replaceAll('-', '');
+  return { ...form, orderNo: `CGDD-${date}-${String(Date.now()).slice(-5).padStart(5, '0')}` };
+}
+
+function toOrderRow(form, { context }) {
+  const source = context?.row || {};
+  return {
+    id: source.id || `order-${Date.now()}`,
+    date: form.date,
+    mode: form.mode,
+    orderNo: form.orderNo,
+    supplier: form.supplier,
+    settleSupplier: form.settleSupplier,
+    settlePeriod: form.settlePeriod,
+    salesman: form.salesman,
+    department: form.department,
+    remark: form.remark,
+    deliveryDate: form.deliveryDate,
+    auditStatus: form.status === '已审核' ? 'approved' : 'pending',
+    executionStatus: source.executionStatus || 'not_started',
+    inboundStatus: source.inboundStatus || 'not_received',
+    closeStatus: source.closeStatus || 'open',
+    paymentStatus: source.paymentStatus || 'unpaid',
+    amount: form.lines.reduce((sum, line) => sum + calculateLineAmount(line), 0),
+    executedAmount: source.executedAmount || 0,
+    lines: form.lines.map((line) => ({ ...line })),
+  };
+}
 
 export function PurchaseOrderCreatePage(props) {
   return <PurchaseOrderFormPage {...props} mode="create" />;
@@ -62,61 +109,37 @@ export function PurchaseOrderEditPage(props) {
   return <PurchaseOrderFormPage {...props} mode="edit" />;
 }
 
-export function PurchaseOrderFormPage({ mode = 'create', context, onFeedback, onOpenPage }) {
-  const isCreate = mode === 'create';
-  const contextId = context?.row?.id || 'create';
+const orderFormConfig = {
+  listPageId: 'purchase-order',
+  storageKey: orderStorageKey,
+  createTitle: '新增采购订单',
+  editTitle: '修改采购订单',
+  infoSectionTitle: '基础信息',
+  lineSectionTitle: '采购明细',
+  lineVariant: 'order',
+  lineEditorOptions: purchaseLineEditorOptions,
+  enableSkuPicker: true,
+  formFields: orderFormFields,
+  hiddenOnCreate: ['status'],
+  getInitialForm,
+  prepareOnSave: prepareOrderForm,
+  toListRow: toOrderRow,
+  persistRow: (row) => upsertMockRow(orderStorageKey, row),
+  validate: (currentForm) => {
+    if (!currentForm.supplier || !currentForm.date || currentForm.lines.some((line) => !line.product || Number(line.quantity) <= 0)) {
+      return '请补充供应商、单据日期和有效的商品明细';
+    }
+    return null;
+  },
+  transformOnSubmit: (currentForm) => ({ ...currentForm, status: '已审核' }),
+  createLine: createOrderLine,
+  createLineFromSku: createOrderLineFromSku,
+  saveMessage: ({ isCreate, form }) => (isCreate ? '采购订单草稿已保存' : `${form.orderNo} 已保存修改`),
+  submitMessage: ({ isCreate, form }) => (isCreate ? '采购订单已保存并审核' : `${form.orderNo} 已保存并审核`),
+  submitLabel: '保存并审核',
+  summary: { quantityLabel: '采购数量', amountLabel: '含税金额' },
+};
 
-  const {
-    form,
-    dirty,
-    totalQuantity,
-    totalAmount,
-    updateField,
-    updateLine,
-    addLine,
-    removeLine,
-    save,
-  } = useDocumentForm({
-    mode,
-    context,
-    contextId,
-    getInitialForm,
-    validate: (currentForm) => {
-      if (!currentForm.supplier || !currentForm.date || currentForm.lines.some((line) => !line.product || Number(line.quantity) <= 0)) {
-        return '请补充供应商、单据日期和有效的商品明细';
-      }
-      return null;
-    },
-    transformOnSubmit: (currentForm) => ({ ...currentForm, status: '已审核' }),
-    onFeedback,
-    onNavigate: () => onOpenPage?.('purchase-order'),
-  });
-
-  const visibleFormFields = isCreate ? orderFormFields.filter((field) => field.key !== 'status') : orderFormFields;
-
-  return (
-    <DocumentEditorFrame
-      title={isCreate ? '新增采购订单' : '修改采购订单'}
-      status={isCreate ? undefined : form.status}
-      dirty={dirty}
-      onCancel={() => onOpenPage?.('purchase-order')}
-      onSave={() => save(isCreate ? '采购订单草稿已保存' : `${form.orderNo} 已保存修改`)}
-      onSaveAndSubmit={() => save(isCreate ? '采购订单已保存并审核' : `${form.orderNo} 已保存并审核`, true)}
-      submitLabel="保存并审核"
-    >
-      <EditorCard title="基础信息">
-        <div className={erpFieldGridClassName}>
-          <FormFields fields={visibleFormFields} form={form} onFieldChange={updateField} />
-        </div>
-      </EditorCard>
-
-      <EditorCard
-        title="采购明细"
-        actions={<Button variant="outline" size="compact" onClick={() => addLine(createOrderLine)}><Plus className="h-3.5 w-3.5" strokeWidth={1.9} />新增明细</Button>}
-      >
-        <LineItemTable variant="order" mode="edit" lines={form.lines} onLineChange={updateLine} onLineRemove={removeLine} />
-        <DocumentSummaryBar quantityLabel="采购数量" quantity={totalQuantity} amountLabel="含税金额" amount={totalAmount} />
-      </EditorCard>
-    </DocumentEditorFrame>
-  );
+export function PurchaseOrderFormPage(props) {
+  return <DocumentFormPage {...props} config={orderFormConfig} />;
 }

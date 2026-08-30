@@ -1,10 +1,11 @@
 import { cn } from '../../lib/utils.js';
 import { FieldAffordance, getFieldControlClassName } from './field.jsx';
 
-export function Input({ className, textSize = 'compact', ...props }) {
+export function Input({ className, textSize = 'compact', variant = 'underline', type, ...props }) {
   return (
     <input
-      className={cn(getFieldControlClassName(textSize), 'text-erp-text placeholder:text-erp-placeholder', className)}
+      type={type}
+      className={cn(getFieldControlClassName(textSize, variant), 'text-erp-text placeholder:text-erp-placeholder', type === 'number' && 'input-number-no-spinner', className)}
       {...props}
     />
   );
