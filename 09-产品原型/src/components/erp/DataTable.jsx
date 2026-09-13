@@ -1,5 +1,5 @@
 import * as ContextMenuPrimitive from '@radix-ui/react-context-menu';
-import { ClipboardCopy, Maximize2, RotateCcw } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, ClipboardCopy, Maximize2, RotateCcw } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { cn } from '../../lib/utils.js';
 import { Button } from '../ui/button.jsx';
@@ -8,8 +8,8 @@ import { ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '../ui/c
 import { ConfirmDialog } from '../ui/alert-dialog.jsx';
 import { HintTooltip } from '../ui/tooltip.jsx';
 
-export function DataTable({ rows, autoFitRows = rows, columns, selectedIds, onToggleRow, onToggleAll, rowActions = [], onRowAction, onCellClick, onFeedback, emptyText = '暂无数据' }) {
-  const operationColumnWidth = 208;
+export function DataTable({ rows, autoFitRows = rows, columns, selectedIds, onToggleRow, onToggleAll, rowActions = [], onRowAction, onCellClick, onFeedback, sort, onSort, pinnedKeys = [], emptyText = '暂无数据' }) {
+  const operationColumnWidth = Math.max(208, rowActions.length * 44 + 20);
   const selectionColumnWidth = 48;
   const [columnWidths, setColumnWidths] = useState(() => Object.fromEntries(columns.map((column) => [column.key, column.defaultWidth])));
   const [containerWidth, setContainerWidth] = useState(0);
@@ -75,6 +75,16 @@ export function DataTable({ rows, autoFitRows = rows, columns, selectedIds, onTo
     if (!extraWidth || !dataColumnsWidth) return baseWidth;
     return baseWidth + (extraWidth * baseWidth) / dataColumnsWidth;
   };
+  const columnOffsets = useMemo(() => {
+    const offsets = {};
+    let left = selectionColumnWidth;
+    for (const column of columns) {
+      if (!pinnedKeys.includes(column.key)) continue;
+      offsets[column.key] = left;
+      left += getEffectiveColumnWidth(column);
+    }
+    return offsets;
+  }, [columns, pinnedKeys, columnWidths, containerWidth]);
   const visibleSelectedIds = useMemo(() => rows.filter((row) => selectedIds.includes(row.id)).map((row) => row.id), [rows, selectedIds]);
   const allSelected = rows.length > 0 && visibleSelectedIds.length === rows.length;
   const someSelected = visibleSelectedIds.length > 0 && !allSelected;
@@ -149,24 +159,54 @@ export function DataTable({ rows, autoFitRows = rows, columns, selectedIds, onTo
             if (!event.target.closest('th')) setContextMenuColumn(null);
           }}
         >
-          <table ref={tableRef} className="table-fixed border-collapse text-left text-[12px] text-erp-text" style={{ width: tableWidth }}>
+          <table ref={tableRef} className="table-fixed border-separate border-spacing-0 text-left text-[12px] text-erp-text" style={{ width: tableWidth }}>
         <colgroup>
           <col style={{ width: selectionColumnWidth }} />
           {columns.map((column) => <col key={column.key} style={{ width: getEffectiveColumnWidth(column) }} />)}
           <col style={{ width: operationColumnWidth }} />
         </colgroup>
-        <thead className="sticky top-0 z-20 h-8 border-b border-erp-border-table-header bg-erp-surface-table-head text-[12px] font-normal text-erp-text-section">
-          <tr className="h-8">
-            <th scope="col" className="border-r border-erp-border-table-column text-center">
+        <thead className="sticky top-0 z-20 h-7 bg-erp-surface-table-head text-[12px] font-normal text-erp-text-section">
+          <tr className="h-7">
+            <th scope="col" className="erp-table-head-cell sticky left-0 z-30 bg-erp-surface-table-head text-center">
               <Checkbox
                 aria-label="选择当前页全部数据"
                 checked={allSelected ? true : someSelected ? 'indeterminate' : false}
                 onCheckedChange={(checked) => onToggleAll(checked === true)}
               />
             </th>
-            {columns.map((column) => (
-              <th scope="col" key={column.key} className="relative border-r border-erp-border-table-column px-2 font-normal" onContextMenu={() => setContextMenuColumn(column)}>
-                <EllipsisCell content={column.label} ellipsis={column.ellipsis} className="block whitespace-nowrap">{column.label}</EllipsisCell>
+            {columns.map((column) => {
+              const isSorted = sort?.key === column.key;
+              const pinnedOffset = columnOffsets[column.key];
+              return (
+              <th
+                scope="col"
+                key={column.key}
+                aria-sort={isSorted ? (sort.direction === 'asc' ? 'ascending' : 'descending') : undefined}
+                style={pinnedOffset != null ? { left: pinnedOffset } : undefined}
+                className={cn(
+                  'erp-table-head-cell group/th relative px-2 font-normal',
+                  pinnedOffset != null && 'sticky z-20 bg-erp-surface-table-head',
+                )}
+                onContextMenu={() => setContextMenuColumn(column)}
+              >
+                {column.sortable ? (
+                  <button
+                    type="button"
+                    className="flex w-full min-w-0 items-center gap-1 text-left hover:text-erp-primary"
+                    onClick={() => onSort?.(column.key)}
+                  >
+                    <EllipsisCell content={column.label} ellipsis={column.ellipsis} className="block min-w-0 whitespace-nowrap">{column.label}</EllipsisCell>
+                    {isSorted ? (
+                      sort.direction === 'asc'
+                        ? <ArrowUp className="h-3 w-3 shrink-0 text-erp-primary" strokeWidth={2} />
+                        : <ArrowDown className="h-3 w-3 shrink-0 text-erp-primary" strokeWidth={2} />
+                    ) : (
+                      <ArrowUpDown className="h-3 w-3 shrink-0 text-erp-text-placeholder opacity-0 transition-opacity group-hover/th:opacity-100" strokeWidth={2} />
+                    )}
+                  </button>
+                ) : (
+                  <EllipsisCell content={column.label} ellipsis={column.ellipsis} className="block whitespace-nowrap">{column.label}</EllipsisCell>
+                )}
                 <span
                   role="separator"
                   aria-orientation="vertical"
@@ -177,22 +217,23 @@ export function DataTable({ rows, autoFitRows = rows, columns, selectedIds, onTo
                   onKeyDown={(event) => { if (event.key === 'ArrowRight') adjustColumnWidth(column, 8); if (event.key === 'ArrowLeft') adjustColumnWidth(column, -8); }}
                 />
               </th>
-            ))}
-            <th scope="col" className="table-operation-sticky sticky right-0 z-30 bg-erp-surface-table-head px-3 text-left font-normal text-erp-text-section">操作</th>
+              );
+            })}
+            <th scope="col" className="table-operation-sticky erp-table-head-cell sticky right-0 z-30 bg-erp-surface-table-head px-3 text-left font-normal text-erp-text-section">操作</th>
           </tr>
         </thead>
         <tbody>
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={columns.length + 2} className="h-32 text-center text-[12px] text-erp-text-subtle">{emptyText}</td>
+              <td colSpan={columns.length + 2} className="h-32 border-b border-erp-border-table-row text-center text-[12px] text-erp-text-muted">{emptyText}</td>
             </tr>
-          ) : rows.map((row, index) => {
+          ) : rows.map((row) => {
             const selected = selectedIds.includes(row.id);
-            const rowClass = selected ? 'bg-erp-surface-selected' : index % 2 ? 'bg-erp-surface-table-zebra' : 'bg-erp-surface-panel';
+            const rowClass = selected ? 'bg-erp-surface-selected' : 'bg-erp-surface-panel';
             const actions = rowActions.filter((action) => !action.visibleWhen || action.visibleWhen(row));
             return (
-              <tr key={row.id} className={`group h-10 border-b border-erp-border-table-row ${rowClass} hover:bg-erp-surface-hover`}>
-                <td className="border-r border-erp-border-table-column text-center">
+              <tr key={row.id} className={`group h-8 ${rowClass} hover:bg-erp-surface-hover`}>
+                <td className={cn('erp-table-cell sticky left-0 z-10 text-center', rowClass, 'group-hover:bg-erp-surface-hover')}>
                   <Checkbox
                     aria-label={`选择${row.orderNo || row.inboundNo || row.id}`}
                     checked={selected}
@@ -236,9 +277,25 @@ export function DataTable({ rows, autoFitRows = rows, columns, selectedIds, onTo
                       </ContextMenuContent>
                     </ContextMenuPrimitive.Root>
                   );
-                  return <td key={column.key} className={cn(column.ellipsis && 'overflow-hidden', 'border-r border-erp-border-table-column px-2 align-middle whitespace-nowrap', column.link && 'text-erp-primary', column.align === 'right' && 'text-right', tone)}>{cellContent}</td>;
+                  const pinnedOffset = columnOffsets[column.key];
+                  return (
+                    <td
+                      key={column.key}
+                      style={pinnedOffset != null ? { left: pinnedOffset } : undefined}
+                      className={cn(
+                        column.ellipsis && 'overflow-hidden',
+                        'erp-table-cell px-2 align-middle whitespace-nowrap',
+                        pinnedOffset != null && `sticky z-[5] ${rowClass} group-hover:bg-erp-surface-hover`,
+                        column.link && 'text-erp-primary',
+                        column.align === 'right' && 'text-right',
+                        tone,
+                      )}
+                    >
+                      {cellContent}
+                    </td>
+                  );
                 })}
-                <td className={`table-operation-sticky sticky right-0 z-10 px-3 ${rowClass} group-hover:bg-erp-surface-hover`}>
+                <td className={`table-operation-sticky erp-table-cell sticky right-0 z-10 px-3 ${rowClass} group-hover:bg-erp-surface-hover`}>
                   <div className="flex items-center justify-start gap-1 whitespace-nowrap text-[12px]">
                     {actions.map((action) => <RowAction key={action.id} action={action} row={row} onAction={onRowAction} />)}
                   </div>
@@ -343,7 +400,7 @@ function RowAction({ action, row, onAction }) {
       variant={action.variant || 'text'}
       size="compact"
       disabled={disabled}
-      className="h-8 gap-1 rounded-erp-control px-2 text-[12px] font-normal hover:bg-erp-primary-soft hover:text-erp-primary"
+      className="h-7 gap-1 rounded-erp-control px-2 text-[12px] font-normal hover:bg-erp-primary-soft hover:text-erp-primary"
       onClick={() => onAction?.(action.id, row)}
     >
       {action.label}

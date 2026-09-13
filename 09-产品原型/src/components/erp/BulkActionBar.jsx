@@ -1,18 +1,20 @@
-import { ChevronDown, Settings } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { Fragment, useState } from 'react';
+import { cn } from '../../lib/utils.js';
 import { Button } from '../ui/button.jsx';
 import { ConfirmDialog } from '../ui/alert-dialog.jsx';
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu.jsx';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu.jsx';
 import { Switch } from '../ui/switch.jsx';
+import { ColumnSettings } from './ColumnSettings.jsx';
 
-export function BulkActionBar({ selectedCount, actions = [], onAction, switchConfig, columnOptions = [], columnVisibility = {}, onColumnVisibilityChange }) {
+export function BulkActionBar({ selectedCount, actions = [], onAction, switchConfig, columnSettings }) {
   return (
-    <div className="flex h-12 shrink-0 items-center justify-between overflow-hidden bg-erp-surface-panel px-4 text-[14px] text-erp-text">
+    <div className="flex h-12 shrink-0 items-center justify-between overflow-hidden bg-erp-surface-panel px-4 text-[12px] text-erp-text">
       <div className="no-scrollbar flex min-w-0 items-center overflow-x-auto">
-        <span className="mr-1 shrink-0 text-erp-text-muted">已选中<span className="text-erp-primary">{selectedCount}</span>条</span>
-        {actions.map((action, index) => (
+        <span className="mr-1 shrink-0 text-erp-text">已选中 <span className="text-erp-primary">{selectedCount}</span> 条</span>
+        {actions.map((action) => (
           <Fragment key={action.id}>
-            {index > 0 && <ToolbarDivider />}
+            <ToolbarDivider />
             <BulkAction action={action} selectedCount={selectedCount} onAction={onAction} />
           </Fragment>
         ))}
@@ -29,42 +31,22 @@ export function BulkActionBar({ selectedCount, actions = [], onAction, switchCon
             />
           </div>
         )}
-        {columnOptions.length > 0 && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-erp-text-subtle" aria-label="列设置" title="列设置">
-                <Settings className="h-4 w-4" strokeWidth={1.8} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {columnOptions.map((option) => (
-                <DropdownMenuCheckboxItem
-                  key={option.key}
-                  checked={Boolean(columnVisibility[option.key])}
-                  onCheckedChange={(checked) => onColumnVisibilityChange?.(option.key, checked === true)}
-                >
-                  {option.label}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+        {columnSettings && <ColumnSettings {...columnSettings} />}
       </div>
     </div>
   );
 }
 
 function ToolbarDivider() {
-  return <span className="mx-2 h-3.5 w-px shrink-0 bg-erp-border-light" aria-hidden="true" />;
+  return <span className="mx-1.5 h-3 w-px shrink-0 rounded-full bg-erp-border-light" aria-hidden="true" />;
 }
 
 function BulkAction({ action, selectedCount, onAction }) {
   const [pendingItem, setPendingItem] = useState(null);
   const disabled = action.disabled || (action.requiresSelection && selectedCount === 0);
-  const Icon = action.icon;
+  const toneClassName = action.variant === 'danger' ? '' : 'text-erp-text';
   const trigger = (
-    <Button variant={action.variant || 'ghost'} size="compact" disabled={disabled} className="gap-1 px-2">
-      {Icon && <Icon className="h-[17px] w-[17px]" strokeWidth={2.1} />}
+    <Button variant={action.variant || 'ghost'} size="compact" disabled={disabled} className={cn('px-2 font-normal', toneClassName)}>
       <span>{action.label}</span>
       {action.menuItems && <ChevronDown className="h-3.5 w-3.5" strokeWidth={2} />}
     </Button>
@@ -132,10 +114,9 @@ function BulkAction({ action, selectedCount, onAction }) {
       variant={action.variant || 'ghost'}
       size="compact"
       disabled={disabled}
-      className="gap-1 px-2"
+      className={cn('px-2 font-normal', toneClassName)}
       onClick={() => onAction?.(action.id)}
     >
-      {Icon && <Icon className="h-[17px] w-[17px]" strokeWidth={2.1} />}
       <span>{action.label}</span>
     </Button>
   );

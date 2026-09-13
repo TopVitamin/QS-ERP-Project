@@ -2,26 +2,50 @@ import { useEffect, useState } from 'react';
 import { AppToaster, TooltipProvider } from './components/ui/index.js';
 import { Sidebar } from './components/layout/Sidebar.jsx';
 import { TopHeader } from './components/layout/TopHeader.jsx';
-import { PAGE_REGISTRY, resolvePageId } from './config/pages.js';
+import { PAGE_REGISTRY, resolveNavId, resolvePageId } from './config/pages.js';
 import { feedback } from './lib/feedback.js';
+import { readPreferences, writePreferences } from './lib/preferences.js';
+import { reconcileTransferTasks } from './lib/transferService.js';
+import { erpThemePresets } from './styles/tokens.js';
 import { WorkbenchPage } from './pages/WorkbenchPage.jsx';
 
 const DEFAULT_PAGE_ID = 'purchase-order';
 const DEFAULT_VIEW_ID = 'home';
 
+function resolvePreferredHome() {
+  const preferred = readPreferences().defaultHome;
+  if (preferred && preferred !== 'home' && PAGE_REGISTRY[preferred]) return preferred;
+  return null;
+}
+
 export function App() {
-  const [openTabs, setOpenTabs] = useState([DEFAULT_PAGE_ID]);
-  const [activeView, setActiveView] = useState(DEFAULT_VIEW_ID);
+  const [openTabs, setOpenTabs] = useState(() => {
+    const preferredHome = resolvePreferredHome();
+    return preferredHome ? [DEFAULT_PAGE_ID, preferredHome] : [DEFAULT_PAGE_ID];
+  });
+  const [activeView, setActiveView] = useState(() => resolvePreferredHome() ?? DEFAULT_VIEW_ID);
   const [pageContexts, setPageContexts] = useState({});
-  const [theme, setTheme] = useState('blue');
+  const [theme, setTheme] = useState(() => {
+    const stored = readPreferences().theme;
+    return erpThemePresets.some((preset) => preset.id === stored) ? stored : 'blue';
+  });
 
   const activePage = activeView === 'home' ? null : activeView;
   const activeTitle = activePage ? PAGE_REGISTRY[activePage]?.title : '工作台';
-  const activeNavItem = activePage?.startsWith('purchase-') ? 'purchase' : activePage ?? null;
+  const activeNavItem = activePage ? resolveNavId(activePage) : null;
 
   useEffect(() => {
     document.title = `强盛ERP - ${activeTitle}`;
   }, [activeTitle]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    writePreferences({ theme });
+  }, [theme]);
+
+  useEffect(() => {
+    reconcileTransferTasks();
+  }, []);
 
   function openPage(target, context) {
     const pageId = resolvePageId(target);
@@ -74,7 +98,7 @@ export function App() {
 
   return (
     <TooltipProvider delayDuration={300}>
-    <div data-theme={theme} className="app-shell flex h-screen min-w-[1180px] overflow-hidden bg-erp-surface font-sans text-erp-text">
+    <div className="app-shell flex h-screen min-w-[1180px] overflow-hidden bg-erp-surface font-sans text-erp-text">
       <Sidebar activeItem={activeNavItem} activePageId={activePage} onSelect={openPage} />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <TopHeader
@@ -84,6 +108,7 @@ export function App() {
           onTabClose={closeTab}
           onTabAction={handleTabAction}
           onAction={showFeedback}
+          onOpenPage={openPage}
           theme={theme}
           onThemeChange={setTheme}
         />
@@ -95,7 +120,7 @@ export function App() {
               const Page = PAGE_REGISTRY[pageId].component;
               return (
                 <div key={pageId} className={activeView === pageId ? 'flex h-full min-h-0 flex-col' : 'hidden'}>
-                  <Page onFeedback={showFeedback} onOpenPage={openPage} context={pageContexts[pageId]} />
+                  <Page onFeedback={showFeedback} onOpenPage={openPage} context={pageContexts[pageId]} theme={theme} onThemeChange={setTheme} />
                 </div>
               );
             })
