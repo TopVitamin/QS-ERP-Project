@@ -33,7 +33,7 @@ export function SelectContent({ className, children, position = 'popper', ...pro
       <SelectPrimitive.Content
         className={cn(
           'relative z-[100] max-h-72 overflow-hidden rounded-erp-overlay border border-erp-border-strong bg-erp-surface-panel text-erp-text shadow-erp-overlay',
-          position === 'popper' && 'w-[var(--radix-select-trigger-width)] translate-y-1',
+          position === 'popper' && 'w-max min-w-[var(--radix-select-trigger-width)] max-w-[min(560px,calc(100vw-24px))] translate-y-1',
           className,
         )}
         position={position}
@@ -42,7 +42,7 @@ export function SelectContent({ className, children, position = 'popper', ...pro
         <SelectPrimitive.Viewport
           className={cn(
             'p-1',
-            position === 'popper' && 'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]',
+            position === 'popper' && 'w-full min-w-[var(--radix-select-trigger-width)]',
           )}
         >
           {children}
@@ -56,7 +56,7 @@ export function SelectItem({ className, children, ...props }) {
   return (
     <SelectPrimitive.Item
       className={cn(
-        'relative flex h-7 w-full cursor-pointer select-none items-center rounded-erp-control px-2 pr-7 text-[12px] outline-none data-[highlighted]:bg-erp-primary-soft data-[highlighted]:text-erp-primary-hover data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+        'relative flex h-7 w-full cursor-pointer select-none items-center whitespace-nowrap rounded-erp-control px-2 pr-7 text-[12px] outline-none data-[highlighted]:bg-erp-primary-soft data-[highlighted]:text-erp-primary-hover data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
         className,
       )}
       {...props}

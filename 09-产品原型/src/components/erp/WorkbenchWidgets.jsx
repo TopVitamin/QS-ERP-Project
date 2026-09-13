@@ -17,9 +17,9 @@ const todoTones = {
   danger: 'bg-erp-danger-bg text-erp-danger',
 };
 const warningTones = {
-  primary: 'text-erp-primary',
-  warning: 'text-erp-warning',
-  danger: 'text-erp-danger',
+  primary: 'bg-erp-primary-soft text-erp-primary',
+  warning: 'bg-erp-warning-bg text-erp-warning',
+  danger: 'bg-erp-danger-bg text-erp-danger',
 };
 
 export function WorkbenchCard({ title, extra, children, className }) {
@@ -63,7 +63,7 @@ export function TodoBoard({ categories, activeCategory, onCategoryChange, onOpen
     <WorkbenchCard title="待办">
       <div className="flex h-9 items-center gap-4 border-b border-erp-border-light px-4">
         {Object.keys(categories).map((category) => (
-          <button key={category} type="button" className={cn('relative h-full text-[12px]', activeCategory === category ? 'font-medium text-erp-primary after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-erp-primary' : 'text-erp-text-muted hover:text-erp-text-section')} onClick={() => onCategoryChange(category)}>{category}</button>
+          <button key={category} type="button" className={cn('relative h-full text-[12px]', activeCategory === category ? 'font-medium text-erp-primary after:absolute after:-bottom-px after:left-0 after:right-0 after:h-0.5 after:bg-erp-primary' : 'text-erp-text hover:text-erp-primary')} onClick={() => onCategoryChange(category)}>{category}</button>
         ))}
       </div>
       <div className="grid grid-cols-2 gap-3 p-4 xl:grid-cols-4">
@@ -87,7 +87,7 @@ export function RealtimeOverview({ metrics }) {
       <div className="grid grid-cols-2 divide-x divide-erp-border-light px-1 py-4 xl:grid-cols-4">
         {metrics.map((metric) => (
           <div key={metric.label} className="min-w-0 px-4 first:pl-3 last:pr-3">
-            <p className="truncate text-[11px] text-erp-text-muted">{metric.label}</p>
+            <p className="truncate text-[11px] text-erp-text">{metric.label}</p>
             <p className="mt-2 truncate text-[18px] font-semibold text-erp-text-title">{metric.value}</p>
             <p className="mt-1 truncate text-[10px] text-erp-text-placeholder">{metric.description}</p>
           </div>
@@ -132,15 +132,15 @@ export function LineTrendChart({ data = [] }) {
     <div className="px-4 pb-3 pt-3">
       <div className="mb-1 flex items-baseline gap-2"><span className="text-[19px] font-semibold text-erp-text-title">¥138,000</span><span className="text-[11px] text-erp-success">本月累计 +18.4%</span></div>
       <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="h-[204px] w-full" role="img" aria-label="采购金额趋势折线图">
-        <defs><linearGradient id="purchase-trend-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#4d7ff2" stopOpacity="0.2" /><stop offset="100%" stopColor="#4d7ff2" stopOpacity="0.02" /></linearGradient></defs>
+        <defs><linearGradient id="purchase-trend-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" className="[stop-color:rgb(var(--erp-brand-500))]" stopOpacity="0.2" /><stop offset="100%" className="[stop-color:rgb(var(--erp-brand-500))]" stopOpacity="0.02" /></linearGradient></defs>
         {[0, 1, 2, 3].map((step) => {
           const y = pad.top + (step / 3) * chartHeight;
           const label = Math.round(maxValue - (step / 3) * maxValue);
-          return <g key={step}><line x1={pad.left} x2={width - pad.right} y1={y} y2={y} stroke="rgb(226 229 238)" strokeDasharray="3 4" /><text x={pad.left - 8} y={y + 4} textAnchor="end" fontSize="10" fill="rgb(145 151 169)">{label}</text></g>;
+          return <g key={step}><line x1={pad.left} x2={width - pad.right} y1={y} y2={y} stroke="rgb(226 229 238)" strokeDasharray="3 4" /><text x={pad.left - 8} y={y + 4} textAnchor="end" fontSize="10" fill="rgb(110 112 140)">{label}</text></g>;
         })}
         <polygon points={areaString} fill="url(#purchase-trend-fill)" />
-        <polyline points={pointString} fill="none" stroke="#4d7ff2" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />
-        {points.map((point) => <g key={point.label}><circle cx={point.x} cy={point.y} r="3.5" fill="#fff" stroke="#4d7ff2" strokeWidth="2" /><text x={point.x} y={height - 8} textAnchor="middle" fontSize="10" fill="rgb(145 151 169)">{point.label}</text></g>)}
+        <polyline points={pointString} fill="none" className="stroke-erp-primary" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />
+        {points.map((point) => <g key={point.label}><circle cx={point.x} cy={point.y} r="3.5" className="fill-erp-surface-panel stroke-erp-primary" strokeWidth="2" /><text x={point.x} y={height - 8} textAnchor="middle" fontSize="10" fill="rgb(110 112 140)">{point.label}</text></g>)}
       </svg>
     </div>
   );
@@ -150,7 +150,7 @@ export function WarningPanel({ warnings, onFeedback }) {
   return (
     <WorkbenchCard title="预警信息" extra={<button type="button" className="text-[11px] text-erp-primary hover:text-erp-primary-hover" onClick={() => onFeedback?.('预警中心将在后续模块接入')}>展开更多</button>}>
       <div className="divide-y divide-erp-border-light px-4">
-        {warnings.map((warning) => <button key={warning.label} type="button" className="flex h-9 w-full items-center gap-2 text-left hover:text-erp-primary" onClick={() => onFeedback?.(`${warning.label}将在后续模块接入`)}><span className={cn('w-7 text-right text-[15px] font-semibold', warningTones[warning.tone])}>{warning.count}</span><span className="min-w-0 flex-1 truncate text-[11px] text-erp-text-muted">{warning.label}</span><ArrowRight className="h-3.5 w-3.5 text-erp-text-placeholder" strokeWidth={1.8} /></button>)}
+        {warnings.map((warning) => <button key={warning.label} type="button" className="flex h-9 w-full items-center gap-2.5 text-left hover:text-erp-primary" onClick={() => onFeedback?.(`${warning.label}将在后续模块接入`)}><span className={cn('flex h-5 min-w-5 shrink-0 items-center justify-center rounded-erp-control px-1 text-[12px] font-semibold tabular-nums', warningTones[warning.tone])}>{warning.count}</span>          <span className="min-w-0 flex-1 truncate text-[11px] text-erp-text">{warning.label}</span><ArrowRight className="h-3.5 w-3.5 shrink-0 text-erp-placeholder" strokeWidth={1.8} /></button>)}
       </div>
     </WorkbenchCard>
   );
@@ -159,7 +159,13 @@ export function WarningPanel({ warnings, onFeedback }) {
 export function AnnouncementPanel({ announcements, onFeedback }) {
   return (
     <WorkbenchCard title="产品公告" extra={<button type="button" className="text-[11px] text-erp-primary" onClick={() => onFeedback?.('公告中心将在后续模块接入')}>更多</button>}>
-      <div className="space-y-3 px-4 py-4">{announcements.map((announcement) => <button key={announcement} type="button" className="block w-full text-left text-[11px] leading-5 text-erp-text-muted hover:text-erp-primary" onClick={() => onFeedback?.(announcement)}>{announcement}</button>)}</div>
+      <div className="divide-y divide-erp-border-light px-4">
+        {announcements.map((announcement) => (
+          <button key={announcement} type="button" className="flex min-h-9 w-full items-center py-2 text-left text-[11px] leading-5 text-erp-text hover:text-erp-primary" onClick={() => onFeedback?.(announcement)}>
+            <span className="min-w-0 flex-1">{announcement}</span>
+          </button>
+        ))}
+      </div>
     </WorkbenchCard>
   );
 }
@@ -167,7 +173,7 @@ export function AnnouncementPanel({ announcements, onFeedback }) {
 export function KnowledgePanel({ links, onFeedback }) {
   return (
     <WorkbenchCard title="知识中心" extra={<button type="button" className="text-[11px] text-erp-primary" onClick={() => onFeedback?.('知识中心将在后续模块接入')}>更多</button>}>
-      <div className="divide-y divide-erp-border-light px-4">{links.map((link) => <button key={link} type="button" className="flex h-9 w-full items-center justify-between text-left text-[11px] text-erp-text-muted hover:text-erp-primary" onClick={() => onFeedback?.(`${link}将在后续模块接入`)}><span className="truncate">{link}</span><ArrowRight className="h-3.5 w-3.5 shrink-0 text-erp-text-placeholder" strokeWidth={1.8} /></button>)}</div>
+      <div className="divide-y divide-erp-border-light px-4">{links.map((link) => <button key={link} type="button" className="flex h-9 w-full items-center justify-between text-left text-[11px] text-erp-text hover:text-erp-primary" onClick={() => onFeedback?.(`${link}将在后续模块接入`)}><span className="truncate">{link}</span><ArrowRight className="h-3.5 w-3.5 shrink-0 text-erp-text-muted" strokeWidth={1.8} /></button>)}</div>
     </WorkbenchCard>
   );
 }

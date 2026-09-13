@@ -44,7 +44,7 @@ export function DialogContent({ className, size = 'md', showClose = true, childr
               variant="ghost"
               size="icon"
               aria-label="关闭"
-              className="absolute right-3 top-3 h-7 w-7 text-erp-text-subtle hover:text-erp-text"
+              className="absolute right-3 top-3 h-7 w-7 text-erp-text-muted hover:text-erp-text"
             >
               <X className="h-4 w-4" strokeWidth={1.8} />
             </Button>

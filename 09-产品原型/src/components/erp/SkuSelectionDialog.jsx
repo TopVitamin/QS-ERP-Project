@@ -192,7 +192,7 @@ export function SkuSelectionDialog({
                   })}
                   {!pageOptions.length && (
                     <tr>
-                      <td colSpan="8" className="h-32 text-center text-[12px] text-erp-text-subtle">没有匹配的 SKU</td>
+                      <td colSpan="8" className="h-32 text-center text-[12px] text-erp-text-muted">没有匹配的 SKU</td>
                     </tr>
                   )}
                 </tbody>
@@ -224,11 +224,11 @@ export function SkuSelectionDialog({
                     <div className="truncate text-[12px] text-erp-text-section" title={option.productName}>{option.productName}</div>
                     <div className="mt-0.5 truncate text-[10px] text-erp-text-muted" title={option.skuCode}>{option.skuCode}</div>
                   </div>
-                  <button type="button" className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-erp-control text-erp-text-subtle opacity-0 transition-opacity hover:bg-erp-danger-bg hover:text-erp-danger group-hover:opacity-100" onClick={() => removeSelected(option.value)} aria-label={`取消选择${option.productName}（${option.skuCode}）`}>
+                  <button type="button" className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-erp-control text-erp-text-muted opacity-0 transition-opacity hover:bg-erp-danger-bg hover:text-erp-danger group-hover:opacity-100" onClick={() => removeSelected(option.value)} aria-label={`取消选择${option.productName}（${option.skuCode}）`}>
                     <X className="h-3.5 w-3.5" strokeWidth={1.8} />
                   </button>
                 </div>
-              )) : <div className="flex h-full items-center justify-center px-4 text-center text-[11px] text-erp-text-subtle">暂未选择 SKU</div>}
+              )) : <div className="flex h-full items-center justify-center px-4 text-center text-[11px] text-erp-text-muted">暂未选择 SKU</div>}
             </div>
           </aside>
         </div>

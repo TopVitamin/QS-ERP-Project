@@ -1,21 +1,16 @@
 import { DocumentFormPage } from '../components/erp/DocumentFormPage.jsx';
 import { calculateLineAmount } from '../lib/format.js';
+import { hasNegativePrice } from '../lib/validation.js';
+import { nextDocumentNo } from '../lib/documentNo.js';
 import { readMockRows, upsertMockRow } from '../lib/mockStorage.js';
+import { currencyOptions, employeeOptions, supplierOptions, warehouseOptions } from '../data/masterData.js';
 import {
   defaultInboundForm,
-  employeeOptions,
   getEditableInbound,
+  inboundTypeOptions,
   purchaseLineEditorOptions,
-  supplierOptions,
-  warehouseOptions,
 } from '../data/purchaseFormData.js';
 import { orders } from '../data/orderData.js';
-
-const inboundTypeOptions = [
-  { value: '采购入库', label: '采购入库' },
-  { value: '退货入库', label: '退货入库' },
-  { value: '其他入库', label: '其他入库' },
-];
 
 const orderStorageKey = 'qs-erp:purchase-orders:v1';
 
@@ -69,6 +64,7 @@ function buildInboundFormFields(orderOptions) {
       disabled: (form) => form.inboundType === '采购入库',
     },
     { key: 'warehouse', label: '入库仓库 *', type: 'select', options: warehouseOptions },
+    { key: 'currency', label: '币别 *', type: 'select', options: currencyOptions },
     { key: 'operator', label: '经办人 *', type: 'select', options: employeeOptions },
     { key: 'status', label: '入库状态', type: 'disabled' },
     { key: 'remark', label: '备注', type: 'textarea', className: 'col-span-3', placeholder: '填写收货、质检或差异说明' },
@@ -79,8 +75,7 @@ const inboundStorageKey = 'qs-erp:purchase-inbounds:v1';
 
 function prepareInboundForm(form) {
   if (form.inboundNo && form.inboundNo !== '保存后自动生成') return form;
-  const date = String(form.date || '20260819').replaceAll('-', '');
-  return { ...form, inboundNo: `CG入库-${date}-${String(Date.now()).slice(-5).padStart(5, '0')}` };
+  return { ...form, inboundNo: nextDocumentNo('CG入库', form.date || '20260819') };
 }
 
 function toInboundRow(form, { context }) {
@@ -92,6 +87,7 @@ function toInboundRow(form, { context }) {
     relatedOrderNo: form.relatedOrderNo,
     supplier: form.supplier,
     warehouse: form.warehouse,
+    currency: form.currency,
     inboundType: form.inboundType,
     status: form.status === '已入库' ? 'completed' : form.status === '部分入库' ? 'partial' : 'pending',
     operator: form.operator,
@@ -131,6 +127,9 @@ const inboundFormConfig = {
     }
     if (currentForm.lines.some((line) => !line.product || Number(line.quantity) <= 0 || Number(line.quantity) > Number(line.orderQuantity || Number.MAX_SAFE_INTEGER))) {
       return '请检查商品明细，入库数量不能超过可入库数量';
+    }
+    if (hasNegativePrice(currentForm.lines)) {
+      return '含税单价不能为负数';
     }
     return null;
   },

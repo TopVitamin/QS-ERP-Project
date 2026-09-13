@@ -49,7 +49,7 @@ export function FormField({ label, required, children, className, htmlFor, size 
   const tokens = getFieldSizeTokens(size);
 
   return (
-    <div className={cn('flex min-w-0 flex-col', tokens.gap, typography.labelMuted, className)}>
+    <div className={cn('flex min-w-0 flex-col', tokens.gap, 'text-erp-text', className)}>
       <FieldLabel label={label} required={required} htmlFor={htmlFor} size={size} />
       {children}
     </div>

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { DetailField, DocumentDetailFrame, EditorCard } from './DocumentDetailFrame.jsx';
 import { LineItemTable } from './LineItemTable.jsx';
 import { erpFieldGridClassName } from '../../styles/typography.js';
+import { currencySymbol } from '../../lib/money.js';
 
 function DetailFieldGrid({ fields }) {
   return (
@@ -44,7 +45,7 @@ export function DocumentDetailPage({ context, onOpenPage, config }) {
           editorOptions={config.lineEditorOptions}
           summary={{
             quantity: { label: config.summary.quantityLabel, value: totalQuantity },
-            amount: { label: config.summary.amountLabel, value: totalAmount, format: 'amount', prefix: '¥ ', emphasis: true },
+            amount: { label: config.summary.amountLabel, value: totalAmount, format: 'amount', prefix: `${currencySymbol(detail[config.currencyKey || 'currency'])} `, emphasis: true },
           }}
         />
       </EditorCard>

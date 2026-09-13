@@ -11,7 +11,7 @@ export function DropdownMenuContent({ className, sideOffset = 5, ...props }) {
       <DropdownMenuPrimitive.Content
         sideOffset={sideOffset}
         className={cn(
-          'z-[100] min-w-[148px] overflow-hidden rounded-erp-overlay border border-erp-border-strong bg-erp-surface-panel p-1 text-erp-text shadow-erp-overlay',
+          'z-[100] max-h-[min(420px,calc(100vh-24px))] min-w-[148px] overflow-y-auto rounded-erp-overlay border border-erp-border-strong bg-erp-surface-panel p-1 text-erp-text shadow-erp-overlay',
           className,
         )}
         {...props}
@@ -58,7 +58,7 @@ export function DropdownMenuSeparator({ className, ...props }) {
 }
 
 export function DropdownMenuLabel({ className, inset, ...props }) {
-  return <DropdownMenuPrimitive.Label className={cn('px-2 py-1.5 text-[11px] text-erp-text-subtle', inset && 'pl-8', className)} {...props} />;
+  return <DropdownMenuPrimitive.Label className={cn('px-2 py-1.5 text-[11px] text-erp-text-muted', inset && 'pl-8', className)} {...props} />;
 }
 
 export function DropdownMenuSub({ ...props }) {

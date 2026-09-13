@@ -7,10 +7,10 @@ const fieldControlBaseClassName =
   'flex w-full min-w-0 items-center gap-2 text-left outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-100';
 
 const fieldControlUnderlineClassName =
-  `${fieldControlBaseClassName} rounded-none border-x-0 border-t-0 border-b border-erp-border-control bg-transparent px-2.5 hover:border-b-erp-primary/70 focus-visible:border-b-erp-primary aria-expanded:border-b-erp-primary data-[state=open]:border-b-erp-primary disabled:border-b-erp-border-light disabled:bg-transparent disabled:text-erp-text-subtle`;
+  `${fieldControlBaseClassName} rounded-none border-x-0 border-t-0 border-b border-erp-border-control bg-transparent px-2.5 hover:border-b-erp-primary/70 focus-visible:border-b-erp-primary aria-expanded:border-b-erp-primary data-[state=open]:border-b-erp-primary disabled:border-b-erp-border-light disabled:bg-transparent disabled:text-erp-text-disabled`;
 
 const fieldControlBoxedClassName =
-  `${fieldControlBaseClassName} rounded-erp-control border border-erp-border-control bg-erp-surface-panel px-2.5 hover:border-erp-primary/70 focus-visible:border-erp-primary focus-visible:ring-1 focus-visible:ring-erp-primary/15 aria-expanded:border-erp-primary data-[state=open]:border-erp-primary disabled:border-erp-border-light disabled:bg-transparent disabled:text-erp-text-subtle`;
+  `${fieldControlBaseClassName} rounded-erp-control border border-erp-border-control bg-erp-surface-panel px-2.5 hover:border-erp-primary/70 focus-visible:border-erp-primary focus-visible:ring-1 focus-visible:ring-erp-primary/15 aria-expanded:border-erp-primary data-[state=open]:border-erp-primary disabled:border-erp-border-light disabled:bg-transparent disabled:text-erp-text-disabled`;
 
 /** @param {'compact' | 'comfortable'} [size] */
 export function getFieldControlClassName(size = 'compact', variant = 'underline') {
@@ -18,14 +18,11 @@ export function getFieldControlClassName(size = 'compact', variant = 'underline'
   return cn(variant === 'boxed' ? fieldControlBoxedClassName : fieldControlUnderlineClassName, tokens.control);
 }
 
-export const fieldControlClassName = getFieldControlClassName('compact');
-export const comfortableFieldControlClassName = getFieldControlClassName('comfortable');
-
 const affordanceClassName =
-  'absolute right-1.5 top-1 z-10 inline-flex size-5 items-center justify-center rounded-erp-control text-erp-text-subtle hover:bg-erp-primary-soft hover:text-erp-primary';
+  'absolute right-1.5 top-1 z-10 inline-flex size-5 items-center justify-center rounded-erp-control text-erp-text-muted hover:bg-erp-primary-soft hover:text-erp-primary';
 
 const localAffordanceButtonClassName =
-  'inline-flex size-5 items-center justify-center rounded-erp-control text-erp-text-subtle hover:bg-erp-primary-soft hover:text-erp-primary';
+  'inline-flex size-5 items-center justify-center rounded-erp-control text-erp-text-muted hover:bg-erp-primary-soft hover:text-erp-primary';
 
 /** 右侧交互区：选择框默认显示下拉箭头，hover 后再显示清除按钮。 */
 export function FieldAffordance({
@@ -86,7 +83,7 @@ export function FieldAffordance({
   }
 
   if (Icon) {
-    return <Icon className="pointer-events-none absolute right-2 top-1.5 size-3.5 shrink-0 text-erp-text-subtle" strokeWidth={2} />;
+    return <Icon className="pointer-events-none absolute right-2 top-1.5 size-3.5 shrink-0 text-erp-text-muted" strokeWidth={2} />;
   }
 
   if (showChevron) {

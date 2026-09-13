@@ -7,22 +7,22 @@ import {
   Home,
   LogOut,
   Search,
-  Settings2,
   Upload,
   UserRound,
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu.jsx';
+import { NotificationCenter } from './NotificationCenter.jsx';
 import { PageTabs } from './PageTabs.jsx';
 import { cn } from '../../lib/utils.js';
 import { erpThemePresets } from '../../styles/tokens.js';
 
-export function TopHeader({ tabs = [], activeView, onTabSelect, onTabClose, onTabAction, onAction, theme = 'blue', onThemeChange }) {
+export function TopHeader({ tabs = [], activeView, onTabSelect, onTabClose, onTabAction, onAction, onOpenPage, theme = 'blue', onThemeChange }) {
   function showAction(message) {
     onAction?.(message);
   }
 
   return (
-    <header className="flex h-12 shrink-0 items-stretch justify-between bg-[linear-gradient(105deg,#edf1f6_0%,#f4f0f8_58%,#f0eaf5_100%)] text-erp-text">
+    <header className="top-header-surface flex h-12 shrink-0 items-stretch justify-between text-erp-text">
       <div className="flex min-w-0 flex-1 items-stretch">
         <button
           type="button"
@@ -41,31 +41,38 @@ export function TopHeader({ tabs = [], activeView, onTabSelect, onTabClose, onTa
 
       <div className="flex shrink-0 items-center gap-1.5 px-3 text-[12px]">
         <button type="button" aria-label="全局搜索" className="flex h-7 w-7 items-center justify-center rounded-erp-control bg-erp-text-muted text-white hover:bg-erp-text" onClick={() => showAction('已打开全局搜索')}><Search className="h-4 w-4" /></button>
-        <div className="ml-0.5 flex items-center gap-1 border-l border-erp-border-strong pl-2 text-erp-text-muted">
-          <button type="button" aria-label="导入" title="导入" className="flex h-7 items-center gap-1 rounded-erp-control border-0 bg-transparent px-1.5 hover:text-erp-primary" onClick={() => showAction('已点击导入')}>
-            <Upload className="h-3.5 w-3.5" strokeWidth={1.8} />
-            <span>导入</span>
+        <div className="ml-0.5 flex items-center gap-1 border-l border-erp-border-strong pl-2 text-erp-text">
+          <button
+            type="button"
+            aria-label="导入中心"
+            title="导入中心"
+            className="flex h-7 w-7 items-center justify-center rounded-erp-control border-0 bg-transparent text-erp-text hover:text-erp-primary"
+            onClick={() => onOpenPage?.('import-center')}
+          >
+            <Upload className="h-4 w-4" strokeWidth={1.8} />
           </button>
-          <button type="button" aria-label="导出" title="导出" className="flex h-7 items-center gap-1 rounded-erp-control border-0 bg-transparent px-1.5 hover:text-erp-primary" onClick={() => showAction('已点击导出')}>
-            <Download className="h-3.5 w-3.5" strokeWidth={1.8} />
-            <span>导出</span>
+          <button
+            type="button"
+            aria-label="导出中心"
+            title="导出中心"
+            className="flex h-7 w-7 items-center justify-center rounded-erp-control border-0 bg-transparent text-erp-text hover:text-erp-primary"
+            onClick={() => onOpenPage?.('export-center')}
+          >
+            <Download className="h-4 w-4" strokeWidth={1.8} />
           </button>
-          <button type="button" aria-label="消息通知" title="消息通知" className="relative flex h-7 w-7 items-center justify-center rounded-erp-control border-0 bg-transparent text-erp-text-muted hover:text-erp-primary" onClick={() => showAction('已打开消息通知')}>
-            <Bell className="h-4 w-4" strokeWidth={1.8} />
-            <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-erp-danger" />
-          </button>
+          <NotificationCenter onAction={showAction} onOpenPage={onOpenPage} />
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button type="button" aria-label="个人中心" className="flex h-8 items-center gap-1.5 rounded-erp-control border-0 bg-transparent px-1 text-erp-text-muted hover:text-erp-primary">
+            <button type="button" aria-label="个人中心" className="flex h-8 items-center gap-1.5 rounded-erp-control border-0 bg-transparent px-1 text-erp-text hover:text-erp-primary">
               <div className="flex h-8 w-8 items-center justify-center"><UserAvatar /></div>
               <span className="text-[12px]">个人中心</span>
-              <ChevronDown className="h-3.5 w-3.5 text-erp-text-subtle" strokeWidth={2} />
+              <ChevronDown className="h-3.5 w-3.5 text-erp-text-muted" strokeWidth={2} />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-36">
-            <DropdownMenuItem onSelect={() => showAction('已打开个人中心')}><UserRound className="h-4 w-4 text-erp-primary" strokeWidth={1.8} /><span>个人中心</span></DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => showAction('已打开账号设置')}><Settings2 className="h-4 w-4 text-erp-primary" strokeWidth={1.8} /><span>账号设置</span></DropdownMenuItem>
+          <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuItem onSelect={() => onOpenPage?.('profile')}><UserRound className="h-4 w-4 text-erp-primary" strokeWidth={1.8} /><span>个人中心</span></DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => onOpenPage?.('notification-center')}><Bell className="h-4 w-4 text-erp-primary" strokeWidth={1.8} /><span>消息中心</span></DropdownMenuItem>
             <DropdownMenuSeparator />
             {erpThemePresets.map((preset) => (
               <DropdownMenuItem key={preset.id} onSelect={() => onThemeChange?.(preset.id)}>

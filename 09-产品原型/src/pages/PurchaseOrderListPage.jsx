@@ -1,10 +1,14 @@
-import { CircleCheck, Download, Plus, Printer, RefreshCw, Trash2, Upload } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { DocumentListPage } from '../components/erp/DocumentListPage.jsx';
+import { ImportExportActions } from '../components/erp/ImportExportActions.jsx';
+import { getTransferTarget } from '../lib/transferTargets.js';
 import { toSelectOptions } from '../lib/options.js';
+import { departmentOptions, employeeOptions, supplierOptions } from '../data/masterData.js';
+import { purchaseModeOptions } from '../data/purchaseFormData.js';
 import { orders, orderStatusLabels, tableColumns } from '../data/orderData.js';
 
 const initialFilters = {
-  date: '2026-08-18',
+  date: '',
   mode: '普通采购',
   supplier: [],
   settleSupplier: '',
@@ -20,13 +24,13 @@ const initialFilters = {
 
 const filterFields = [
   { key: 'date', label: '单据日期', type: 'date' },
-  { key: 'mode', label: '采购模式', type: 'select', options: [{ value: '普通采购', label: '普通采购' }, { value: '委外采购', label: '委外采购' }] },
-  { key: 'supplier', label: '供应商', type: 'multi-select', options: [{ value: '供应商10086', label: '供应商10086' }, { value: '土豆供应商', label: '土豆供应商' }, { value: '测试', label: '测试' }, { value: '中南批发商行', label: '中南批发商行' }, { value: '我是赠品2', label: '我是赠品2' }, { value: '订货散客', label: '订货散客' }] },
-  { key: 'settleSupplier', label: '结算供应商', type: 'select', options: [{ value: '供应商10086', label: '供应商10086' }, { value: '土豆供应商', label: '土豆供应商' }, { value: '测试', label: '测试' }] },
+  { key: 'mode', label: '采购模式', type: 'select', options: purchaseModeOptions },
+  { key: 'supplier', label: '供应商', type: 'multi-select', options: supplierOptions },
+  { key: 'settleSupplier', label: '结算供应商', type: 'select', options: supplierOptions },
   { key: 'keyword', label: '单据编号/供应商', type: 'search', placeholder: '输入单据编号或供应商' },
   { key: 'auditStatus', label: '审核状态', type: 'select', options: toSelectOptions(orderStatusLabels.auditStatus) },
-  { key: 'salesman', label: '业务员', type: 'select', options: [{ value: '韩佩奇HPQ', label: '韩佩奇HPQ' }, { value: '陈小梦CXM', label: '陈小梦CXM' }, { value: '李思乾LSQ', label: '李思乾LSQ' }, { value: '张廷ZT', label: '张廷ZT' }, { value: '李明', label: '李明' }] },
-  { key: 'department', label: '部门', type: 'select', options: [{ value: '工程一部', label: '工程一部' }, { value: '工程二部', label: '工程二部' }, { value: '工程四部', label: '工程四部' }] },
+  { key: 'salesman', label: '业务员', type: 'select', options: employeeOptions },
+  { key: 'department', label: '部门', type: 'select', options: departmentOptions },
   { key: 'executionStatus', label: '执行状态', type: 'select', options: toSelectOptions(orderStatusLabels.executionStatus) },
   { key: 'inboundStatus', label: '入库状态', type: 'select', options: toSelectOptions(orderStatusLabels.inboundStatus) },
   { key: 'closeStatus', label: '关闭状态', type: 'select', options: toSelectOptions(orderStatusLabels.closeStatus) },
@@ -40,7 +44,6 @@ const toolbarActions = [
   {
     id: 'approve',
     label: '审核',
-    icon: CircleCheck,
     requiresSelection: true,
     menuItems: [
       {
@@ -63,9 +66,9 @@ const toolbarActions = [
       },
     ],
   },
-  { id: 'delete', label: '删除', icon: Trash2, variant: 'danger', requiresSelection: true, confirm: { title: '确认删除选中的采购订单？', description: '删除后不会再出现在当前列表中，演示数据可以通过刷新页面恢复。', confirmLabel: '确认删除', confirmVariant: 'danger' } },
-  { id: 'print', label: '打印', icon: Printer, requiresSelection: true, menuItems: [{ id: 'print-list', label: '打印采购订单' }, { id: 'print-detail', label: '打印订单明细' }] },
-  { id: 'refresh', label: '更新', icon: RefreshCw },
+  { id: 'delete', label: '删除', variant: 'danger', requiresSelection: true, confirm: { title: '确认删除选中的采购订单？', description: '删除后不会再出现在当前列表中，演示数据可以通过刷新页面恢复。', confirmLabel: '确认删除', confirmVariant: 'danger' } },
+  { id: 'print', label: '打印', requiresSelection: true, menuItems: [{ id: 'print-list', label: '打印采购订单' }, { id: 'print-detail', label: '打印订单明细' }] },
+  { id: 'refresh', label: '更新' },
 ];
 
 function filterRows(row, filters) {
@@ -91,8 +94,7 @@ function handleHeaderAction(id, { notify, onOpenPage }) {
     onOpenPage?.('purchase-order-create');
     return;
   }
-  const messages = { create: '已打开新增采购订单', import: '已打开采购订单导入', export: '已导出当前采购订单' };
-  notify(messages[id] || id, 'info');
+  notify(id, 'info');
 }
 
 function handleToolbarAction(id, { state, notify, getSelectedRows, getSelectedIds }) {
@@ -186,7 +188,21 @@ const orderListConfig = {
   columns: tableColumns,
   columnOptions,
   filterFields,
-  headerActions: [{ id: 'create', label: '新增', icon: Plus, variant: 'primary' }, { id: 'import', label: '导入', icon: Upload }, { id: 'export', label: '导出', icon: Download }],
+  headerActions: [
+    { id: 'create', label: '新增', icon: Plus, variant: 'primary' },
+    {
+      id: 'import-export',
+      render: (ctx) => (
+        <ImportExportActions
+          target={getTransferTarget('purchase-order')}
+          scopeSource={{ all: ctx.state.rows, filtered: ctx.state.filteredRows, selected: ctx.getSelectedRows() }}
+          defaultColumnKeys={tableColumns.filter((column) => ctx.state.visibility[column.key] !== false).map((column) => column.key)}
+          notify={ctx.notify}
+          onOpenPage={ctx.onOpenPage}
+        />
+      ),
+    },
+  ],
   toolbarActions,
   rowActions: [
     { id: 'view', label: '查看' },

@@ -50,7 +50,7 @@ export function PageTabs({ tabs = [], activeView, onTabSelect, onTabClose, onTab
         <button
           type="button"
           aria-label="向左滚动标签页"
-          className="flex w-7 shrink-0 items-center justify-center border-r border-erp-border-light text-erp-text-subtle hover:bg-erp-surface-panel hover:text-erp-primary"
+          className="flex w-7 shrink-0 items-center justify-center border-r border-erp-border-light text-erp-text-muted hover:bg-erp-surface-panel hover:text-erp-primary"
           onClick={() => scrollTabs(-1)}
         >
           <ChevronLeft className="h-4 w-4" strokeWidth={1.8} />
@@ -91,7 +91,7 @@ export function PageTabs({ tabs = [], activeView, onTabSelect, onTabClose, onTab
                   aria-label={`关闭 ${tab.title}`}
                   className={cn(
                     'mr-1 self-center rounded-erp-control p-0.5 opacity-0 transition-all duration-150 group-hover:opacity-100 focus-visible:opacity-100',
-                    isActive ? 'text-erp-text-subtle hover:bg-erp-primary-soft hover:text-erp-primary' : 'text-erp-text-placeholder hover:bg-erp-surface-panel/70 hover:text-erp-text-muted',
+                    isActive ? 'text-erp-text-muted hover:bg-erp-primary-soft hover:text-erp-primary' : 'text-erp-text-placeholder hover:bg-erp-surface-panel/70 hover:text-erp-text-muted',
                   )}
                   onClick={() => onTabClose?.(tab.id)}
                 >
@@ -107,7 +107,7 @@ export function PageTabs({ tabs = [], activeView, onTabSelect, onTabClose, onTab
         <button
           type="button"
           aria-label="向右滚动标签页"
-          className="flex w-7 shrink-0 items-center justify-center border-l border-erp-border-light text-erp-text-subtle hover:bg-erp-surface-panel hover:text-erp-primary"
+          className="flex w-7 shrink-0 items-center justify-center border-l border-erp-border-light text-erp-text-muted hover:bg-erp-surface-panel hover:text-erp-primary"
           onClick={() => scrollTabs(1)}
         >
           <ChevronRight className="h-4 w-4" strokeWidth={1.8} />
@@ -121,7 +121,7 @@ export function PageTabs({ tabs = [], activeView, onTabSelect, onTabClose, onTab
               type="button"
               aria-label="查看全部标签页"
               title="查看全部标签页"
-              className="flex w-8 shrink-0 items-center justify-center border-l border-erp-border-light text-erp-text-subtle hover:bg-erp-surface-panel hover:text-erp-primary"
+              className="flex w-8 shrink-0 items-center justify-center border-l border-erp-border-light text-erp-text-muted hover:bg-erp-surface-panel hover:text-erp-primary"
             >
               <MoreHorizontal className="h-4 w-4" strokeWidth={1.8} />
             </button>

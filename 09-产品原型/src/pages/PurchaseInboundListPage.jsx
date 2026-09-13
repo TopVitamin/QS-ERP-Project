@@ -1,11 +1,15 @@
-import { CircleCheck, Download, PackageCheck, Plus, Printer, RefreshCw, Trash2, Upload, XCircle } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { DocumentListPage } from '../components/erp/DocumentListPage.jsx';
+import { ImportExportActions } from '../components/erp/ImportExportActions.jsx';
+import { getTransferTarget } from '../lib/transferTargets.js';
 import { toSelectOptions } from '../lib/options.js';
+import { employeeOptions, supplierOptions, warehouseOptions } from '../data/masterData.js';
+import { inboundTypeOptions } from '../data/purchaseFormData.js';
 import { inboundColumns, inboundOrders, inboundStatusLabels } from '../data/inboundData.js';
 import { orders } from '../data/orderData.js';
 
 const initialFilters = {
-  date: '2026-08-18',
+  date: '',
   warehouse: '',
   supplier: [],
   keyword: '',
@@ -16,22 +20,22 @@ const initialFilters = {
 
 const filterFields = [
   { key: 'date', label: '单据日期', type: 'date' },
-  { key: 'warehouse', label: '入库仓库', type: 'select', options: [{ value: '一号仓', label: '一号仓' }, { value: '二号仓', label: '二号仓' }, { value: '三号仓', label: '三号仓' }] },
-  { key: 'supplier', label: '供应商', type: 'multi-select', options: [{ value: '测试', label: '测试' }, { value: '土豆供应商', label: '土豆供应商' }, { value: '中南批发商行', label: '中南批发商行' }, { value: '订货散客', label: '订货散客' }, { value: '我是赠品2', label: '我是赠品2' }, { value: '供应商10086', label: '供应商10086' }, { value: '甲', label: '甲' }] },
+  { key: 'warehouse', label: '入库仓库', type: 'select', options: warehouseOptions },
+  { key: 'supplier', label: '供应商', type: 'multi-select', options: supplierOptions },
   { key: 'keyword', label: '入库单号/采购订单', type: 'search', placeholder: '输入单号或采购订单' },
   { key: 'status', label: '入库状态', type: 'select', options: toSelectOptions(inboundStatusLabels) },
-  { key: 'operator', label: '经办人', type: 'select', options: [{ value: '陈小梦CXM', label: '陈小梦CXM' }, { value: '李明', label: '李明' }, { value: '王芳', label: '王芳' }, { value: '张廷ZT', label: '张廷ZT' }] },
-  { key: 'inboundType', label: '入库类型', type: 'select', options: [{ value: '采购入库', label: '采购入库' }, { value: '退货入库', label: '退货入库' }, { value: '其他入库', label: '其他入库' }] },
+  { key: 'operator', label: '经办人', type: 'select', options: employeeOptions },
+  { key: 'inboundType', label: '入库类型', type: 'select', options: inboundTypeOptions },
 ];
 
 const initialVisibility = Object.fromEntries(inboundColumns.map((column) => [column.key, true]));
 const columnOptions = inboundColumns.map((column) => ({ key: column.key, label: column.label }));
 
 const toolbarActions = [
-  { id: 'confirm-inbound', label: '确认入库', icon: PackageCheck, requiresSelection: true, confirm: { title: '确认处理选中的入库单？', description: '确认后，选中的单据状态会变为已入库。', confirmLabel: '确认入库' } },
-  { id: 'void', label: '作废', icon: XCircle, variant: 'danger', requiresSelection: true, confirm: { title: '确认作废选中的入库单？', description: '作废后单据会从当前列表移除，演示数据可以通过刷新页面恢复。', confirmLabel: '确认作废', confirmVariant: 'danger' } },
-  { id: 'print', label: '打印', icon: Printer, requiresSelection: true, menuItems: [{ id: 'print-inbound', label: '打印入库单' }, { id: 'print-detail', label: '打印入库明细' }] },
-  { id: 'refresh', label: '更新', icon: RefreshCw },
+  { id: 'confirm-inbound', label: '确认入库', requiresSelection: true, confirm: { title: '确认处理选中的入库单？', description: '确认后，选中的单据状态会变为已入库。', confirmLabel: '确认入库' } },
+  { id: 'void', label: '作废', variant: 'danger', requiresSelection: true, confirm: { title: '确认作废选中的入库单？', description: '作废后单据会从当前列表移除，演示数据可以通过刷新页面恢复。', confirmLabel: '确认作废', confirmVariant: 'danger' } },
+  { id: 'print', label: '打印', requiresSelection: true, menuItems: [{ id: 'print-inbound', label: '打印入库单' }, { id: 'print-detail', label: '打印入库明细' }] },
+  { id: 'refresh', label: '更新' },
 ];
 
 function filterRows(row, filters) {
@@ -52,8 +56,7 @@ function handleHeaderAction(id, { notify, onOpenPage }) {
     onOpenPage?.('purchase-inbound-create');
     return;
   }
-  const messages = { create: '已打开新增采购入库单', import: '已打开采购入库单导入', export: '已导出当前采购入库单' };
-  notify(messages[id] || id, 'info');
+  notify(id, 'info');
 }
 
 function handleToolbarAction(id, { state, notify, getSelectedRows, getSelectedIds }) {
@@ -135,13 +138,27 @@ const inboundListConfig = {
   columns: inboundColumns,
   columnOptions,
   filterFields,
-  headerActions: [{ id: 'create', label: '新增', icon: Plus, variant: 'primary' }, { id: 'import', label: '导入', icon: Upload }, { id: 'export', label: '导出', icon: Download }],
+  headerActions: [
+    { id: 'create', label: '新增', icon: Plus, variant: 'primary' },
+    {
+      id: 'import-export',
+      render: (ctx) => (
+        <ImportExportActions
+          target={getTransferTarget('purchase-inbound')}
+          scopeSource={{ all: ctx.state.rows, filtered: ctx.state.filteredRows, selected: ctx.getSelectedRows() }}
+          defaultColumnKeys={inboundColumns.filter((column) => ctx.state.visibility[column.key] !== false).map((column) => column.key)}
+          notify={ctx.notify}
+          onOpenPage={ctx.onOpenPage}
+        />
+      ),
+    },
+  ],
   toolbarActions,
   rowActions: [
     { id: 'view', label: '查看' },
     { id: 'edit', label: '修改', visibleWhen: (row) => row.status !== 'completed' },
-    { id: 'confirm', label: '确认', icon: CircleCheck, visibleWhen: (row) => row.status !== 'completed', confirm: { title: '确认此采购入库单？', description: '确认后，入库单状态会更新为已入库。', confirmLabel: '确认入库' } },
-    { id: 'void', label: '作废', icon: Trash2, variant: 'danger', visibleWhen: (row) => row.status !== 'completed', confirm: { title: '确认作废此采购入库单？', description: '作废后该入库单会从当前列表移除。', confirmLabel: '确认作废', confirmVariant: 'danger' } },
+    { id: 'confirm', label: '确认', visibleWhen: (row) => row.status !== 'completed', confirm: { title: '确认此采购入库单？', description: '确认后，入库单状态会更新为已入库。', confirmLabel: '确认入库' } },
+    { id: 'void', label: '作废', variant: 'danger', visibleWhen: (row) => row.status !== 'completed', confirm: { title: '确认作废此采购入库单？', description: '作废后该入库单会从当前列表移除。', confirmLabel: '确认作废', confirmVariant: 'danger' } },
   ],
   resetMessage: '筛选条件已重置',
   queryMessage: '已执行采购入库单查询',

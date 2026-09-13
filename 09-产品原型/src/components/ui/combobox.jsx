@@ -84,8 +84,6 @@ export function Combobox({
   );
 }
 
-export const SearchableSelect = Combobox;
-
 export function MultiSelect({
   options = [],
   value = [],

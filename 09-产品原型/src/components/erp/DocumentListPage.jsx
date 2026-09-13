@@ -14,13 +14,38 @@ export function DocumentListPage({ onFeedback, onOpenPage, config }) {
     filterRows: config.filterRows,
     initialVisibility: config.initialVisibility,
     storageKey: config.storageKey,
+    columns: config.columns,
   });
+  const orderedColumns = useMemo(() => {
+    const byKey = new Map(config.columns.map((column) => [column.key, column]));
+    const order = [
+      ...state.columnOrder.filter((key) => state.pinnedKeys.includes(key)),
+      ...state.columnOrder.filter((key) => !state.pinnedKeys.includes(key)),
+    ];
+    const list = order.map((key) => byKey.get(key)).filter(Boolean);
+    for (const column of config.columns) {
+      if (!order.includes(column.key)) list.push(column);
+    }
+    return list;
+  }, [config.columns, state.columnOrder, state.pinnedKeys]);
   const visibleColumns = useMemo(
-    () => config.columns.filter((column) => state.visibility[column.key] !== false),
-    [config.columns, state.visibility],
+    () => orderedColumns.filter((column) => state.visibility[column.key] !== false),
+    [orderedColumns, state.visibility],
   );
   const { notify, getSelectedRows, getSelectedIds } = useListPageActions({ onFeedback, state });
   const actionContext = { state, notify, getSelectedRows, getSelectedIds, onFeedback, onOpenPage };
+  const tabs = useMemo(() => {
+    if (!config.tabs) return undefined;
+    const { filterKey, items } = config.tabs;
+    return {
+      items: items.map((item) => ({
+        ...item,
+        count: state.rows.filter((row) => !item.value || row[filterKey] === item.value).length,
+      })),
+      value: state.appliedFilters[filterKey] ?? '',
+      onChange: (value) => state.applyQuickFilter(filterKey, value),
+    };
+  }, [config.tabs, state.rows, state.appliedFilters, state.applyQuickFilter]);
 
   return (
     <ListPageFrame
@@ -39,14 +64,23 @@ export function DocumentListPage({ onFeedback, onOpenPage, config }) {
           notify(config.queryMessage || '查询已完成', 'success');
         },
         onAction: (id) => config.onHeaderAction?.(id, actionContext),
+        actionContext,
       }}
+      tabs={tabs}
       toolbar={{
         selectedCount: state.filteredSelectedIds.length,
         actions: config.toolbarActions,
         onAction: (id) => config.onToolbarAction?.(id, actionContext),
-        columnOptions: config.columnOptions,
-        columnVisibility: state.visibility,
-        onColumnVisibilityChange: state.setVisibility,
+        columnSettings: {
+          options: config.columnOptions,
+          visibility: state.visibility,
+          order: state.columnOrder,
+          pinnedKeys: state.pinnedKeys,
+          onToggle: state.setVisibility,
+          onPin: state.togglePin,
+          onReorder: state.setColumnOrder,
+          onReset: state.resetColumns,
+        },
       }}
       table={{
         rows: state.pageRows,
@@ -59,6 +93,9 @@ export function DocumentListPage({ onFeedback, onOpenPage, config }) {
         onCellClick: (column, row) => config.onCellClick?.(column, row, actionContext),
         onRowAction: (id, row) => config.onRowAction?.(id, row, actionContext),
         rowActions: config.rowActions,
+        sort: state.sort,
+        onSort: state.toggleSort,
+        pinnedKeys: state.pinnedKeys,
       }}
       pagination={{
         total: state.filteredRows.length,

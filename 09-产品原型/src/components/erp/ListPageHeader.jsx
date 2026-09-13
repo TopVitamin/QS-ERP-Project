@@ -22,7 +22,7 @@ function FilterToggle({ children, className, ...props }) {
   );
 }
 
-export function ListPageHeader({ title, actions = [], filters = [], filterValues, onFilterChange, onReset, onQuery, onAction, defaultOpen = true }) {
+export function ListPageHeader({ title, actions = [], filters = [], filterValues, onFilterChange, onReset, onQuery, onAction, actionContext, defaultOpen = true }) {
   const [filtersOpen, setFiltersOpen] = useState(defaultOpen);
 
   function updateFilter(key, value) {
@@ -30,6 +30,7 @@ export function ListPageHeader({ title, actions = [], filters = [], filterValues
   }
 
   function renderAction(action) {
+    if (action.render) return <span key={action.id}>{action.render(actionContext)}</span>;
     const Icon = action.icon;
     const actionButton = (
       <Button

@@ -23,6 +23,9 @@ function CalendarDayButton({ className, modifiers, ...props }) {
         'hover:bg-erp-primary-soft hover:text-erp-primary-hover',
         'focus-visible:ring-2 focus-visible:ring-erp-primary/30',
         isSelected && 'bg-erp-primary text-white hover:bg-erp-primary-hover hover:text-white',
+        modifiers.range_start && 'rounded-r-none rounded-l-erp-control bg-erp-primary text-white hover:bg-erp-primary hover:text-white',
+        modifiers.range_end && 'rounded-l-none rounded-r-erp-control bg-erp-primary text-white hover:bg-erp-primary hover:text-white',
+        modifiers.range_middle && 'rounded-none bg-erp-primary-soft text-erp-primary hover:bg-erp-primary-soft hover:text-erp-primary',
         modifiers.today && !isSelected && 'border border-erp-primary text-erp-primary',
         modifiers.outside && 'text-erp-text-placeholder',
         modifiers.disabled && 'cursor-not-allowed text-erp-border-control opacity-50',
@@ -64,7 +67,7 @@ export function Calendar({ className, classNames, showOutsideDays = true, ...pro
         month_grid: cn('w-full border-collapse', defaultClassNames.month_grid),
         weekdays: cn('flex', defaultClassNames.weekdays),
         weekday: cn(
-          'flex-1 select-none text-center text-[11px] font-normal text-erp-text-subtle',
+          'flex-1 select-none text-center text-[11px] font-normal text-erp-text-muted',
           defaultClassNames.weekday,
         ),
         week: cn('mt-1 flex w-full', defaultClassNames.week),

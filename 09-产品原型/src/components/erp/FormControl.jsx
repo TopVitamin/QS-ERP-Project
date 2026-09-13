@@ -37,12 +37,13 @@ export function FormControl({ field, value, form, onChange }) {
         value={value || ''}
         onChange={(event) => onChange(event.target.value)}
         placeholder={field.placeholder}
+        aria-label={ariaLabel}
       />
     );
   }
 
   if (field.type === 'disabled') {
-    return <Input value={field.value ?? value ?? field.fallbackValue ?? ''} disabled />;
+    return <Input value={field.value ?? value ?? field.fallbackValue ?? ''} disabled aria-label={ariaLabel} />;
   }
 
   return (
@@ -51,6 +52,7 @@ export function FormControl({ field, value, form, onChange }) {
       onChange={(event) => onChange(event.target.value)}
       placeholder={field.placeholder}
       disabled={typeof field.disabled === 'function' ? field.disabled(form) : field.disabled}
+      aria-label={ariaLabel}
     />
   );
 }

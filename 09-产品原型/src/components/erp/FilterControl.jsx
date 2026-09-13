@@ -1,7 +1,7 @@
-import { Search } from 'lucide-react';
 import { format, isValid, parseISO } from 'date-fns';
 import { Combobox, MultiSelect } from '../ui/combobox.jsx';
 import { DatePicker } from '../ui/date-picker.jsx';
+import { DateRangePicker } from '../ui/date-range-picker.jsx';
 import { ClearableInput } from '../ui/input.jsx';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group.jsx';
 import { SelectField } from '../ui/select-field.jsx';
@@ -13,6 +13,17 @@ function getSelectPlaceholder(field) {
 export function FilterControl({ field, value, onChange }) {
   const options = field.options || [];
   const selectPlaceholder = getSelectPlaceholder(field);
+
+  if (field.type === 'date-range') {
+    return (
+      <DateRangePicker
+        value={value && typeof value === 'object' ? value : { from: '', to: '' }}
+        onChange={onChange}
+        placeholder={field.placeholder || '请选择日期范围'}
+        ariaLabel={field.label}
+      />
+    );
+  }
 
   if (field.type === 'date') {
     return (
@@ -84,7 +95,6 @@ export function FilterControl({ field, value, onChange }) {
       onClear={() => onChange('')}
       aria-label={field.label}
       placeholder={field.placeholder}
-      trailingIcon={field.type === 'search' ? Search : undefined}
     />
   );
 }

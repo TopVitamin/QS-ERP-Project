@@ -1,27 +1,13 @@
-/** Theme metadata and semantic shape names used by the ERP UI. */
+/** Theme presets used by the ERP UI. */
 export const erpThemePresets = [
-  { id: 'blue', label: '蓝色' },
-  { id: 'green', label: '绿色' },
-  { id: 'violet', label: '紫色' },
+  { id: 'blue', label: '精工蓝' },
+  { id: 'indigo', label: '靛青' },
+  { id: 'cyan', label: '天青' },
+  { id: 'teal', label: '竹青' },
+  { id: 'green', label: '松绿' },
+  { id: 'gold', label: '鎏金' },
+  { id: 'orange', label: '琥珀' },
+  { id: 'red', label: '朱砂' },
+  { id: 'violet', label: '紫檀' },
+  { id: 'graphite', label: '石墨' },
 ];
-
-export const erpRadius = {
-  control: 'var(--erp-radius-control)',
-  section: 'var(--erp-radius-section)',
-  overlay: 'var(--erp-radius-overlay)',
-  dialog: 'var(--erp-radius-dialog)',
-  status: 'var(--erp-radius-status)',
-};
-
-export const erpShadow = {
-  overlay: 'var(--erp-shadow-overlay)',
-  dialog: 'var(--erp-shadow-dialog)',
-  flyout: 'var(--erp-shadow-flyout)',
-};
-
-export const erpSurface = {
-  page: 'bg-erp-surface',
-  card: 'bg-erp-surface-panel border-erp-border-card',
-  tableHead: 'bg-erp-surface-table-head',
-  summary: 'bg-erp-surface-muted border-t border-erp-border-header',
-};

@@ -1,20 +1,16 @@
 import { DocumentFormPage } from '../components/erp/DocumentFormPage.jsx';
 import { calculateLineAmount } from '../lib/format.js';
+import { hasNegativePrice } from '../lib/validation.js';
+import { nextDocumentNo } from '../lib/documentNo.js';
 import { upsertMockRow } from '../lib/mockStorage.js';
+import { currencyOptions, departmentOptions, employeeOptions, supplierOptions } from '../data/masterData.js';
 import {
-  departmentOptions,
   defaultOrderForm,
-  employeeOptions,
   getEditableOrder,
   paymentTermOptions,
   purchaseLineEditorOptions,
-  supplierOptions,
+  purchaseModeOptions,
 } from '../data/purchaseFormData.js';
-
-const modeOptions = [
-  { value: '普通采购', label: '普通采购' },
-  { value: '委外采购', label: '委外采购' },
-];
 
 function getInitialForm(mode, context) {
   const source = mode === 'edit' ? getEditableOrder(context?.row) : defaultOrderForm;
@@ -56,10 +52,11 @@ function createOrderLineFromSku(sku, template) {
 const orderFormFields = [
   { key: 'orderNo', label: '单据编号', type: 'disabled' },
   { key: 'date', label: '单据日期 *', type: 'date' },
-  { key: 'mode', label: '采购模式 *', type: 'select', options: modeOptions },
+  { key: 'mode', label: '采购模式 *', type: 'select', options: purchaseModeOptions },
   { key: 'supplier', label: '供应商 *', type: 'select', options: supplierOptions },
   { key: 'settleSupplier', label: '结算供应商', type: 'select', options: supplierOptions },
   { key: 'settlePeriod', label: '结算期限', type: 'select', options: paymentTermOptions },
+  { key: 'currency', label: '币别 *', type: 'select', options: currencyOptions },
   { key: 'salesman', label: '业务员', type: 'select', options: employeeOptions },
   { key: 'department', label: '部门', type: 'select', options: departmentOptions },
   { key: 'deliveryDate', label: '预计交货日期', type: 'date' },
@@ -72,8 +69,7 @@ const orderStorageKey = 'qs-erp:purchase-orders:v1';
 
 function prepareOrderForm(form) {
   if (form.orderNo && form.orderNo !== '保存后自动生成') return form;
-  const date = String(form.date || '20260819').replaceAll('-', '');
-  return { ...form, orderNo: `CGDD-${date}-${String(Date.now()).slice(-5).padStart(5, '0')}` };
+  return { ...form, orderNo: nextDocumentNo('CGDD', form.date || '20260819') };
 }
 
 function toOrderRow(form, { context }) {
@@ -86,6 +82,7 @@ function toOrderRow(form, { context }) {
     supplier: form.supplier,
     settleSupplier: form.settleSupplier,
     settlePeriod: form.settlePeriod,
+    currency: form.currency,
     salesman: form.salesman,
     department: form.department,
     remark: form.remark,
@@ -128,6 +125,9 @@ const orderFormConfig = {
   validate: (currentForm) => {
     if (!currentForm.supplier || !currentForm.date || currentForm.lines.some((line) => !line.product || Number(line.quantity) <= 0)) {
       return '请补充供应商、单据日期和有效的商品明细';
+    }
+    if (hasNegativePrice(currentForm.lines)) {
+      return '含税单价不能为负数';
     }
     return null;
   },

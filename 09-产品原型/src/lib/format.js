@@ -9,3 +9,9 @@ export function calculateLineAmount(line) {
 export function productLabel(value, options = []) {
   return options.find((option) => option.value === value)?.label || value || '—';
 }
+
+export function formatDateTime(value = new Date()) {
+  const date = value instanceof Date ? value : new Date(value);
+  const pad = (number) => String(number).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}

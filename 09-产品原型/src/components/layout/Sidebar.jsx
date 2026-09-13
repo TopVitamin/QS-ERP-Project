@@ -9,14 +9,16 @@ import {
   Wrench,
 } from 'lucide-react';
 import { NavigationFlyout, getNavigationFlyoutLayout } from './NavigationFlyout.jsx';
+import { baseDataGroups } from './BaseDataFlyout.jsx';
 import { purchaseGroups } from './PurchaseFlyout.jsx';
+import { systemGroups } from './SystemFlyout.jsx';
 
 export const defaultNavItems = [
   { id: 'purchase', label: '采购管理', icon: ShoppingCart, groups: purchaseGroups },
   { id: 'sales', label: '销售管理', icon: BarChart3 },
   { id: 'inventory', label: '库存管理', icon: Warehouse },
-  { id: 'settings', label: '系统设置', icon: FileCog },
-  { id: 'base', label: '基础资料', icon: PackageOpen },
+  { id: 'settings', label: '系统设置', icon: FileCog, groups: systemGroups },
+  { id: 'base', label: '基础资料', icon: PackageOpen, groups: baseDataGroups },
   { id: 'custom', label: '自定义中心', icon: Wrench },
 ];
 
@@ -39,7 +41,7 @@ export function Sidebar({ activeItem, activePageId, onSelect, items = defaultNav
       className={`sidebar-shell relative z-40 flex h-screen shrink-0 flex-col overflow-visible border-r border-erp-sidebar-border text-erp-sidebar-text ${collapsed ? 'w-[52px]' : 'w-[141px]'}`}
       onMouseLeave={() => setOpenFlyout(false)}
     >
-      <div className={`relative flex h-12 shrink-0 items-center overflow-hidden bg-erp-sidebar-brand ${collapsed ? 'justify-center px-0' : 'px-3'}`}>
+      <div className={`relative flex h-12 shrink-0 items-center overflow-hidden ${collapsed ? 'justify-center px-0' : 'px-3'}`}>
         <div className={`grid h-6 w-6 shrink-0 grid-cols-2 grid-rows-2 gap-1 ${collapsed ? '' : 'mr-2'}`}>
           <span className="rounded-full bg-[#0da5ef]" />
           <span className="rounded-full bg-[#2379e5]" />
@@ -63,7 +65,7 @@ export function Sidebar({ activeItem, activePageId, onSelect, items = defaultNav
               type="button"
               aria-current={isActive ? 'page' : undefined}
               aria-label={label}
-              className={`group relative flex h-10 w-full items-center text-left text-[13px] ${collapsed ? 'justify-center' : 'px-2'}`}
+              className={`group relative flex h-[38px] w-full items-center text-left text-[12.5px] ${collapsed ? 'justify-center' : 'px-2'}`}
               title={collapsed ? label : undefined}
               onMouseEnter={hasSubmenu ? (event) => showNavigationMenu(event, groups) : undefined}
               onFocus={hasSubmenu ? (event) => showNavigationMenu(event, groups) : undefined}
@@ -75,11 +77,11 @@ export function Sidebar({ activeItem, activePageId, onSelect, items = defaultNav
               <span
                 className={`flex h-8 min-w-0 items-center rounded-erp-section ${collapsed ? 'w-8 justify-center' : 'flex-1 gap-2 px-3'} ${
                   isActive
-                    ? 'bg-erp-sidebar-active-bg font-medium text-erp-primary'
+                    ? 'bg-erp-sidebar-active-solid font-medium text-white'
                     : 'text-erp-sidebar-text hover:bg-erp-sidebar-hover-bg hover:text-erp-sidebar-active-text'
                 }`}
               >
-                <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-erp-primary' : 'text-erp-sidebar-icon group-hover:text-erp-sidebar-active-text'}`} strokeWidth={1.8} />
+                <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-white' : 'text-erp-sidebar-icon group-hover:text-erp-sidebar-active-text'}`} strokeWidth={1.8} />
                 {!collapsed && <span className="truncate whitespace-nowrap">{label}</span>}
                 {hasSubmenu && !collapsed && !isActive && <span className="ml-auto text-erp-sidebar-text/80">›</span>}
               </span>

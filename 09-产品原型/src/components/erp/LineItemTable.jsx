@@ -5,17 +5,17 @@ import { Input } from '../ui/input.jsx';
 import { SelectField } from '../ui/select-field.jsx';
 import { calculateLineAmount, formatAmount, productLabel } from '../../lib/format.js';
 import { FieldAffordance, FieldTrigger } from '../ui/field.jsx';
-import { FieldLabelContent } from '../ui/form-field.jsx';
+import { FieldLabelContent, parseFieldLabel } from '../ui/form-field.jsx';
 import { cn } from '../../lib/utils.js';
 import { DocumentSummaryBar } from './DocumentSummaryBar.jsx';
 import { SkuSelectionDialog } from './SkuSelectionDialog.jsx';
 
 const tableShellClassName = 'overflow-x-auto';
 const tableClassName = 'w-full table-fixed border-collapse text-left text-[12px]';
-const theadClassName = 'h-9 border-b border-erp-border-table-header bg-erp-surface-table-head text-erp-text-section';
+const theadClassName = 'h-7 border-b border-erp-border-table-header bg-erp-surface-table-head text-erp-text-section';
 const thClassName = 'border-r border-erp-border-table-column px-2 font-normal last:border-r-0';
-const rowClassName = 'h-12 border-b border-erp-border-table-row even:bg-erp-surface-table-zebra';
-const tdClassName = 'border-r border-erp-border-table-column last:border-r-0';
+const rowClassName = 'h-8 border-b border-erp-border-table-row';
+const tdClassName = 'border-r border-erp-border-table-column align-middle last:border-r-0';
 const cellPaddingClassName = 'px-1.5';
 const readCellClassName = 'px-2';
 
@@ -94,10 +94,11 @@ const emptyEditorOptions = {
 
 function renderEditCell({ column, line, index, onLineChange, onLineRemove, onProductSelect, skuPickerEnabled, editorOptions }) {
   const rowLabel = `第${index + 1}行`;
+  const cellLabel = `${rowLabel}${parseFieldLabel(column.label).text}`;
 
   switch (column.key) {
     case 'index':
-      return <span className="text-erp-text-subtle">{index + 1}</span>;
+      return <span className="text-erp-text-muted">{index + 1}</span>;
     case 'product':
       if (skuPickerEnabled && editorOptions.skuOptions?.length) {
         return (
@@ -124,7 +125,7 @@ function renderEditCell({ column, line, index, onLineChange, onLineRemove, onPro
         />
       );
     case 'spec':
-      return <Input variant="boxed" value={line.spec} onChange={(event) => onLineChange(line.id, 'spec', event.target.value)} placeholder="规格型号" />;
+      return <Input variant="boxed" value={line.spec} onChange={(event) => onLineChange(line.id, 'spec', event.target.value)} placeholder="规格型号" aria-label={cellLabel} />;
     case 'unit':
       return (
         <SelectField
@@ -145,11 +146,12 @@ function renderEditCell({ column, line, index, onLineChange, onLineRemove, onPro
           value={line.quantity}
           onChange={(event) => onLineChange(line.id, 'quantity', event.target.value)}
           className="text-right"
+          aria-label={cellLabel}
         />
       );
     case 'orderQuantity':
     case 'received':
-      return <span className="text-erp-text-subtle">{line[column.key] || 0}</span>;
+      return <span className="text-erp-text-muted">{line[column.key] || 0}</span>;
     case 'price':
       return (
         <Input
@@ -160,6 +162,7 @@ function renderEditCell({ column, line, index, onLineChange, onLineRemove, onPro
           value={line.price}
           onChange={(event) => onLineChange(line.id, 'price', event.target.value)}
           className="text-right"
+          aria-label={cellLabel}
         />
       );
     case 'taxRate':
@@ -175,7 +178,7 @@ function renderEditCell({ column, line, index, onLineChange, onLineRemove, onPro
     case 'amount':
       return <span className="font-medium text-erp-text-section">{formatAmount(calculateLineAmount(line))}</span>;
     case 'remark':
-      return <Input variant="boxed" value={line.remark} onChange={(event) => onLineChange(line.id, 'remark', event.target.value)} placeholder="—" />;
+      return <Input variant="boxed" value={line.remark} onChange={(event) => onLineChange(line.id, 'remark', event.target.value)} placeholder="—" aria-label={cellLabel} />;
     case 'actions':
       return (
         <Button variant="danger" size="icon" aria-label={`删除${rowLabel}`} title="删除明细" onClick={() => onLineRemove(line.id)}>
@@ -269,7 +272,7 @@ export function LineItemTable({
                       alignClassName(column.align),
                       isEditableCell ? cellPaddingClassName : readCellClassName,
                       column.key === 'product' && !isEdit && 'text-erp-text',
-                      column.muted && 'text-erp-text-subtle',
+                      column.muted && 'text-erp-text-muted',
                       column.key === 'amount' && 'font-medium text-erp-text-section',
                     )}
                   >

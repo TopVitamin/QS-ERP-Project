@@ -43,12 +43,13 @@ export const orderStatusLabels = {
 };
 
 export const tableColumns = [
-  { key: 'date', label: '单据日期', defaultWidth: 112, minWidth: 96, maxWidth: 160, ellipsis: true },
+  { key: 'date', label: '单据日期', defaultWidth: 112, minWidth: 96, maxWidth: 160, ellipsis: true, sortable: true },
   { key: 'mode', label: '业务模式', defaultWidth: 100, minWidth: 88, maxWidth: 160, ellipsis: true },
   { key: 'orderNo', label: '单据编号', defaultWidth: 200, minWidth: 160, maxWidth: 280, ellipsis: true, link: true },
   { key: 'supplier', label: '供应商', defaultWidth: 200, minWidth: 120, maxWidth: 280, ellipsis: true },
   { key: 'settleSupplier', label: '结算供应商', defaultWidth: 200, minWidth: 120, maxWidth: 280, ellipsis: true },
   { key: 'settlePeriod', label: '结算期限', defaultWidth: 120, minWidth: 88, maxWidth: 160, ellipsis: true },
+  { key: 'currency', label: '币别', defaultWidth: 90, minWidth: 76, maxWidth: 130, ellipsis: true, render: (value) => value || '人民币' },
   { key: 'salesman', label: '业务员', defaultWidth: 160, minWidth: 100, maxWidth: 220, ellipsis: true },
   { key: 'department', label: '部门', defaultWidth: 160, minWidth: 100, maxWidth: 220, ellipsis: true },
   { key: 'auditStatus', label: '审核状态', defaultWidth: 100, minWidth: 96, maxWidth: 180, ellipsis: true, render: (value) => orderStatusLabels.auditStatus[value], tone: (value) => value === 'pending' ? 'text-erp-warning' : 'text-erp-success' },
@@ -56,6 +57,6 @@ export const tableColumns = [
   { key: 'inboundStatus', label: '入库状态', defaultWidth: 100, minWidth: 96, maxWidth: 180, ellipsis: true, render: (value) => orderStatusLabels.inboundStatus[value], tone: (value) => value === 'not_received' ? 'text-erp-warning' : value === 'partial' ? 'text-erp-info' : 'text-erp-success' },
   { key: 'closeStatus', label: '关闭状态', defaultWidth: 100, minWidth: 96, maxWidth: 180, ellipsis: true, render: (value) => orderStatusLabels.closeStatus[value], tone: (value) => value === 'open' ? 'text-erp-warning' : 'text-erp-success' },
   { key: 'paymentStatus', label: '订单付款状态', defaultWidth: 110, minWidth: 96, maxWidth: 200, ellipsis: true, render: (value) => orderStatusLabels.paymentStatus[value], tone: (value) => value === 'unpaid' ? 'text-erp-warning' : value === 'partial' ? 'text-erp-info' : 'text-erp-success' },
-  { key: 'amount', label: '成交金额', defaultWidth: 148, minWidth: 120, maxWidth: 200, ellipsis: true, align: 'right', render: (value) => value ? value.toLocaleString('zh-CN', { minimumFractionDigits: 2 }) : '' },
-  { key: 'executedAmount', label: '已执行金额', defaultWidth: 148, minWidth: 120, maxWidth: 200, ellipsis: true, align: 'right', render: (value) => value ? value.toLocaleString('zh-CN', { minimumFractionDigits: 2 }) : '' },
+  { key: 'amount', label: '成交金额', defaultWidth: 148, minWidth: 120, maxWidth: 200, ellipsis: true, align: 'right', sortable: true, render: (value) => value ? value.toLocaleString('zh-CN', { minimumFractionDigits: 2 }) : '' },
+  { key: 'executedAmount', label: '已执行金额', defaultWidth: 148, minWidth: 120, maxWidth: 200, ellipsis: true, align: 'right', sortable: true, render: (value) => value ? value.toLocaleString('zh-CN', { minimumFractionDigits: 2 }) : '' },
 ];

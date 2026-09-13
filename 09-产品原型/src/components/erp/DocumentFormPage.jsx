@@ -5,6 +5,7 @@ import { LineItemTable } from './LineItemTable.jsx';
 import { Button } from '../ui/button.jsx';
 import { erpFieldGridClassName } from '../../styles/typography.js';
 import { useDocumentForm } from '../../hooks/useDocumentForm.js';
+import { currencySymbol } from '../../lib/money.js';
 
 /**
  * 配置驱动的单据新增/编辑页。
@@ -85,7 +86,7 @@ export function DocumentFormPage({ mode = 'create', context, onFeedback, onOpenP
           editorOptions={config.lineEditorOptions}
           summary={{
             quantity: { label: config.summary.quantityLabel, value: totalQuantity },
-            amount: { label: config.summary.amountLabel, value: totalAmount, format: 'amount', prefix: '¥ ', emphasis: true },
+            amount: { label: config.summary.amountLabel, value: totalAmount, format: 'amount', prefix: `${currencySymbol(form[config.currencyKey || 'currency'])} `, emphasis: true },
           }}
         />
       </EditorCard>

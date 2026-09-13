@@ -7,8 +7,6 @@
 
 /** @typedef {'compact' | 'comfortable'} FieldSize */
 
-export const FIELD_SIZES = /** @type {const} */ (['compact', 'comfortable']);
-
 const fieldSizeTokens = {
   compact: {
     label: 'text-[12px] leading-5',
@@ -43,7 +41,7 @@ export function getFieldSizeTokens(size = 'compact') {
 export const typography = {
   pageTitle: 'text-erp-page-title font-medium leading-none text-erp-text-title',
   docTitle: 'text-erp-doc-title font-medium leading-none text-erp-text-title',
-  sectionTitle: 'text-erp-section-title font-medium leading-5 text-erp-text-section',
+  sectionTitle: 'text-erp-section-title font-normal leading-6 text-erp-text-section',
   body: 'text-erp-compact',
   caption: 'text-erp-caption leading-4',
   tab: 'text-erp-tab',

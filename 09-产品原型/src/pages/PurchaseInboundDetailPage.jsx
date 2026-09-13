@@ -41,6 +41,7 @@ const inboundDetailConfig = {
     { key: 'relatedOrderNo', label: '关联采购订单', value: detail.relatedOrderNo },
     { key: 'supplier', label: '供应商', value: detail.supplier },
     { key: 'warehouse', label: '入库仓库', value: detail.warehouse },
+    { key: 'currency', label: '币别', value: detail.currency || '人民币' },
     { key: 'operator', label: '经办人', value: detail.operator },
     { key: 'status', label: '入库状态', value: status },
     { key: 'remark', label: '备注', value: detail.remark, className: 'col-span-3' },

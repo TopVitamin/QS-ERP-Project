@@ -7,6 +7,7 @@ export { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 export { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from './context-menu.jsx';
 export { Calendar } from './calendar.jsx';
 export { DatePicker } from './date-picker.jsx';
+export { DateRangePicker } from './date-range-picker.jsx';
 export { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogOverlay, DialogPortal, DialogTitle, DialogTrigger, SimpleDialog } from './dialog.jsx';
 export { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuTrigger } from './dropdown-menu.jsx';
 export { DetailField, FieldLabel, FieldLabelContent, FormField, parseFieldLabel } from './form-field.jsx';

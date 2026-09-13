@@ -18,14 +18,15 @@ export const inboundOrders = seedInboundOrders.map((row, index) => ({ id: `inbou
 export const inboundStatusLabels = { pending: '待入库', partial: '部分入库', completed: '已入库' };
 
 export const inboundColumns = [
-  { key: 'date', label: '单据日期', defaultWidth: 112, minWidth: 96, maxWidth: 160, ellipsis: true },
+  { key: 'date', label: '单据日期', defaultWidth: 112, minWidth: 96, maxWidth: 160, ellipsis: true, sortable: true },
   { key: 'inboundNo', label: '入库单号', defaultWidth: 210, minWidth: 180, maxWidth: 300, ellipsis: true, link: true },
   { key: 'relatedOrderNo', label: '关联采购订单', defaultWidth: 200, minWidth: 160, maxWidth: 280, ellipsis: true, link: true },
   { key: 'supplier', label: '供应商', defaultWidth: 180, minWidth: 120, maxWidth: 280, ellipsis: true },
+  { key: 'currency', label: '币别', defaultWidth: 88, minWidth: 76, maxWidth: 130, ellipsis: true, render: (value) => value || '人民币' },
   { key: 'warehouse', label: '入库仓库', defaultWidth: 130, minWidth: 96, maxWidth: 180, ellipsis: true },
   { key: 'inboundType', label: '入库类型', defaultWidth: 120, minWidth: 96, maxWidth: 180, ellipsis: true },
   { key: 'status', label: '入库状态', defaultWidth: 110, minWidth: 96, maxWidth: 180, ellipsis: true, render: (value) => inboundStatusLabels[value], tone: (value) => value === 'pending' ? 'text-erp-warning' : value === 'partial' ? 'text-erp-info' : 'text-erp-success' },
   { key: 'operator', label: '经办人', defaultWidth: 150, minWidth: 100, maxWidth: 200, ellipsis: true },
-  { key: 'quantity', label: '入库数量', defaultWidth: 120, minWidth: 96, maxWidth: 180, ellipsis: true, align: 'right' },
-  { key: 'amount', label: '入库金额', defaultWidth: 148, minWidth: 120, maxWidth: 200, ellipsis: true, align: 'right', render: (value) => value ? value.toLocaleString('zh-CN', { minimumFractionDigits: 2 }) : '' },
+  { key: 'quantity', label: '入库数量', defaultWidth: 120, minWidth: 96, maxWidth: 180, ellipsis: true, align: 'right', sortable: true },
+  { key: 'amount', label: '入库金额', defaultWidth: 148, minWidth: 120, maxWidth: 200, ellipsis: true, align: 'right', sortable: true, render: (value) => value ? value.toLocaleString('zh-CN', { minimumFractionDigits: 2 }) : '' },
 ];

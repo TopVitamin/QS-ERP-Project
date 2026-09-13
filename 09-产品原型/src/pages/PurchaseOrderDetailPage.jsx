@@ -42,6 +42,7 @@ const orderDetailConfig = {
     { key: 'supplier', label: '供应商', value: detail.supplier },
     { key: 'settleSupplier', label: '结算供应商', value: detail.settleSupplier },
     { key: 'settlePeriod', label: '结算期限', value: detail.settlePeriod },
+    { key: 'currency', label: '币别', value: detail.currency || '人民币' },
     { key: 'salesman', label: '业务员', value: detail.salesman },
     { key: 'department', label: '部门', value: detail.department },
     { key: 'deliveryDate', label: '预计交货日期', value: detail.deliveryDate },
