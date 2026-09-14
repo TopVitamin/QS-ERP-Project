@@ -6,6 +6,9 @@ dist/
 build/
 *.local
 
+# Prototype review screenshots (kept locally, not a deliverable)
+.openchamber/
+
 # Vite
 .vite/
 
