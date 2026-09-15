@@ -31,7 +31,7 @@
 1. 在 `src/data/` 加数据文件：列定义、状态字典、种子数据（参考 `orderData.js`、`inboundData.js`）。
 2. 加三个配置页：列表／表单／详情（参考 `PurchaseOrder*` 三个页面；单号生成用 `lib/documentNo.js`，校验用 `lib/validation.js`）。
 3. 在 `src/config/pages.js` 注册页面，标 `navId`（侧边栏高亮用）。
-4. 在 `Sidebar.jsx` 的 `defaultNavItems` 加导航分组（参考 `purchaseGroups`）。
+4. 在 `src/config/nav.js` 的 `defaultNavItems` 加菜单（基线是《系统与模块地图》附录《系统菜单结构与期次》：名称、顺序都照那里排；未实现的页面会在 `config/pages.js` 自动挂占位页，不用逐个写空页面）。
 5. 明细列与现有单据不同时，扩展 `LineItemTable` 的 variant；选项从 `masterData.js` 取。
 
 ## 导入导出与消息

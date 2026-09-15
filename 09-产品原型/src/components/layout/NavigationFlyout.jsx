@@ -5,7 +5,7 @@ export function NavigationFlyout({ groups = [], left = 141, top, maxHeight, acti
       style={{ left, top, maxHeight }}
       onMouseEnter={(event) => event.stopPropagation()}
     >
-      <div className={`no-scrollbar max-h-full overflow-y-auto overscroll-contain ${groups.length > 1 ? 'grid grid-cols-2 gap-x-5' : ''}`}>
+      <div className={`no-scrollbar max-h-full overflow-y-auto overscroll-contain ${groups.length > 1 ? 'grid grid-cols-2 gap-x-5 gap-y-5' : ''}`}>
         {groups.map((group) => (
           <section key={group.title} className="min-w-0">
             <h2 className="border-b border-erp-sidebar-border pb-2.5 text-[13px] font-semibold text-erp-sidebar-flyout-muted">{group.title}</h2>
@@ -14,10 +14,11 @@ export function NavigationFlyout({ groups = [], left = 141, top, maxHeight, acti
                 <button
                   key={item.pageId}
                   type="button"
-                  className={`block w-full truncate rounded-erp-control px-1.5 text-left text-[13px] leading-8 transition-colors hover:bg-erp-sidebar-flyout-hover hover:text-erp-primary-soft ${activePageId === item.pageId ? 'bg-erp-sidebar-flyout-hover text-erp-primary-soft' : 'text-erp-sidebar-flyout-text'}`}
+                  className={`flex w-full items-center justify-between gap-2 rounded-erp-control px-1.5 text-left text-[13px] leading-8 transition-colors hover:bg-erp-sidebar-flyout-hover hover:text-erp-primary-soft ${activePageId === item.pageId ? 'bg-erp-sidebar-flyout-hover text-erp-primary-soft' : 'text-erp-sidebar-flyout-text'}`}
                   onClick={() => onSelect?.(item.pageId)}
                 >
-                  {item.label}
+                  <span className="truncate">{item.label}</span>
+                  {item.tag && <span className="shrink-0 rounded-[3px] border border-erp-sidebar-flyout-border px-1 text-[10px] leading-4">{item.tag}</span>}
                 </button>
               ))}
             </div>

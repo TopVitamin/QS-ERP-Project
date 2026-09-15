@@ -6,10 +6,10 @@ export function Command({ className, ...props }) {
   return <CommandPrimitive className={cn('flex h-full w-full flex-col overflow-hidden rounded-erp-overlay text-erp-text', className)} {...props} />;
 }
 
-export function CommandInput({ className, ...props }) {
+export function CommandInput({ className, wrapperClassName, iconClassName, ...props }) {
   return (
-    <div className="flex h-8 items-center gap-2 border-b border-erp-border-light px-2.5">
-      <Search className="size-3.5 shrink-0 text-erp-text-muted" strokeWidth={1.9} />
+    <div className={cn('flex h-8 items-center gap-2 border-b border-erp-border-light px-2.5', wrapperClassName)}>
+      <Search className={cn('size-3.5 shrink-0 text-erp-text-muted', iconClassName)} strokeWidth={1.9} />
       <CommandPrimitive.Input className={cn('h-full min-w-0 flex-1 bg-transparent text-[12px] outline-none placeholder:text-erp-placeholder', className)} {...props} />
     </div>
   );

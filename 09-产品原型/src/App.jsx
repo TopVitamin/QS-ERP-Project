@@ -32,7 +32,7 @@ export function App() {
 
   const activePage = activeView === 'home' ? null : activeView;
   const activeTitle = activePage ? PAGE_REGISTRY[activePage]?.title : '工作台';
-  const activeNavItem = activePage ? resolveNavId(activePage) : null;
+  const activeNavItem = activePage ? resolveNavId(activePage) : 'home';
 
   useEffect(() => {
     document.title = `强盛ERP - ${activeTitle}`;
@@ -48,6 +48,11 @@ export function App() {
   }, []);
 
   function openPage(target, context) {
+    if (target === 'home') {
+      setActiveView('home');
+      return;
+    }
+
     const pageId = resolvePageId(target);
     if (!pageId) {
       feedback.info(`${target} 模块将在后续页面接入`);

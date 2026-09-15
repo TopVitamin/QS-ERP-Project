@@ -8,6 +8,8 @@ import { PurchaseOrderDetailPage } from '../pages/PurchaseOrderDetailPage.jsx';
 import { PurchaseOrderListPage } from '../pages/PurchaseOrderListPage.jsx';
 import { ExportCenterPage, ImportCenterPage } from '../pages/TransferCenterPage.jsx';
 import { WarehouseListPage } from '../pages/WarehouseListPage.jsx';
+import { createPlaceholderPage } from '../pages/PlaceholderPage.jsx';
+import { defaultNavItems } from './nav.js';
 
 export const PAGE_REGISTRY = {
   'purchase-order': {
@@ -90,10 +92,38 @@ export const PAGE_REGISTRY = {
   },
 };
 
+// 还没实现的菜单统一挂占位页：菜单结构以《系统与模块地图》附录为基线，避免逐个手写空页面。
+const registeredPageIds = new Set(Object.keys(PAGE_REGISTRY));
+for (const navItem of defaultNavItems) {
+  for (const group of navItem.groups ?? []) {
+    for (const item of group.items) {
+      if (registeredPageIds.has(item.pageId)) continue;
+      PAGE_REGISTRY[item.pageId] = {
+        id: item.pageId,
+        title: item.label,
+        navId: navItem.id,
+        component: createPlaceholderPage({ title: item.label, tag: item.tag }),
+      };
+    }
+  }
+}
+
+// 点一级菜单时落到该模块的第一个页面；home 由 App 直接切到工作台视图。
+const NAV_DEFAULT_PAGES = {
+  home: 'home',
+  base: 'base-product',
+  price: 'price-purchase-list',
+  purchase: 'purchase-order',
+  sales: 'sales-order',
+  inventory: 'inventory-stock-query',
+  integration: 'integration-finance-results',
+  settings: 'import-center',
+};
+
 export function resolvePageId(target) {
-  if (target === 'purchase' || target === 'purchase-order') return 'purchase-order';
+  if (NAV_DEFAULT_PAGES[target]) return NAV_DEFAULT_PAGES[target];
   if (target === 'purchase-inbound') return 'purchase-inbound';
-  if (target === 'base' || target === 'warehouse') return 'warehouse-list';
+  if (target === 'warehouse') return 'warehouse-list';
   return PAGE_REGISTRY[target] ? target : null;
 }
 

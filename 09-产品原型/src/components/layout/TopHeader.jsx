@@ -6,11 +6,11 @@ import {
   Download,
   Home,
   LogOut,
-  Search,
   Upload,
   UserRound,
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu.jsx';
+import { GlobalSearch } from './GlobalSearch.jsx';
 import { NotificationCenter } from './NotificationCenter.jsx';
 import { PageTabs } from './PageTabs.jsx';
 import { cn } from '../../lib/utils.js';
@@ -40,7 +40,7 @@ export function TopHeader({ tabs = [], activeView, onTabSelect, onTabClose, onTa
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5 px-3 text-[12px]">
-        <button type="button" aria-label="全局搜索" className="flex h-7 w-7 items-center justify-center rounded-erp-control bg-erp-text-muted text-white hover:bg-erp-text" onClick={() => showAction('已打开全局搜索')}><Search className="h-4 w-4" /></button>
+        <GlobalSearch onOpenPage={onOpenPage} />
         <div className="ml-0.5 flex items-center gap-1 border-l border-erp-border-strong pl-2 text-erp-text">
           <button
             type="button"

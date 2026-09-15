@@ -1,26 +1,7 @@
 import { useState } from 'react';
-import {
-  BarChart3,
-  ChevronLeft,
-  FileCog,
-  PackageOpen,
-  ShoppingCart,
-  Warehouse,
-  Wrench,
-} from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { NavigationFlyout, getNavigationFlyoutLayout } from './NavigationFlyout.jsx';
-import { baseDataGroups } from './BaseDataFlyout.jsx';
-import { purchaseGroups } from './PurchaseFlyout.jsx';
-import { systemGroups } from './SystemFlyout.jsx';
-
-export const defaultNavItems = [
-  { id: 'purchase', label: '采购管理', icon: ShoppingCart, groups: purchaseGroups },
-  { id: 'sales', label: '销售管理', icon: BarChart3 },
-  { id: 'inventory', label: '库存管理', icon: Warehouse },
-  { id: 'settings', label: '系统设置', icon: FileCog, groups: systemGroups },
-  { id: 'base', label: '基础资料', icon: PackageOpen, groups: baseDataGroups },
-  { id: 'custom', label: '自定义中心', icon: Wrench },
-];
+import { defaultNavItems } from '../../config/nav.js';
 
 export function Sidebar({ activeItem, activePageId, onSelect, items = defaultNavItems }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -56,7 +37,7 @@ export function Sidebar({ activeItem, activePageId, onSelect, items = defaultNav
       </div>
 
       <nav aria-label="主导航" className="no-scrollbar flex-1 overflow-y-auto overscroll-contain py-1">
-        {items.map(({ id, label, icon: Icon, groups }) => {
+        {items.map(({ id, label, icon: Icon, groups, tag }) => {
           const hasSubmenu = Boolean(groups?.length);
           const isActive = activeItem === id;
           return (
@@ -71,7 +52,12 @@ export function Sidebar({ activeItem, activePageId, onSelect, items = defaultNav
               onFocus={hasSubmenu ? (event) => showNavigationMenu(event, groups) : undefined}
               onClick={() => {
                 onSelect(id);
-                if (hasSubmenu) setOpenFlyout(true);
+                if (hasSubmenu) {
+                  setOpenGroups(groups);
+                  setOpenFlyout(true);
+                } else {
+                  setOpenFlyout(false);
+                }
               }}
             >
               <span
@@ -83,7 +69,8 @@ export function Sidebar({ activeItem, activePageId, onSelect, items = defaultNav
               >
                 <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-white' : 'text-erp-sidebar-icon group-hover:text-erp-sidebar-active-text'}`} strokeWidth={1.8} />
                 {!collapsed && <span className="truncate whitespace-nowrap">{label}</span>}
-                {hasSubmenu && !collapsed && !isActive && <span className="ml-auto text-erp-sidebar-text/80">›</span>}
+                {!collapsed && tag && <span aria-label={tag} title={tag} className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-60" />}
+                {hasSubmenu && !collapsed && !isActive && !tag && <span className="ml-auto text-erp-sidebar-text/80">›</span>}
               </span>
             </button>
           );
