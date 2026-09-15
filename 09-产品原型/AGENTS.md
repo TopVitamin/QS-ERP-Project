@@ -7,6 +7,7 @@
 - 能自己起服务就自己起：`npm run dev` 后在浏览器里自检，不要把启动命令丢给用户。
 - 视觉以参考截图或线上原型为准：布局、密度、间距、颜色、字体、可见内容与层级都按它来。
 - 只把跨页面、可复用的规则写进本文件；一次性决定留在对应页面或数据文件，不写成长日志。
+- 原型与已确认口径不一致的地方记在 `待改项.md`，动相关页面前先看它。
 - UI 写在 `src/`；保持 `.openai/hosting.json`、`worker/index.js`、`scripts/prepare-sites-build.mjs`、`tests/sites-worker.test.mjs` 不动。
 
 ## 前端规范
