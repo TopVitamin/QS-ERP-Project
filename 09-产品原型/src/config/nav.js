@@ -25,7 +25,6 @@ export const defaultNavItems = [
           { label: '仓库资料', pageId: 'warehouse-list' },
           { label: '物流资料', pageId: 'base-logistics' },
           { label: '辅助资料', pageId: 'base-auxiliary' },
-          { label: '组织资料', pageId: 'base-organization' },
         ],
       },
     ],
