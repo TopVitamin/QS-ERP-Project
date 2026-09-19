@@ -1,3 +1,4 @@
+import { EMPTY_PLACEHOLDER } from '../../lib/format.js';
 import { cn } from '../../lib/utils.js';
 import { detailFieldTokens, getFieldSizeTokens, typography } from '../../styles/typography.js';
 
@@ -44,21 +45,29 @@ export function FieldLabel({ label, required, className, htmlFor, title, size = 
   );
 }
 
-/** @param {{ label: string, required?: boolean, children: import('react').ReactNode, className?: string, htmlFor?: string, size?: 'compact' | 'comfortable' }} props */
-export function FormField({ label, required, children, className, htmlFor, size = 'compact' }) {
+/** @param {{ label: string, required?: boolean, children: import('react').ReactNode, className?: string, htmlFor?: string, size?: 'compact' | 'comfortable', error?: string, fieldKey?: string }} props */
+export function FormField({ label, required, children, className, htmlFor, size = 'compact', error, fieldKey }) {
   const tokens = getFieldSizeTokens(size);
 
   return (
-    <div className={cn('flex min-w-0 flex-col', tokens.gap, 'text-erp-text', className)}>
+    <div
+      className={cn('flex min-w-0 flex-col', tokens.gap, 'text-erp-text', className)}
+      data-field-key={fieldKey}
+    >
       <FieldLabel label={label} required={required} htmlFor={htmlFor} size={size} />
       {children}
+      {error ? (
+        <p className="text-[12px] leading-4 text-erp-danger" role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
 
 /** Read-only label/value pair for detail pages. */
 export function DetailField({ label, value, className = '' }) {
-  const displayValue = value === undefined || value === null || value === '' ? '—' : value;
+  const displayValue = value === undefined || value === null || value === '' ? EMPTY_PLACEHOLDER : value;
 
   return (
     <div className={cn('flex min-w-0 flex-col', detailFieldTokens.gap, typography.labelMuted, className)}>

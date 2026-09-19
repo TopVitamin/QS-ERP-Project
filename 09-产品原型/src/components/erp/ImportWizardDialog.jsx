@@ -3,6 +3,7 @@ import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Download, FileSpr
 import { Button } from '../ui/button.jsx';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog.jsx';
 import { WizardSteps } from './WizardSteps.jsx';
+import { EMPTY_PLACEHOLDER } from '../../lib/format.js';
 import { cn } from '../../lib/utils.js';
 import { parseSpreadsheetFile } from '../../lib/spreadsheet.js';
 import { getImportFields, validateImportRows } from '../../lib/transferTargets.js';
@@ -333,7 +334,7 @@ function SummaryField({ label, value, tone }) {
   return (
     <div className="flex items-center gap-2">
       <span className="shrink-0 text-erp-text-muted">{label}</span>
-      <span className={cn('min-w-0 truncate text-erp-text', tone)} title={String(value ?? '')}>{value ?? '—'}</span>
+      <span className={cn('min-w-0 truncate text-erp-text', tone)} title={String(value ?? '')}>{value ?? EMPTY_PLACEHOLDER}</span>
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { FieldAffordance, FieldTrigger } from './field.jsx';
 import { Popover, PopoverContent, PopoverTrigger } from './popover.jsx';
 import { cn } from '../../lib/utils.js';
 
-export function DatePicker({ value, onChange, placeholder = '请选择日期', clearable = true, disabled = false, ariaLabel, className, textSize = 'compact' }) {
+export function DatePicker({ value, onChange, placeholder = '请选择日期', clearable = true, disabled = false, ariaLabel, className, textSize = 'compact', invalid = false }) {
   const [open, setOpen] = useState(false);
   const hasValue = value instanceof Date && !Number.isNaN(value.getTime());
 
@@ -17,6 +17,7 @@ export function DatePicker({ value, onChange, placeholder = '请选择日期', c
           <FieldTrigger
             disabled={disabled}
             aria-label={ariaLabel}
+            aria-invalid={invalid || undefined}
             hasValue={hasValue}
             textSize={textSize}
             className={cn('justify-between', className)}

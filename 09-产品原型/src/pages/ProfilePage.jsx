@@ -8,13 +8,16 @@ import { useNotifications } from '../hooks/useNotifications.js';
 import { readPreferences, writePreferences } from '../lib/preferences.js';
 import { erpThemePresets } from '../styles/tokens.js';
 import { PAGE_REGISTRY } from '../config/pages.js';
+import { isPageImplemented } from '../config/implementedPages.js';
 import { cn } from '../lib/utils.js';
 import { typography } from '../styles/typography.js';
 
 function getHomeOptions() {
   return [
     { value: 'home', label: '首页' },
-    ...['purchase-order', 'purchase-inbound', 'warehouse-list'].map((pageId) => ({ value: pageId, label: PAGE_REGISTRY[pageId]?.title || pageId })),
+    ...['purchase-order', 'purchase-inbound']
+      .filter((pageId) => isPageImplemented(pageId))
+      .map((pageId) => ({ value: pageId, label: PAGE_REGISTRY[pageId]?.title || pageId })),
   ];
 }
 

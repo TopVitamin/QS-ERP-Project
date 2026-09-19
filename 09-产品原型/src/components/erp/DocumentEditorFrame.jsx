@@ -22,8 +22,8 @@ export function EditorCard({ title, actions, children, className = '' }) {
                 aria-label={`${open ? '收起' : '展开'}${title}`}
                 onClick={() => setOpen((current) => !current)}
               >
-                {open ? <ChevronDown className="h-4 w-4" strokeWidth={2} /> : <ChevronRight className="h-4 w-4" strokeWidth={2} />}
                 <span>{title}</span>
+                {open ? <ChevronDown className="h-4 w-4" strokeWidth={2} /> : <ChevronRight className="h-4 w-4" strokeWidth={2} />}
               </button>
             </h2>
           )}
@@ -35,25 +35,45 @@ export function EditorCard({ title, actions, children, className = '' }) {
   );
 }
 
+function StatusBadgeList({ statuses, status }) {
+  const items = statuses?.length
+    ? statuses
+    : status
+      ? [{ label: status }]
+      : [];
+
+  if (!items.length) return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {items.map((item) => (
+        <StatusBadge key={item.label} tone={item.tone}>{item.label}</StatusBadge>
+      ))}
+    </div>
+  );
+}
+
 export function DocumentEditorFrame({
   title,
   status,
+  statuses,
   children,
   onCancel,
   onSave,
   onSaveAndSubmit,
-  submitLabel = '保存并审核',
-  saveLabel = '保存草稿',
+  submitLabel = '提交审核',
+  saveLabel = '保存',
   dirty = false,
+  showSubmit = true,
 }) {
   return (
     <main className="flex min-h-0 flex-1 flex-col bg-erp-surface text-erp-text">
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-erp-border-header bg-erp-surface-panel px-4">
         <div className="flex min-w-0 items-center gap-2.5">
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h1 className={cn('truncate', typography.docTitle)}>{title}</h1>
-              <StatusBadge>{status}</StatusBadge>
+              <StatusBadgeList statuses={statuses} status={status} />
             </div>
           </div>
         </div>
@@ -74,10 +94,12 @@ export function DocumentEditorFrame({
             <Save className="h-3.5 w-3.5" strokeWidth={1.9} />
             {saveLabel}
           </Button>
-          <Button variant="primary" size="compact" onClick={onSaveAndSubmit}>
-            <Check className="h-3.5 w-3.5" strokeWidth={1.9} />
-            {submitLabel}
-          </Button>
+          {showSubmit && onSaveAndSubmit ? (
+            <Button variant="primary" size="compact" onClick={onSaveAndSubmit}>
+              <Check className="h-3.5 w-3.5" strokeWidth={1.9} />
+              {submitLabel}
+            </Button>
+          ) : null}
         </div>
       </header>
 

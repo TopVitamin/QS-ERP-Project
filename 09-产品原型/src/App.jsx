@@ -3,25 +3,25 @@ import { AppToaster, TooltipProvider } from './components/ui/index.js';
 import { Sidebar } from './components/layout/Sidebar.jsx';
 import { TopHeader } from './components/layout/TopHeader.jsx';
 import { PAGE_REGISTRY, resolveNavId, resolvePageId } from './config/pages.js';
+import { isPageImplemented } from './config/implementedPages.js';
 import { feedback } from './lib/feedback.js';
 import { readPreferences, writePreferences } from './lib/preferences.js';
 import { reconcileTransferTasks } from './lib/transferService.js';
 import { erpThemePresets } from './styles/tokens.js';
 import { WorkbenchPage } from './pages/WorkbenchPage.jsx';
 
-const DEFAULT_PAGE_ID = 'purchase-order';
 const DEFAULT_VIEW_ID = 'home';
 
 function resolvePreferredHome() {
   const preferred = readPreferences().defaultHome;
-  if (preferred && preferred !== 'home' && PAGE_REGISTRY[preferred]) return preferred;
+  if (preferred && preferred !== 'home' && isPageImplemented(preferred)) return preferred;
   return null;
 }
 
 export function App() {
   const [openTabs, setOpenTabs] = useState(() => {
     const preferredHome = resolvePreferredHome();
-    return preferredHome ? [DEFAULT_PAGE_ID, preferredHome] : [DEFAULT_PAGE_ID];
+    return preferredHome ? [preferredHome] : [];
   });
   const [activeView, setActiveView] = useState(() => resolvePreferredHome() ?? DEFAULT_VIEW_ID);
   const [pageContexts, setPageContexts] = useState({});
@@ -59,6 +59,11 @@ export function App() {
       return;
     }
 
+    if (!isPageImplemented(pageId)) {
+      feedback.info('该功能尚未完成，暂不可访问');
+      return;
+    }
+
     if (context) setPageContexts((current) => ({ ...current, [pageId]: context }));
     setOpenTabs((current) => (current.includes(pageId) ? current : [...current, pageId]));
     setActiveView(pageId);
@@ -76,13 +81,14 @@ export function App() {
 
   function closeTab(pageId) {
     setOpenTabs((current) => {
-      if (current.length <= 1) return current;
-
       const nextTabs = current.filter((id) => id !== pageId);
       if (activeView === pageId) {
-        const closedIndex = current.indexOf(pageId);
-        const nextActive = nextTabs[Math.min(closedIndex, nextTabs.length - 1)] ?? DEFAULT_PAGE_ID;
-        setActiveView(nextActive);
+        if (nextTabs.length === 0) {
+          setActiveView('home');
+        } else {
+          const closedIndex = current.indexOf(pageId);
+          setActiveView(nextTabs[Math.min(closedIndex, nextTabs.length - 1)]);
+        }
       }
       return nextTabs;
     });

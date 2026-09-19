@@ -1,17 +1,19 @@
+import { buildMasterOption } from '../lib/codeName.js';
+
 export const supplierOptions = [
-  { value: '供应商10086', label: '供应商10086' },
-  { value: '土豆供应商', label: '土豆供应商' },
-  { value: '测试', label: '测试' },
-  { value: '中南批发商行', label: '中南批发商行' },
-  { value: '我是赠品2', label: '我是赠品2' },
-  { value: '订货散客', label: '订货散客' },
-  { value: '甲', label: '甲' },
+  buildMasterOption({ code: 'SUP000001', name: '测试' }),
+  buildMasterOption({ code: 'SUP000002', name: '土豆供应商' }),
+  buildMasterOption({ code: 'SUP000003', name: '中南批发商行', defaultCurrency: '美元' }),
+  buildMasterOption({ code: 'SUP000004', name: '供应商10086' }),
+  buildMasterOption({ code: 'SUP000005', name: '订货散客' }),
+  buildMasterOption({ code: 'SUP000006', name: '我是赠品2' }),
+  buildMasterOption({ code: 'SUP000007', name: '甲' }),
 ];
 
 export const warehouseOptions = [
-  { value: '一号仓', label: '一号仓' },
-  { value: '二号仓', label: '二号仓' },
-  { value: '三号仓', label: '三号仓' },
+  buildMasterOption({ code: 'WH000001', name: '一号仓' }),
+  buildMasterOption({ code: 'WH000002', name: '二号仓' }),
+  buildMasterOption({ code: 'WH000003', name: '三号仓' }),
 ];
 
 export const employeeOptions = [

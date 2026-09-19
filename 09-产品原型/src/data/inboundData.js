@@ -1,32 +1,110 @@
-const seedInboundOrders = [
-  { inboundNo: 'CG入库-20260818-00018', relatedOrderNo: 'CGDD-20260818-00045', supplier: '测试', warehouse: '一号仓', inboundType: '采购入库', status: 'pending', operator: '陈小梦CXM', quantity: 28, amount: 339 },
-  { inboundNo: 'CG入库-20260818-00017', relatedOrderNo: 'CGDD-20260818-00043', supplier: '我是赠品2', warehouse: '一号仓', inboundType: '采购入库', status: 'completed', operator: '李明', quantity: 120, amount: 9000 },
-  { inboundNo: 'CG入库-20260818-00016', relatedOrderNo: 'CGDD-20260818-00042', supplier: '我是赠品2', warehouse: '二号仓', inboundType: '采购入库', status: 'completed', operator: '李明', quantity: 80, amount: 9000 },
-  { inboundNo: 'CG入库-20260818-00015', relatedOrderNo: 'CGDD-20260818-00035', supplier: '土豆供应商', warehouse: '一号仓', inboundType: '采购入库', status: 'completed', operator: '王芳', quantity: 64, amount: 5888 },
-  { inboundNo: 'CG入库-20260818-00014', relatedOrderNo: 'CGDD-20260818-00030', supplier: '测试', warehouse: '一号仓', inboundType: '采购入库', status: 'partial', operator: '陈小梦CXM', quantity: 18, amount: 0 },
-  { inboundNo: 'CG入库-20260818-00013', relatedOrderNo: 'CGDD-20260818-00034', supplier: '中南批发商行', warehouse: '三号仓', inboundType: '采购入库', status: 'pending', operator: '张廷ZT', quantity: 36, amount: 1695 },
-  { inboundNo: 'CG入库-20260818-00012', relatedOrderNo: 'CGDD-20260818-00033', supplier: '土豆供应商', warehouse: '一号仓', inboundType: '采购入库', status: 'pending', operator: '李明', quantity: 42, amount: 1243 },
-  { inboundNo: 'CG入库-20260818-00011', relatedOrderNo: 'CGDD-20260818-00032', supplier: '甲', warehouse: '二号仓', inboundType: '采购入库', status: 'pending', operator: '李明', quantity: 25, amount: 1130 },
-  { inboundNo: 'CG入库-20260818-00010', relatedOrderNo: 'CGDD-20260818-00026', supplier: '订货散客', warehouse: '一号仓', inboundType: '采购入库', status: 'pending', operator: '张廷ZT', quantity: 51, amount: 2280 },
-  { inboundNo: 'CG入库-20260818-00009', relatedOrderNo: 'CGDD-20260818-00023', supplier: '中南批发商行', warehouse: '三号仓', inboundType: '采购入库', status: 'completed', operator: '王芳', quantity: 74, amount: 7500 },
-  { inboundNo: 'CG入库-20260818-00008', relatedOrderNo: 'CGDD-20260818-00024', supplier: '土豆供应商', warehouse: '一号仓', inboundType: '采购入库', status: 'pending', operator: '王芳', quantity: 30, amount: 0 },
-  { inboundNo: 'CG入库-20260818-00007', relatedOrderNo: 'CGDD-20260818-00027', supplier: '供应商10086', warehouse: '二号仓', inboundType: '采购入库', status: 'pending', operator: '李明', quantity: 46, amount: 0 },
-];
+import { resolveOptionLabel } from '../lib/codeName.js';
+import { EMPTY_PLACEHOLDER, formatAmount } from '../lib/format.js';
+import {
+  auditStatusLabels,
+  buildSeedInboundFromNotice,
+  INBOUND_STORAGE_KEY,
+  kingdeePushStatusLabels,
+  loadAllInbounds,
+  normalizeInboundRow,
+} from '../lib/inboundLogic.js';
+import { supplierOptions, warehouseOptions } from './masterData.js';
+import { orders } from './orderData.js';
+import { receiptNotices } from './receiptNoticeData.js';
 
-export const inboundOrders = seedInboundOrders.map((row, index) => ({ id: `inbound-${index + 1}`, date: '2026-08-18', ...row }));
+/**
+ * 演示种子只保留 2 条，与采购收货通知单、采购订单链路对齐：
+ * 1. 推送成功：notice-seed-2 → order-2
+ * 2. 推送失败：notice-seed-failed → order-2（供列表「重推金蝶」演示）
+ *
+ * storageKey 升级后会丢弃浏览器里旧的测试入库单。
+ */
+const orderForInboundDemo = orders.find((order) => order.id === 'order-2');
+const noticePushSuccess = receiptNotices.find((notice) => notice.id === 'notice-seed-2');
+const noticePushFailed = receiptNotices.find((notice) => notice.id === 'notice-seed-failed');
 
-export const inboundStatusLabels = { pending: '待入库', partial: '部分入库', completed: '已入库' };
+const seedInbounds = [
+  noticePushSuccess && orderForInboundDemo
+    ? buildSeedInboundFromNotice(noticePushSuccess, orderForInboundDemo, {
+      id: 'inbound-seed-1',
+      inboundNo: 'CGRK-20260917-0001',
+      kingdeePushStatus: 'push_success',
+      pushTime: '2026-09-17 15:31:00',
+      updatedAt: '2026-09-17 15:31:00',
+    })
+    : null,
+  noticePushFailed && orderForInboundDemo
+    ? buildSeedInboundFromNotice(noticePushFailed, orderForInboundDemo, {
+      id: 'inbound-seed-2',
+      inboundNo: 'CGRK-20260918-0001',
+      kingdeePushStatus: 'push_failed',
+      pushTime: '2026-09-18 11:22:00',
+      pushFailReason: '接口超时，金蝶未确认接收',
+      updatedAt: '2026-09-18 11:22:00',
+    })
+    : null,
+].filter(Boolean).map(normalizeInboundRow);
+
+export { INBOUND_STORAGE_KEY };
+
+export const inboundOrders = loadAllInbounds(seedInbounds);
+
+export function getInboundStatusBadges(row) {
+  const badges = [
+    {
+      label: auditStatusLabels[row.auditStatus] || row.auditStatus,
+      tone: 'success',
+    },
+  ];
+  if (row.kingdeePushStatus) {
+    const toneMap = {
+      un_pushed: 'warning',
+      pushing: 'info',
+      push_success: 'success',
+      push_failed: 'danger',
+    };
+    badges.push({
+      label: kingdeePushStatusLabels[row.kingdeePushStatus] || row.kingdeePushStatus,
+      tone: toneMap[row.kingdeePushStatus] || 'default',
+    });
+  }
+  return badges;
+}
+
+function formatCurrencyAmount(value, row) {
+  const symbol = row.currency === '人民币' ? '¥' : `${row.currency || 'CNY'} `;
+  return `${symbol}${formatAmount(value)}`;
+}
+
+const qtyCell = (value) => value ?? 0;
 
 export const inboundColumns = [
-  { key: 'date', label: '单据日期', defaultWidth: 112, minWidth: 96, maxWidth: 160, ellipsis: true, sortable: true },
-  { key: 'inboundNo', label: '入库单号', defaultWidth: 210, minWidth: 180, maxWidth: 300, ellipsis: true, link: true },
-  { key: 'relatedOrderNo', label: '关联采购订单', defaultWidth: 200, minWidth: 160, maxWidth: 280, ellipsis: true, link: true },
-  { key: 'supplier', label: '供应商', defaultWidth: 180, minWidth: 120, maxWidth: 280, ellipsis: true },
-  { key: 'currency', label: '币别', defaultWidth: 88, minWidth: 76, maxWidth: 130, ellipsis: true, render: (value) => value || '人民币' },
-  { key: 'warehouse', label: '入库仓库', defaultWidth: 130, minWidth: 96, maxWidth: 180, ellipsis: true },
-  { key: 'inboundType', label: '入库类型', defaultWidth: 120, minWidth: 96, maxWidth: 180, ellipsis: true },
-  { key: 'status', label: '入库状态', defaultWidth: 110, minWidth: 96, maxWidth: 180, ellipsis: true, render: (value) => inboundStatusLabels[value], tone: (value) => value === 'pending' ? 'text-erp-warning' : value === 'partial' ? 'text-erp-info' : 'text-erp-success' },
-  { key: 'operator', label: '经办人', defaultWidth: 150, minWidth: 100, maxWidth: 200, ellipsis: true },
-  { key: 'quantity', label: '入库数量', defaultWidth: 120, minWidth: 96, maxWidth: 180, ellipsis: true, align: 'right', sortable: true },
-  { key: 'amount', label: '入库金额', defaultWidth: 148, minWidth: 120, maxWidth: 200, ellipsis: true, align: 'right', sortable: true, render: (value) => value ? value.toLocaleString('zh-CN', { minimumFractionDigits: 2 }) : '' },
+  { key: 'inboundNo', label: '单号', defaultWidth: 190, minWidth: 170, maxWidth: 240, ellipsis: true, link: true },
+  { key: 'sourceNoticeNo', label: '来源采购收货通知单', defaultWidth: 190, minWidth: 170, maxWidth: 240, ellipsis: true, link: true },
+  { key: 'sourceOrderNo', label: '来源采购订单', defaultWidth: 180, minWidth: 160, maxWidth: 240, ellipsis: true, link: true },
+  { key: 'supplier', label: '供应商', defaultWidth: 200, minWidth: 140, maxWidth: 280, ellipsis: true, render: (value) => resolveOptionLabel(value, supplierOptions) },
+  { key: 'currency', label: '币别', defaultWidth: 88, minWidth: 72, maxWidth: 120, ellipsis: true, render: (value) => value || EMPTY_PLACEHOLDER },
+  { key: 'warehouse', label: '入库仓库', defaultWidth: 160, minWidth: 120, maxWidth: 220, ellipsis: true, render: (value) => resolveOptionLabel(value, warehouseOptions) },
+  { key: 'auditStatus', label: '审核状态', defaultWidth: 96, minWidth: 88, maxWidth: 140, ellipsis: true, render: (value) => auditStatusLabels[value] || value, tone: () => 'text-erp-success' },
+  { key: 'kingdeePushStatus', label: '金蝶推送状态', defaultWidth: 112, minWidth: 96, maxWidth: 160, ellipsis: true, render: (value) => kingdeePushStatusLabels[value] || value, tone: (value) => (value === 'push_success' ? 'text-erp-success' : value === 'push_failed' ? 'text-erp-danger' : value === 'pushing' ? 'text-erp-info' : 'text-erp-warning') },
+  { key: 'totalInboundQty', label: '实际入库数量', defaultWidth: 112, minWidth: 96, maxWidth: 140, ellipsis: true, align: 'right', sortable: true, render: qtyCell },
+  { key: 'totalAmount', label: '金额', defaultWidth: 132, minWidth: 112, maxWidth: 180, ellipsis: true, align: 'right', sortable: true, render: (value, row) => formatCurrencyAmount(value, row) },
 ];
+
+export function buildSourceNoticeFilterOptions(rows = []) {
+  const map = new Map();
+  rows.forEach((row) => {
+    if (!row.sourceNoticeNo) return;
+    map.set(row.sourceNoticeNo, { value: row.sourceNoticeNo, label: row.sourceNoticeNo });
+  });
+  return [{ value: '', label: '全部通知单' }, ...map.values()];
+}
+
+export function buildSourceOrderFilterOptions(rows = []) {
+  const map = new Map();
+  rows.forEach((row) => {
+    if (!row.sourceOrderNo) return;
+    map.set(row.sourceOrderNo, { value: row.sourceOrderNo, label: row.sourceOrderNo });
+  });
+  return [{ value: '', label: '全部订单' }, ...map.values()];
+}

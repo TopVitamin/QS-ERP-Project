@@ -1,12 +1,14 @@
 import { formatFormDate, parseFormDate } from '../../lib/formDate.js';
+import { fieldInvalidClassName } from '../ui/field.jsx';
 import { DatePicker } from '../ui/date-picker.jsx';
 import { FormField } from '../ui/form-field.jsx';
 import { Input } from '../ui/input.jsx';
 import { SelectField } from '../ui/select-field.jsx';
 import { Textarea } from '../ui/textarea.jsx';
 
-export function FormControl({ field, value, form, onChange }) {
+export function FormControl({ field, value, form, onChange, invalid = false }) {
   const ariaLabel = field.ariaLabel || field.label.replace(/\s*\*$/, '');
+  const invalidClassName = invalid ? fieldInvalidClassName : undefined;
 
   if (field.type === 'date') {
     return (
@@ -14,6 +16,8 @@ export function FormControl({ field, value, form, onChange }) {
         value={parseFormDate(value)}
         onChange={(nextDate) => onChange(formatFormDate(nextDate))}
         ariaLabel={ariaLabel}
+        invalid={invalid}
+        className={invalidClassName}
       />
     );
   }
@@ -27,6 +31,8 @@ export function FormControl({ field, value, form, onChange }) {
         placeholder={field.placeholder}
         ariaLabel={ariaLabel}
         disabled={typeof field.disabled === 'function' ? field.disabled(form) : field.disabled}
+        invalid={invalid}
+        className={invalidClassName}
       />
     );
   }
@@ -38,12 +44,17 @@ export function FormControl({ field, value, form, onChange }) {
         onChange={(event) => onChange(event.target.value)}
         placeholder={field.placeholder}
         aria-label={ariaLabel}
+        aria-invalid={invalid || undefined}
+        className={invalidClassName}
       />
     );
   }
 
   if (field.type === 'disabled') {
-    return <Input value={field.value ?? value ?? field.fallbackValue ?? ''} disabled aria-label={ariaLabel} />;
+    const displayValue = typeof field.getValue === 'function'
+      ? field.getValue(form)
+      : (field.value ?? value ?? field.fallbackValue ?? '');
+    return <Input value={displayValue} disabled aria-label={ariaLabel} />;
   }
 
   return (
@@ -53,11 +64,13 @@ export function FormControl({ field, value, form, onChange }) {
       placeholder={field.placeholder}
       disabled={typeof field.disabled === 'function' ? field.disabled(form) : field.disabled}
       aria-label={ariaLabel}
+      aria-invalid={invalid || undefined}
+      className={invalidClassName}
     />
   );
 }
 
-export function FormFields({ fields, form, onFieldChange }) {
+export function FormFields({ fields, form, onFieldChange, fieldErrors = {} }) {
   return fields.map((field) => {
     function handleChange(nextValue) {
       if (field.onValueChange) {
@@ -67,9 +80,11 @@ export function FormFields({ fields, form, onFieldChange }) {
       onFieldChange(field.key, nextValue);
     }
 
+    const error = fieldErrors[field.key];
+
     return (
-      <FormField key={field.key} label={field.label} required={field.required} className={field.className}>
-        <FormControl field={field} value={form[field.key]} form={form} onChange={handleChange} />
+      <FormField key={field.key} label={field.label} required={field.required} className={field.className} fieldKey={field.key} error={error}>
+        <FormControl field={field} value={form[field.key]} form={form} onChange={handleChange} invalid={Boolean(error)} />
       </FormField>
     );
   });

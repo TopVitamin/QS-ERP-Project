@@ -1,6 +1,10 @@
-import { inboundOrders, inboundStatusLabels } from '../data/inboundData.js';
+import { inboundOrders } from '../data/inboundData.js';
+import { auditStatusLabels, INBOUND_STORAGE_KEY, kingdeePushStatusLabels } from '../lib/inboundLogic.js';
 import { orderStatusLabels, orders } from '../data/orderData.js';
+import { receiptNotices } from '../data/receiptNoticeData.js';
+import { noticeStatusLabels } from './receiptNoticeLogic.js';
 import { warehouseStatusLabels, warehouses } from '../data/warehouseData.js';
+import { EMPTY_PLACEHOLDER } from './format.js';
 import { readMockRows } from './mockStorage.js';
 
 function toOptions(labels) {
@@ -18,40 +22,56 @@ const warehouseFields = [
   { key: 'phone', label: '联系电话', example: '0755-8888 3202' },
   { key: 'useStatus', label: '使用状态', options: toOptions({ enabled: '启用', disabled: '禁用' }), example: '启用' },
   { key: 'auditStatus', label: '审核状态', importable: false, options: toOptions(warehouseStatusLabels) },
-  { key: 'updatedAt', label: '更新时间', importable: false },
+  { key: 'updatedAt', label: '最后更新时间', importable: false },
 ];
 
 const purchaseOrderFields = [
+  { key: 'orderNo', label: '单号' },
   { key: 'date', label: '单据日期' },
-  { key: 'mode', label: '业务模式' },
-  { key: 'orderNo', label: '单据编号' },
   { key: 'supplier', label: '供应商' },
-  { key: 'settleSupplier', label: '结算供应商' },
-  { key: 'settlePeriod', label: '结算期限' },
+  { key: 'warehouse', label: '收货仓库' },
+  { key: 'deliveryDate', label: '承诺交期' },
   { key: 'currency', label: '币别' },
-  { key: 'salesman', label: '业务员' },
-  { key: 'department', label: '部门' },
+  { key: 'amount', label: '价税合计' },
+  { key: 'taxAmount', label: '税额' },
+  { key: 'netAmount', label: '金额' },
+  { key: 'receivedQty', label: '累计入库' },
+  { key: 'remark', label: '备注' },
+  { key: 'createdAt', label: '创建时间' },
   { key: 'auditStatus', label: '审核状态', options: toOptions(orderStatusLabels.auditStatus) },
-  { key: 'executionStatus', label: '执行状态', options: toOptions(orderStatusLabels.executionStatus) },
-  { key: 'inboundStatus', label: '入库状态', options: toOptions(orderStatusLabels.inboundStatus) },
-  { key: 'closeStatus', label: '关闭状态', options: toOptions(orderStatusLabels.closeStatus) },
-  { key: 'paymentStatus', label: '订单付款状态', options: toOptions(orderStatusLabels.paymentStatus) },
-  { key: 'amount', label: '成交金额' },
-  { key: 'executedAmount', label: '已执行金额' },
+  { key: 'businessStatus', label: '业务状态', options: toOptions(orderStatusLabels.businessStatus) },
+  { key: 'receiveStatus', label: '收货状态', options: toOptions(orderStatusLabels.receiveStatus) },
+  { key: 'updatedAt', label: '最后更新时间' },
+];
+
+const purchaseReceiptNoticeFields = [
+  { key: 'noticeNo', label: '单号' },
+  { key: 'sourceOrderNo', label: '来源采购订单' },
+  { key: 'supplier', label: '供应商' },
+  { key: 'warehouse', label: '收货仓库' },
+  { key: 'status', label: '单据状态', options: toOptions(noticeStatusLabels) },
+  { key: 'totalNotifyQty', label: '通知数量' },
+  { key: 'totalReceivedQty', label: '实收数量' },
+  { key: 'totalShortQty', label: '缺收数量' },
+  { key: 'createdAt', label: '创建时间' },
+  { key: 'updatedAt', label: '最后更新时间' },
 ];
 
 const purchaseInboundFields = [
-  { key: 'date', label: '单据日期' },
-  { key: 'inboundNo', label: '入库单号' },
-  { key: 'relatedOrderNo', label: '关联采购订单' },
+  { key: 'inboundNo', label: '单号' },
+  { key: 'sourceNoticeNo', label: '来源采购收货通知单' },
+  { key: 'sourceOrderNo', label: '来源采购订单' },
   { key: 'supplier', label: '供应商' },
   { key: 'currency', label: '币别' },
   { key: 'warehouse', label: '入库仓库' },
-  { key: 'inboundType', label: '入库类型' },
-  { key: 'status', label: '入库状态', options: toOptions(inboundStatusLabels) },
-  { key: 'operator', label: '经办人' },
-  { key: 'quantity', label: '入库数量' },
-  { key: 'amount', label: '入库金额' },
+  { key: 'auditStatus', label: '审核状态', options: toOptions(auditStatusLabels) },
+  { key: 'kingdeePushStatus', label: '金蝶推送状态', options: toOptions(kingdeePushStatusLabels) },
+  { key: 'businessDate', label: '业务日期' },
+  { key: 'actualInboundTime', label: '实际入库时间' },
+  { key: 'totalInboundQty', label: '实际入库数量' },
+  { key: 'totalAmount', label: '金额' },
+  { key: 'pushTime', label: '推送时间' },
+  { key: 'pushFailReason', label: '推送失败原因' },
 ];
 
 export const transferTargets = [
@@ -87,9 +107,20 @@ export const transferTargets = [
     fields: purchaseOrderFields,
   },
   {
+    id: 'purchase-receipt-notice',
+    label: '采购收货通知单',
+    storageKey: 'qs-erp:purchase-receipt-notices:v1',
+    seedRows: receiptNotices,
+    fileName: '采购收货通知单',
+    keyField: 'noticeNo',
+    keyLabel: '单号',
+    importable: false,
+    fields: purchaseReceiptNoticeFields,
+  },
+  {
     id: 'purchase-inbound',
     label: '采购入库单',
-    storageKey: 'qs-erp:purchase-inbounds:v1',
+    storageKey: INBOUND_STORAGE_KEY,
     seedRows: inboundOrders,
     fileName: '采购入库单',
     keyField: 'inboundNo',
@@ -124,7 +155,7 @@ export function exportFieldValue(field, row) {
 
 function normalizeImportValue(value) {
   const text = String(value ?? '').trim();
-  return text === '—' ? '' : text;
+  return text === EMPTY_PLACEHOLDER ? '' : text;
 }
 
 export function validateImportRows(target, headers, rows) {

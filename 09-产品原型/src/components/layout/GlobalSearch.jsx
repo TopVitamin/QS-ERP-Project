@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CornerDownLeft, Search } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, Dialog, DialogContent, DialogTitle } from '../ui/index.js';
+import { NavMenuStatusTag } from './NavMenuStatusTag.jsx';
+import { isPageImplemented } from '../../config/implementedPages.js';
 import { defaultNavItems } from '../../config/nav.js';
+import { cn } from '../../lib/utils.js';
 
 /**
  * 全局搜索：只搜菜单，做页面快速导航。
@@ -20,9 +23,13 @@ function buildSections(navItems) {
     title: navItem.label,
     items: navItem.groups?.length
       ? navItem.groups.flatMap((group) =>
-          group.items.map((item) => ({ ...item, keywords: [navItem.label, group.title] })),
+          group.items.map((item) => ({
+            ...item,
+            keywords: [navItem.label, group.title],
+            implemented: isPageImplemented(item.pageId),
+          })),
         )
-      : [{ label: navItem.label, pageId: navItem.id, tag: navItem.tag, keywords: [navItem.label] }],
+      : [{ label: navItem.label, pageId: navItem.id, keywords: [navItem.label], implemented: isPageImplemented(navItem.id) }],
   }));
 }
 
@@ -92,15 +99,15 @@ export function GlobalSearch({ onOpenPage }) {
                       key={item.pageId}
                       value={item.label}
                       keywords={item.keywords}
-                      className="h-8 gap-2"
-                      onSelect={() => handleSelect(item.pageId)}
+                      disabled={!item.implemented}
+                      className={cn('h-8 gap-2', !item.implemented && 'cursor-not-allowed opacity-45 data-[disabled=true]:opacity-45')}
+                      onSelect={() => {
+                        if (!item.implemented) return;
+                        handleSelect(item.pageId);
+                      }}
                     >
                       <span className="truncate">{item.label}</span>
-                      {item.tag && (
-                        <span className="ml-auto shrink-0 rounded-[3px] border border-erp-border-strong px-1 text-[10px] leading-4 text-erp-text-muted">
-                          {item.tag}
-                        </span>
-                      )}
+                      {!item.implemented && <NavMenuStatusTag className="ml-auto border-erp-border-strong text-erp-text-muted" />}
                     </CommandItem>
                   ))}
                 </CommandGroup>

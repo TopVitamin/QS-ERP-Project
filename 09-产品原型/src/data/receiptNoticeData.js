@@ -1,0 +1,175 @@
+import { resolveOptionLabel } from '../lib/codeName.js';
+import { EMPTY_PLACEHOLDER } from '../lib/format.js';
+import { normalizeNoticeRow, noticeStatusLabels } from '../lib/receiptNoticeLogic.js';
+import { supplierOptions, warehouseOptions } from './masterData.js';
+
+const seedNotices = [
+  {
+    id: 'notice-seed-1',
+    noticeNo: 'CGSHTZ-20260918-0001',
+    sourceOrderId: 'order-2',
+    sourceOrderNo: 'CGDD-20260918-0002',
+    supplier: 'SUP000002',
+    warehouse: 'WH000002',
+    status: 'pending_receive',
+    remark: '第二批发货',
+    pushTime: '2026-09-18 16:00:00',
+    finalReceiveTime: '',
+    pushFailReason: '',
+    creator: '张三',
+    createdAt: '2026-09-18 15:50:00',
+    updater: '张三',
+    updatedAt: '2026-09-18 16:00:00',
+    lines: [
+      {
+        id: 'order-line-2',
+        sourceOrderLineId: 'order-line-2',
+        product: 'SKU-1002',
+        productCode: 'SKU-1002',
+        barcode: '6901001002',
+        productName: '人体工学鼠标 M720',
+        unit: '个',
+        pushableQty: 20,
+        notifyQty: 10,
+        receivedQty: 0,
+        shortQty: 0,
+      },
+    ],
+  },
+  {
+    id: 'notice-seed-2',
+    noticeNo: 'CGSHTZ-20260917-0001',
+    sourceOrderId: 'order-2',
+    sourceOrderNo: 'CGDD-20260918-0002',
+    supplier: 'SUP000002',
+    warehouse: 'WH000002',
+    status: 'received',
+    remark: '',
+    inboundId: 'inbound-seed-1',
+    inboundNo: 'CGRK-20260917-0001',
+    pushTime: '2026-09-17 11:00:00',
+    finalReceiveTime: '2026-09-17 15:30:00',
+    pushFailReason: '',
+    creator: '李四',
+    createdAt: '2026-09-17 10:45:00',
+    updater: '李四',
+    updatedAt: '2026-09-17 15:30:00',
+    lines: [
+      {
+        id: 'order-line-2-received',
+        sourceOrderLineId: 'order-line-2',
+        product: 'SKU-1002',
+        productCode: 'SKU-1002',
+        barcode: '6901001002',
+        productName: '人体工学鼠标 M720',
+        unit: '个',
+        notifyQty: 10,
+        receivedQty: 10,
+        shortQty: 0,
+      },
+    ],
+  },
+  {
+    id: 'notice-seed-failed',
+    noticeNo: 'CGSHTZ-20260918-0099',
+    sourceOrderId: 'order-2',
+    sourceOrderNo: 'CGDD-20260918-0002',
+    supplier: 'SUP000002',
+    warehouse: 'WH000002',
+    status: 'received',
+    remark: '少收演示后入库',
+    inboundId: 'inbound-seed-2',
+    inboundNo: 'CGRK-20260918-0001',
+    pushTime: '2026-09-18 10:50:00',
+    finalReceiveTime: '2026-09-18 11:20:00',
+    pushFailReason: '',
+    creator: '王芳',
+    createdAt: '2026-09-18 10:40:00',
+    updater: '王芳',
+    updatedAt: '2026-09-18 11:20:00',
+    lines: [
+      {
+        id: 'order-line-2-short',
+        sourceOrderLineId: 'order-line-2',
+        product: 'SKU-1002',
+        productCode: 'SKU-1002',
+        barcode: '6901001002',
+        productName: '人体工学鼠标 M720',
+        unit: '个',
+        notifyQty: 8,
+        receivedQty: 5,
+        shortQty: 3,
+      },
+    ],
+  },
+  {
+    id: 'notice-seed-3',
+    noticeNo: 'CGSHTZ-20260920-0099',
+    sourceOrderId: 'order-6',
+    sourceOrderNo: 'CGDD-20260920-0006',
+    supplier: 'SUP000001',
+    warehouse: 'WH000001',
+    status: 'push_failed',
+    remark: '推送失败演示',
+    pushTime: '',
+    finalReceiveTime: '',
+    pushFailReason: '仓库接口超时，未确认接收',
+    creator: '张三',
+    createdAt: '2026-09-20 08:50:00',
+    updater: '张三',
+    updatedAt: '2026-09-20 09:10:00',
+    lines: [
+      {
+        id: 'order-line-6-notice',
+        sourceOrderLineId: 'order-line-6',
+        product: 'SKU-1001',
+        productCode: 'SKU-1001',
+        barcode: '6901001001',
+        productName: '无线键盘 K380',
+        unit: '个',
+        pushableQty: 80,
+        notifyQty: 20,
+        receivedQty: 0,
+        shortQty: 0,
+      },
+    ],
+  },
+];
+
+export const receiptNotices = seedNotices.map(normalizeNoticeRow);
+
+export function getNoticeStatusBadges(row) {
+  const toneMap = {
+    pending_push: 'warning',
+    pushing: 'info',
+    push_failed: 'danger',
+    pending_receive: 'info',
+    cancelling: 'warning',
+    received: 'success',
+    cancelled: 'danger',
+  };
+  return [{ label: noticeStatusLabels[row.status] || row.status, tone: toneMap[row.status] || 'default' }];
+}
+
+const qtyCell = (value) => value ?? 0;
+
+export const receiptNoticeColumns = [
+  { key: 'noticeNo', label: '单号', defaultWidth: 190, minWidth: 170, maxWidth: 240, ellipsis: true, link: true },
+  { key: 'sourceOrderNo', label: '来源采购订单', defaultWidth: 180, minWidth: 160, maxWidth: 240, ellipsis: true, link: true },
+  { key: 'supplier', label: '供应商', defaultWidth: 200, minWidth: 140, maxWidth: 280, ellipsis: true, render: (value) => resolveOptionLabel(value, supplierOptions) },
+  { key: 'warehouse', label: '收货仓库', defaultWidth: 160, minWidth: 120, maxWidth: 220, ellipsis: true, render: (value) => resolveOptionLabel(value, warehouseOptions) },
+  { key: 'status', label: '单据状态', defaultWidth: 96, minWidth: 88, maxWidth: 140, ellipsis: true, render: (value) => noticeStatusLabels[value] || value, tone: (value) => (value === 'received' ? 'text-erp-success' : value === 'pending_receive' ? 'text-erp-info' : value === 'push_failed' || value === 'cancelled' ? 'text-erp-danger' : 'text-erp-warning') },
+  { key: 'totalNotifyQty', label: '通知数量', defaultWidth: 96, minWidth: 80, maxWidth: 120, ellipsis: true, align: 'right', sortable: true, render: qtyCell },
+  { key: 'totalReceivedQty', label: '实收数量', defaultWidth: 96, minWidth: 80, maxWidth: 120, ellipsis: true, align: 'right', sortable: true, render: qtyCell },
+  { key: 'totalShortQty', label: '缺收数量', defaultWidth: 96, minWidth: 80, maxWidth: 120, ellipsis: true, align: 'right', sortable: true, render: qtyCell },
+  { key: 'createdAt', label: '创建时间', defaultWidth: 160, minWidth: 140, maxWidth: 200, ellipsis: true, sortable: true },
+];
+
+export function buildSourceOrderFilterOptions(rows = []) {
+  const map = new Map();
+  rows.forEach((row) => {
+    if (!row.sourceOrderNo) return;
+    map.set(row.sourceOrderNo, { value: row.sourceOrderNo, label: row.sourceOrderNo });
+  });
+  return [{ value: '', label: '全部订单' }, ...map.values()];
+}

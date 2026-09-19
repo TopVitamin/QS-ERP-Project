@@ -85,19 +85,17 @@ export function PageTabs({ tabs = [], activeView, onTabSelect, onTabClose, onTab
               >
                 <span className="block truncate">{tab.title}</span>
               </button>
-              {tabs.length > 1 && (
-                <button
-                  type="button"
-                  aria-label={`关闭 ${tab.title}`}
-                  className={cn(
-                    'mr-1 self-center rounded-erp-control p-0.5 opacity-0 transition-all duration-150 group-hover:opacity-100 focus-visible:opacity-100',
-                    isActive ? 'text-erp-text-muted hover:bg-erp-primary-soft hover:text-erp-primary' : 'text-erp-text-placeholder hover:bg-erp-surface-panel/70 hover:text-erp-text-muted',
-                  )}
-                  onClick={() => onTabClose?.(tab.id)}
-                >
-                  <X className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden="true" />
-                </button>
-              )}
+              <button
+                type="button"
+                aria-label={`关闭 ${tab.title}`}
+                className={cn(
+                  'mr-1 self-center rounded-erp-control p-0.5 opacity-0 transition-all duration-150 group-hover:opacity-100 focus-visible:opacity-100',
+                  isActive ? 'text-erp-text-muted hover:bg-erp-primary-soft hover:text-erp-primary' : 'text-erp-text-placeholder hover:bg-erp-surface-panel/70 hover:text-erp-text-muted',
+                )}
+                onClick={() => onTabClose?.(tab.id)}
+              >
+                <X className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden="true" />
+              </button>
             </div>
           );
         })}

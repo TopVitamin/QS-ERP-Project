@@ -15,6 +15,7 @@ export function DocumentListPage({ onFeedback, onOpenPage, config }) {
     initialVisibility: config.initialVisibility,
     storageKey: config.storageKey,
     columns: config.columns,
+    initialSort: config.defaultSort,
   });
   const orderedColumns = useMemo(() => {
     const byKey = new Map(config.columns.map((column) => [column.key, column]));
@@ -93,6 +94,7 @@ export function DocumentListPage({ onFeedback, onOpenPage, config }) {
         onCellClick: (column, row) => config.onCellClick?.(column, row, actionContext),
         onRowAction: (id, row) => config.onRowAction?.(id, row, actionContext),
         rowActions: config.rowActions,
+        rowActionsMaxVisible: config.rowActionsMaxVisible,
         sort: state.sort,
         onSort: state.toggleSort,
         pinnedKeys: state.pinnedKeys,

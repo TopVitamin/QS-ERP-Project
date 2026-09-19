@@ -85,7 +85,7 @@ export function ListPageHeader({ title, actions = [], filters = [], filterValues
               <FormField key={field.key} label={field.label}>
                 <FilterControl
                   field={field}
-                  value={filterValues?.[field.key] ?? ''}
+                  value={filterValues?.[field.key] ?? (field.type === 'multi-select' ? [] : '')}
                   onChange={(value) => updateFilter(field.key, value)}
                 />
               </FormField>

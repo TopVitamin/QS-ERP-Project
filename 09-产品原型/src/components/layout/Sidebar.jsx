@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { NavigationFlyout, getNavigationFlyoutLayout } from './NavigationFlyout.jsx';
+import { isNavModuleAccessible, isPageImplemented } from '../../config/implementedPages.js';
+import { resolvePageId } from '../../config/pages.js';
 import { defaultNavItems } from '../../config/nav.js';
+import { cn } from '../../lib/utils.js';
 
 export function Sidebar({ activeItem, activePageId, onSelect, items = defaultNavItems }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -40,6 +43,7 @@ export function Sidebar({ activeItem, activePageId, onSelect, items = defaultNav
         {items.map(({ id, label, icon: Icon, groups, tag }) => {
           const hasSubmenu = Boolean(groups?.length);
           const isActive = activeItem === id;
+          const moduleAccessible = isNavModuleAccessible({ id, groups });
           return (
             <button
               key={id}
@@ -51,23 +55,41 @@ export function Sidebar({ activeItem, activePageId, onSelect, items = defaultNav
               onMouseEnter={hasSubmenu ? (event) => showNavigationMenu(event, groups) : undefined}
               onFocus={hasSubmenu ? (event) => showNavigationMenu(event, groups) : undefined}
               onClick={() => {
-                onSelect(id);
                 if (hasSubmenu) {
                   setOpenGroups(groups);
                   setOpenFlyout(true);
+                  const defaultPageId = resolvePageId(id);
+                  if (isPageImplemented(defaultPageId)) {
+                    onSelect(id);
+                  }
                 } else {
+                  onSelect(id);
                   setOpenFlyout(false);
                 }
               }}
             >
               <span
-                className={`flex h-8 min-w-0 items-center rounded-erp-section ${collapsed ? 'w-8 justify-center' : 'flex-1 gap-2 px-3'} ${
+                className={cn(
+                  'flex h-8 min-w-0 items-center rounded-erp-section',
+                  collapsed ? 'w-8 justify-center' : 'flex-1 gap-2 px-3',
                   isActive
                     ? 'bg-erp-sidebar-active-solid font-medium text-white'
-                    : 'text-erp-sidebar-text hover:bg-erp-sidebar-hover-bg hover:text-erp-sidebar-active-text'
-                }`}
+                    : moduleAccessible
+                      ? 'text-erp-sidebar-text hover:bg-erp-sidebar-hover-bg hover:text-erp-sidebar-active-text'
+                      : 'text-erp-sidebar-text/55 hover:bg-erp-sidebar-hover-bg/70 hover:text-erp-sidebar-text/70',
+                )}
               >
-                <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-white' : 'text-erp-sidebar-icon group-hover:text-erp-sidebar-active-text'}`} strokeWidth={1.8} />
+                <Icon
+                  className={cn(
+                    'h-4 w-4 shrink-0',
+                    isActive
+                      ? 'text-white'
+                      : moduleAccessible
+                        ? 'text-erp-sidebar-icon group-hover:text-erp-sidebar-active-text'
+                        : 'text-erp-sidebar-icon/55 group-hover:text-erp-sidebar-text/70',
+                  )}
+                  strokeWidth={1.8}
+                />
                 {!collapsed && <span className="truncate whitespace-nowrap">{label}</span>}
                 {!collapsed && tag && <span aria-label={tag} title={tag} className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-60" />}
                 {hasSubmenu && !collapsed && !isActive && !tag && <span className="ml-auto text-erp-sidebar-text/80">›</span>}

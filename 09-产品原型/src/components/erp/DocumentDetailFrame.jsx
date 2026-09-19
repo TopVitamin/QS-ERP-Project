@@ -8,15 +8,43 @@ import { EditorCard } from './DocumentEditorFrame.jsx';
 
 export { DetailField };
 
-export function DocumentDetailFrame({ title, status, children, onBack, onEdit, editLabel = '修改' }) {
+function StatusBadgeList({ statuses, status }) {
+  const items = statuses?.length
+    ? statuses
+    : status
+      ? [{ label: status }]
+      : [];
+
+  if (!items.length) return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {items.map((item) => (
+        <StatusBadge key={item.label} tone={item.tone}>{item.label}</StatusBadge>
+      ))}
+    </div>
+  );
+}
+
+export function DocumentDetailFrame({
+  title,
+  status,
+  statuses,
+  children,
+  headerActions,
+  onBack,
+  onEdit,
+  editLabel = '修改',
+}) {
   return (
     <main className="flex min-h-0 flex-1 flex-col bg-erp-surface text-erp-text">
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-erp-border-header bg-erp-surface-panel px-4">
         <div className="flex min-w-0 items-center gap-2.5">
           <h1 className={cn('truncate', typography.docTitle)}>{title}</h1>
-          <StatusBadge>{status}</StatusBadge>
+          <StatusBadgeList statuses={statuses} status={status} />
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          {headerActions}
           <Button variant="outline" size="compact" onClick={onBack}>返回列表</Button>
           {onEdit && (
             <Button variant="primary" size="compact" onClick={onEdit}>

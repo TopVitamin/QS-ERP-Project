@@ -214,6 +214,11 @@ const warehouseListConfig = {
   onRowAction: handleRowAction,
 };
 
+/**
+ * 仓库资料列表（演示保留，菜单标「未完成」）。
+ *
+ * 页内 Tab（审核状态）是主数据列表的交互样板，PRD 收口后再从 implementedPages.js 开放。
+ */
 export function WarehouseListPage(props) {
   return <DocumentListPage {...props} config={warehouseListConfig} />;
 }

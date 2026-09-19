@@ -5,12 +5,13 @@ import { BarChart3, FileCog, LayoutDashboard, PackageOpen, Plug, ShoppingCart, T
  *
  * 基线是《系统与模块地图》附录《系统菜单结构与期次》：一级菜单、二级菜单的名称和顺序都照那里排。
  * 一级菜单没有二级菜单的（工作台）直接进首页；有二级菜单的用 groups 挂 flyout。
- * tag 只是标注「待确认」；后置菜单（消息与待办、参数配置、操作日志）不进菜单。
+ * 菜单项是否可进入由 `implementedPages.js` 统一判定；未完成的项在 flyout 里标「未完成」并置灰。
+ * 后置菜单（消息与待办、参数配置、操作日志）不进菜单。
  * 顺序规则：业务模块按链路顺序排（订单／申请 → 通知 → 结果单），正向链在前、退货链在后；
  * 查询类在前，比对、映射这类低频或配置菜单在后。
  */
 export const defaultNavItems = [
-  { id: 'home', label: '工作台', icon: LayoutDashboard, tag: '待确认' },
+  { id: 'home', label: '工作台', icon: LayoutDashboard },
   {
     id: 'base',
     label: '基础资料',
@@ -107,7 +108,7 @@ export const defaultNavItems = [
         title: '查询',
         items: [
           { label: '库存查询', pageId: 'inventory-stock-query' },
-          { label: '库存流水', pageId: 'inventory-stock-flow', tag: '待确认' },
+          { label: '库存流水', pageId: 'inventory-stock-flow' },
         ],
       },
       {
@@ -161,14 +162,14 @@ export const defaultNavItems = [
         title: '数据',
         items: [
           { label: '导入中心', pageId: 'import-center' },
-          { label: '导出中心', pageId: 'export-center', tag: '待确认' },
+          { label: '导出中心', pageId: 'export-center' },
         ],
       },
       {
         title: '账号与权限',
         items: [
           { label: '用户与权限', pageId: 'settings-users' },
-          { label: '个人中心', pageId: 'profile', tag: '待确认' },
+          { label: '个人中心', pageId: 'profile' },
         ],
       },
     ],

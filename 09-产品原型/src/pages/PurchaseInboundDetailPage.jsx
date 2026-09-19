@@ -1,54 +1,157 @@
+import { useState } from 'react';
 import { DocumentDetailPage } from '../components/erp/DocumentDetailPage.jsx';
-import { defaultInboundForm, getEditableInbound, purchaseLineEditorOptions } from '../data/purchaseFormData.js';
-import { inboundStatusLabels } from '../data/inboundData.js';
+import { buildCreateMetaFields } from '../components/erp/DocumentMetaTabsCard.jsx';
+import { buildInboundOperationLogs } from '../lib/operationLog.js';
+import {
+  PurchaseInboundActionDialogs,
+  PurchaseInboundDetailHeaderActions,
+} from '../components/erp/PurchaseInboundActionDialogs.jsx';
+import { usePurchaseInboundRow } from '../hooks/usePurchaseInboundRow.js';
+import { resolveOptionLabel } from '../lib/codeName.js';
+import { EMPTY_PLACEHOLDER, formatAmount } from '../lib/format.js';
+import { currencySymbol } from '../lib/money.js';
+import { supplierOptions, warehouseOptions } from '../data/masterData.js';
+import { getInboundStatusBadges } from '../data/inboundData.js';
+import { orders } from '../data/orderData.js';
+import { receiptNotices } from '../data/receiptNoticeData.js';
+import { auditStatusLabels, kingdeePushStatusLabels, loadInboundById, refreshInboundLines } from '../lib/inboundLogic.js';
+import { loadOrderById } from '../lib/purchaseOrderLogic.js';
+import { loadNoticeById } from '../lib/receiptNoticeLogic.js';
 
 function getInboundDetail(row) {
-  const source = getEditableInbound(row);
-  const quantity = Number(row.quantity || 0);
-  const fallbackLines = row?.id ? [{
-    id: `${row.id}-summary-line`,
-    product: defaultInboundForm.lines[0].product,
-    spec: '列表汇总明细',
-    unit: defaultInboundForm.lines[0].unit,
-    orderQuantity: quantity,
-    quantity,
-    price: quantity ? Number(row.amount || 0) / quantity : 0,
-    remark: '',
-  }] : defaultInboundForm.lines;
-
+  if (!row) return { lines: [] };
   return {
-    ...source,
-    lines: row?.lines?.length ? row.lines : fallbackLines,
+    ...row,
+    lines: refreshInboundLines(row.lines || []),
   };
+}
+
+function buildDocumentLink(label, onClick) {
+  if (!label) return EMPTY_PLACEHOLDER;
+  return (
+    <button type="button" className="truncate text-erp-primary hover:underline" onClick={onClick}>
+      {label}
+    </button>
+  );
+}
+
+function buildInboundInfoFields({ detail, row, onOpenPage }) {
+  const relatedNotice = loadNoticeById(row.sourceNoticeId)
+    || receiptNotices.find((notice) => notice.noticeNo === row.sourceNoticeNo);
+  const relatedOrder = loadOrderById(row.sourceOrderId)
+    || orders.find((order) => order.orderNo === row.sourceOrderNo);
+
+  const fields = [
+    { key: 'inboundNo', label: '单号', value: detail.inboundNo },
+    {
+      key: 'sourceNoticeNo',
+      label: '来源采购收货通知单',
+      value: buildDocumentLink(detail.sourceNoticeNo, () => onOpenPage?.('purchase-receipt-notice-detail', {
+        row: relatedNotice || { noticeNo: detail.sourceNoticeNo, id: detail.sourceNoticeId },
+      })),
+    },
+    {
+      key: 'sourceOrderNo',
+      label: '来源采购订单',
+      value: buildDocumentLink(detail.sourceOrderNo, () => onOpenPage?.('purchase-order-detail', {
+        row: relatedOrder || { orderNo: detail.sourceOrderNo, id: detail.sourceOrderId },
+      })),
+    },
+    { key: 'supplier', label: '供应商', value: resolveOptionLabel(detail.supplier, supplierOptions) },
+    { key: 'warehouse', label: '入库仓库', value: resolveOptionLabel(detail.warehouse, warehouseOptions) },
+    { key: 'currency', label: '币别', value: detail.currency || EMPTY_PLACEHOLDER },
+    { key: 'amount', label: '价税合计', value: `${currencySymbol(row.currency)} ${formatAmount(row.amount ?? 0)}` },
+    { key: 'taxAmount', label: '税额', value: `${currencySymbol(row.currency)} ${formatAmount(row.taxAmount ?? 0)}` },
+    { key: 'netAmount', label: '金额', value: `${currencySymbol(row.currency)} ${formatAmount(row.netAmount ?? 0)}` },
+    { key: 'businessDate', label: '业务日期', value: detail.businessDate || EMPTY_PLACEHOLDER },
+    { key: 'actualInboundTime', label: '实际入库时间', value: detail.actualInboundTime || EMPTY_PLACEHOLDER },
+    { key: 'pushTime', label: '推送时间', value: detail.pushTime || EMPTY_PLACEHOLDER },
+  ];
+
+  if (row.pushFailReason) {
+    fields.push({ key: 'pushFailReason', label: '推送失败原因', value: row.pushFailReason, className: 'col-span-3' });
+  }
+
+  fields.push({ key: 'remark', label: '备注', value: detail.remark || EMPTY_PLACEHOLDER, className: 'col-span-3' });
+  return fields;
 }
 
 const inboundDetailConfig = {
   listPageId: 'purchase-inbound',
-  editPageId: 'purchase-inbound-edit',
-  infoSectionTitle: '入库信息',
-  lineSectionTitle: '入库明细',
-  lineVariant: 'inbound',
-  lineEditorOptions: purchaseLineEditorOptions,
+  lineSectionTitle: '商品明细',
+  lineVariant: 'purchase-inbound',
   getDetail: getInboundDetail,
-  title: (detail) => `采购入库单详情${detail.inboundNo && detail.inboundNo !== '保存后自动生成' ? ` · ${detail.inboundNo}` : ''}`,
-  getStatus: (row, detail) => inboundStatusLabels[row.status] || detail.status,
-  canEdit: (row) => row.status !== 'completed',
+  title: (detail) => `采购入库单详情${detail.inboundNo ? ` · ${detail.inboundNo}` : ''}`,
+  getStatusBadges: (row) => getInboundStatusBadges(row),
   rowKey: (detail) => detail.inboundNo,
-  infoFields: ({ detail, status }) => [
-    { key: 'inboundNo', label: '入库单号', value: detail.inboundNo },
-    { key: 'date', label: '单据日期', value: detail.date },
-    { key: 'inboundType', label: '入库类型', value: detail.inboundType },
-    { key: 'relatedOrderNo', label: '关联采购订单', value: detail.relatedOrderNo },
-    { key: 'supplier', label: '供应商', value: detail.supplier },
-    { key: 'warehouse', label: '入库仓库', value: detail.warehouse },
-    { key: 'currency', label: '币别', value: detail.currency || '人民币' },
-    { key: 'operator', label: '经办人', value: detail.operator },
-    { key: 'status', label: '入库状态', value: status },
-    { key: 'remark', label: '备注', value: detail.remark, className: 'col-span-3' },
+  sections: [
+    {
+      title: '单据信息',
+      fields: ({ detail, row, onOpenPage }) => buildInboundInfoFields({ detail, row, onOpenPage }),
+    },
   ],
-  summary: { quantityLabel: '入库数量', amountLabel: '入库金额' },
+  extraSections: [
+    {
+      title: '操作信息',
+      variant: 'meta-tabs',
+      defaultTab: 'create',
+      tabs: ({ row }) => [
+        {
+          key: 'create',
+          label: '制单信息',
+          fields: buildCreateMetaFields(row),
+        },
+        {
+          key: 'log',
+          label: '操作日志',
+          variant: 'log',
+          logEntries: () => buildInboundOperationLogs(row),
+        },
+      ],
+    },
+  ],
+  summary: { quantityLabel: '实际入库数量', amountLabel: '价税合计' },
+  buildLineSummary: ({ detail, lineTotals, currency }) => {
+    const prefix = `${currencySymbol(currency)} `;
+    return {
+      quantity: { label: '实际入库数量', value: detail.totalInboundQty ?? lineTotals.quantity },
+      grossAmount: { label: '价税合计', value: lineTotals.grossAmount, format: 'amount', prefix, emphasis: true },
+      taxAmount: { label: '税额', value: lineTotals.taxAmount, format: 'amount', prefix },
+      netAmount: { label: '金额', value: lineTotals.netAmount, format: 'amount', prefix },
+    };
+  },
 };
 
-export function PurchaseInboundDetailPage(props) {
-  return <DocumentDetailPage {...props} config={inboundDetailConfig} />;
+export function PurchaseInboundDetailPage({ onFeedback, onOpenPage, context }) {
+  const row = usePurchaseInboundRow(context);
+  const [dialog, setDialog] = useState(null);
+
+  function handleDialogComplete(result) {
+    if (result?.message) onFeedback?.(result.message, result.type || 'success');
+    if (result?.row) {
+      onOpenPage?.('purchase-inbound-detail', { row: loadInboundById(result.row.id) || result.row });
+    }
+    setDialog(null);
+  }
+
+  const config = {
+    ...inboundDetailConfig,
+    renderHeaderActions: () => (
+      <PurchaseInboundDetailHeaderActions
+        row={row}
+        onAction={(id, currentRow) => setDialog({ type: id, row: currentRow })}
+      />
+    ),
+  };
+
+  return (
+    <>
+      <DocumentDetailPage context={{ row }} onOpenPage={onOpenPage} config={config} />
+      <PurchaseInboundActionDialogs
+        dialog={dialog}
+        onClose={() => setDialog(null)}
+        onComplete={handleDialogComplete}
+      />
+    </>
+  );
 }

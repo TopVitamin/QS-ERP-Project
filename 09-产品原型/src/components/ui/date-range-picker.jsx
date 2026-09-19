@@ -18,8 +18,8 @@ export function DateRangePicker({ value, onChange, placeholder = '请选择日�
   const to = parseDateValue(value?.to);
   const hasValue = Boolean(from || to);
   const label = from && to
-    ? `${format(from, 'yyyy-MM-dd')} ~ ${format(to, from.getFullYear() === to.getFullYear() ? 'MM-dd' : 'yyyy-MM-dd')}`
-    : from ? `${format(from, 'yyyy-MM-dd')} ~` : to ? `~ ${format(to, 'yyyy-MM-dd')}` : placeholder;
+    ? `${format(from, 'yyyy-MM-dd')}～${format(to, 'yyyy-MM-dd')}`
+    : from ? `${format(from, 'yyyy-MM-dd')}～` : to ? `～${format(to, 'yyyy-MM-dd')}` : placeholder;
 
   function selectRange(range, triggerDate) {
     if (!range && from && triggerDate && isSameDay(triggerDate, from)) {

@@ -1,62 +1,63 @@
-const seedOrders = [
-  { orderNo: 'CGDD-20260818-00048', supplier: '供应商10086', settleSupplier: '供应商10086', auditStatus: 'pending', executionStatus: 'not_started', inboundStatus: 'not_received', closeStatus: 'open', paymentStatus: 'unpaid', amount: 113000, executedAmount: 0 },
-  { orderNo: 'CGDD-20260818-00047', supplier: '土豆供应商', settleSupplier: '土豆供应商', settlePeriod: '45天', auditStatus: 'pending', executionStatus: 'not_started', inboundStatus: 'not_received', closeStatus: 'open', paymentStatus: 'paid', amount: 0, executedAmount: 0 },
-  { orderNo: 'CGDD-20260818-00046', supplier: '土豆供应商', settleSupplier: '土豆供应商', settlePeriod: '45天', auditStatus: 'pending', executionStatus: 'not_started', inboundStatus: 'not_received', closeStatus: 'open', paymentStatus: 'paid', amount: 0, executedAmount: 0 },
-  { orderNo: 'CGDD-20260818-00045', supplier: '测试', settleSupplier: '测试', settlePeriod: '45天', salesman: '韩佩奇HPQ', department: '工程四部', auditStatus: 'approved', executionStatus: 'not_started', inboundStatus: 'not_received', closeStatus: 'open', paymentStatus: 'partial', amount: 339, executedAmount: 0 },
-  { orderNo: 'CGDD-20260818-00044', supplier: '测试', settleSupplier: '测试', settlePeriod: '45天', salesman: '韩佩奇HPQ', department: '工程四部', auditStatus: 'approved', executionStatus: 'not_started', inboundStatus: 'not_received', closeStatus: 'open', paymentStatus: 'partial', amount: 339, executedAmount: 0 },
-  { orderNo: 'CGDD-20260818-00043', supplier: '我是赠品2', settleSupplier: '我是赠品2', auditStatus: 'approved', executionStatus: 'completed', inboundStatus: 'completed', closeStatus: 'closed', paymentStatus: 'unpaid', amount: 9000, executedAmount: 9000 },
-  { orderNo: 'CGDD-20260818-00042', supplier: '我是赠品2', settleSupplier: '我是赠品2', auditStatus: 'approved', executionStatus: 'completed', inboundStatus: 'completed', closeStatus: 'closed', paymentStatus: 'unpaid', amount: 9000, executedAmount: 9000 },
-  { orderNo: 'CGDD-20260818-00041', supplier: '测试', settleSupplier: '测试', auditStatus: 'approved', executionStatus: 'completed', inboundStatus: 'completed', closeStatus: 'closed', paymentStatus: 'unpaid', amount: 4000, executedAmount: 4000 },
-  { orderNo: 'CGDD-20260818-00040', supplier: '1111', settleSupplier: '1111', auditStatus: 'approved', executionStatus: 'completed', inboundStatus: 'completed', closeStatus: 'closed', paymentStatus: 'unpaid', amount: 1.7, executedAmount: 1.7 },
-  { orderNo: 'CGDD-20260818-00039', supplier: '土豆供应商', settleSupplier: '土豆供应商', auditStatus: 'approved', executionStatus: 'not_started', inboundStatus: 'not_received', closeStatus: 'open', paymentStatus: 'unpaid', amount: 1.7, executedAmount: 0 },
-  { orderNo: 'CGDD-20260818-00038', supplier: '泉得', settleSupplier: '泉得', salesman: '陈小梦CXM', department: '工程一部', auditStatus: 'approved', executionStatus: 'not_started', inboundStatus: 'not_received', closeStatus: 'open', paymentStatus: 'unpaid', amount: 150, executedAmount: 0 },
-  { orderNo: 'CGDD-20260818-00037', supplier: '甲', settleSupplier: '甲', salesman: '李思乾LSQ', department: '工程二部', auditStatus: 'approved', executionStatus: 'not_started', inboundStatus: 'not_received', closeStatus: 'open', paymentStatus: 'paid', amount: 0, executedAmount: 0 },
-  { orderNo: 'CGDD-20260818-00036', supplier: '甲', settleSupplier: '甲', salesman: '李思乾LSQ', department: '工程二部', auditStatus: 'approved', executionStatus: 'not_started', inboundStatus: 'not_received', closeStatus: 'open', paymentStatus: 'paid', amount: 0, executedAmount: 0 },
-  { orderNo: 'CGDD-20260818-00035', supplier: '土豆供应商', settleSupplier: '土豆供应商', auditStatus: 'approved', executionStatus: 'completed', inboundStatus: 'completed', closeStatus: 'closed', paymentStatus: 'partial', amount: 5888, executedAmount: 5888 },
-  { orderNo: 'CGDD-20260818-00034', supplier: '中南批发商行', settleSupplier: '中南批发商行', salesman: '张廷ZT', department: '工程二部', auditStatus: 'approved', executionStatus: 'not_started', inboundStatus: 'not_received', closeStatus: 'open', paymentStatus: 'paid', amount: 1695, executedAmount: 0 },
-  { orderNo: 'CGDD-20260818-00033', supplier: '土豆供应商', settleSupplier: '土豆供应商', salesman: '李明', department: '工程二部', auditStatus: 'approved', executionStatus: 'not_started', inboundStatus: 'not_received', closeStatus: 'open', paymentStatus: 'unpaid', amount: 1243, executedAmount: 0 },
-  { orderNo: 'CGDD-20260818-00032', supplier: '甲', settleSupplier: '甲', salesman: '李明', department: '工程二部', auditStatus: 'approved', executionStatus: 'not_started', inboundStatus: 'not_received', closeStatus: 'open', paymentStatus: 'unpaid', amount: 1130, executedAmount: 0 },
-  { orderNo: 'CGDD-20260818-00031', supplier: '中南批发商行', settleSupplier: '中南批发商行', salesman: '张廷ZT', auditStatus: 'pending', executionStatus: 'not_started', inboundStatus: 'not_received', closeStatus: 'open', paymentStatus: 'paid', amount: 0, executedAmount: 0 },
-  { orderNo: 'CGDD-20260818-00030', supplier: '测试', settleSupplier: '测试', salesman: '陈小梦CXM', department: '工程四部', auditStatus: 'approved', executionStatus: 'partial', inboundStatus: 'partial', closeStatus: 'open', paymentStatus: 'paid', amount: 0, executedAmount: 0 },
-  { orderNo: 'CGDD-20260818-00029', supplier: '订货散客', settleSupplier: '订货散客', auditStatus: 'pending', executionStatus: 'not_started', inboundStatus: 'not_received', closeStatus: 'open', paymentStatus: 'unpaid', amount: 0, executedAmount: 0 },
-  { orderNo: 'CGDD-20260818-00028', supplier: '订货散客', settleSupplier: '订货散客', auditStatus: 'pending', executionStatus: 'not_started', inboundStatus: 'not_received', closeStatus: 'open', paymentStatus: 'unpaid', amount: 0, executedAmount: 0 },
-  { orderNo: 'CGDD-20260818-00027', supplier: '供应商10086', settleSupplier: '供应商10086', auditStatus: 'pending', executionStatus: 'not_started', inboundStatus: 'not_received', closeStatus: 'open', paymentStatus: 'unpaid', amount: 0, executedAmount: 0 },
-  { orderNo: 'CGDD-20260818-00026', supplier: '订货散客', settleSupplier: '订货散客', salesman: '张廷ZT', department: '工程二部', auditStatus: 'approved', executionStatus: 'not_started', inboundStatus: 'not_received', closeStatus: 'open', paymentStatus: 'paid', amount: 2280, executedAmount: 0 },
-  { orderNo: 'CGDD-20260818-00025', supplier: '订货散客', settleSupplier: '订货散客', salesman: '李明', auditStatus: 'approved', executionStatus: 'not_started', inboundStatus: 'not_received', closeStatus: 'open', paymentStatus: 'unpaid', amount: 0, executedAmount: 0 },
-  { orderNo: 'CGDD-20260818-00024', supplier: '土豆供应商', settleSupplier: '土豆供应商', settlePeriod: '30天', auditStatus: 'approved', executionStatus: 'not_started', inboundStatus: 'not_received', closeStatus: 'open', paymentStatus: 'unpaid', amount: 0, executedAmount: 0 },
-  { orderNo: 'CGDD-20260818-00023', supplier: '中南批发商行', settleSupplier: '中南批发商行', salesman: '张廷ZT', department: '工程二部', auditStatus: 'approved', executionStatus: 'completed', inboundStatus: 'completed', closeStatus: 'closed', paymentStatus: 'unpaid', amount: 7500, executedAmount: 7500 },
+import { resolveOptionLabel } from '../lib/codeName.js';
+import { EMPTY_PLACEHOLDER, formatAmount } from '../lib/format.js';
+import { enrichOrderLine, normalizeOrderRow } from '../lib/purchaseOrderLogic.js';
+import { supplierOptions, warehouseOptions } from './masterData.js';
+
+function enrichSampleLine(line) {
+  return enrichOrderLine(line);
+}
+
+const sampleLines = [
+  enrichSampleLine({ id: 'order-line-1', product: 'SKU-1001', unit: '个', quantity: 100, received: 0, notifyQty: 0, pushableQty: 100, price: 113, taxRate: '13' }),
+  enrichSampleLine({ id: 'order-line-2', product: 'SKU-1002', unit: '个', quantity: 50, received: 30, notifyQty: 10, pushableQty: 10, price: 159, taxRate: '13' }),
 ];
 
-export const orders = seedOrders.map((order, index) => ({
+const seedOrders = [
+  { orderNo: 'CGDD-20260919-0001', date: '2026-09-19', supplier: 'SUP000001', warehouse: 'WH000001', deliveryDate: '2026-10-05', currency: '人民币', amount: 11300, taxAmount: 1299.12, netAmount: 10000.88, receivedQty: 0, auditStatus: 'draft', businessStatus: 'normal', receiveStatus: 'not_received', remark: '示例补货单', updatedAt: '2026-09-19 10:00:00', lines: sampleLines.slice(0, 1) },
+  { orderNo: 'CGDD-20260918-0002', date: '2026-09-18', supplier: 'SUP000002', warehouse: 'WH000002', deliveryDate: '2026-09-30', currency: '人民币', amount: 56500, taxAmount: 6491.15, netAmount: 50008.85, receivedQty: 30, auditStatus: 'approved', businessStatus: 'normal', receiveStatus: 'partial', submittedAt: '2026-09-18 14:30:00', submitter: '张三', auditor: '李四', auditTime: '2026-09-18 15:00:00', remark: '', updatedAt: '2026-09-18 16:20:00', lines: sampleLines },
+  { orderNo: 'CGDD-20260917-0003', date: '2026-09-17', supplier: 'SUP000003', warehouse: 'WH000003', deliveryDate: '2026-10-01', currency: '人民币', amount: 3390, taxAmount: 389.38, netAmount: 3000.62, receivedQty: 0, auditStatus: 'pending', businessStatus: 'normal', receiveStatus: 'not_received', submittedAt: '2026-09-17 14:10:00', submitter: '王五', remark: '', updatedAt: '2026-09-17 14:10:00', lines: [enrichSampleLine({ id: 'order-line-3', product: 'SKU-1003', unit: '件', quantity: 10, received: 0, notifyQty: 10, pushableQty: 0, price: 339, taxRate: '13' })] },
+  { orderNo: 'CGDD-20260916-0004', date: '2026-09-16', supplier: 'SUP000004', warehouse: 'WH000001', deliveryDate: '2026-09-25', currency: '人民币', amount: 9000, taxAmount: 1035.40, netAmount: 7964.60, receivedQty: 6, auditStatus: 'approved', businessStatus: 'closed', receiveStatus: 'completed', submittedAt: '2026-09-16 11:00:00', submitter: '张三', auditor: '李四', auditTime: '2026-09-16 16:00:00', closeType: 'manual', closeReason: '供应商无法继续供货', closeTime: '2026-09-20 14:30:00', closeOperator: '张三', remark: '', updatedAt: '2026-09-20 14:30:00', lines: [enrichSampleLine({ id: 'order-line-4', product: 'SKU-1004', unit: '台', quantity: 6, received: 6, notifyQty: 0, pushableQty: 0, price: 1500, taxRate: '13' })] },
+  { orderNo: 'CGDD-20260915-0005', date: '2026-09-15', supplier: 'SUP000005', warehouse: 'WH000002', deliveryDate: '2026-09-22', currency: '人民币', amount: 2280, taxAmount: 262.30, netAmount: 2017.70, receivedQty: 0, auditStatus: 'approved', businessStatus: 'cancelled', receiveStatus: 'not_received', cancelReason: '客户取消采购', cancelTime: '2026-09-16 09:00:00', cancelOperator: '李四', remark: '', updatedAt: '2026-09-16 09:00:00', lines: [enrichSampleLine({ id: 'order-line-5', product: 'SKU-1005', unit: '个', quantity: 12, received: 0, notifyQty: 0, pushableQty: 0, price: 190, taxRate: '13' })] },
+  { orderNo: 'CGDD-20260920-0006', date: '2026-09-20', supplier: 'SUP000001', warehouse: 'WH000001', deliveryDate: '2026-10-10', currency: '人民币', amount: 11300, taxAmount: 1299.12, netAmount: 10000.88, receivedQty: 0, auditStatus: 'approved', businessStatus: 'normal', receiveStatus: 'not_received', remark: '待取消演示单', updatedAt: '2026-09-20 09:00:00', lines: [enrichSampleLine({ id: 'order-line-6', product: 'SKU-1001', unit: '个', quantity: 100, received: 0, notifyQty: 20, pushableQty: 80, price: 113, taxRate: '13' })] },
+];
+
+export const orders = seedOrders.map((order, index) => normalizeOrderRow({
   id: `order-${index + 1}`,
-  date: '2026-08-18',
-  mode: '普通采购',
+  creator: '张三',
+  createdAt: order.updatedAt,
+  updater: '张三',
   ...order,
 }));
 
 export const orderStatusLabels = {
-  auditStatus: { pending: '未审核', approved: '已审核' },
-  executionStatus: { not_started: '未执行', partial: '部分执行', completed: '全部执行' },
-  inboundStatus: { not_received: '未入库', partial: '部分入库', completed: '全部入库' },
-  closeStatus: { open: '未关闭', closed: '已关闭' },
-  paymentStatus: { unpaid: '未核销', partial: '部分核销', paid: '全部核销' },
+  auditStatus: { draft: '草稿', pending: '待审核', approved: '已审核' },
+  businessStatus: { normal: '正常', cancelled: '已取消', closed: '已关闭' },
+  receiveStatus: { not_received: '未收货', partial: '部分收货', completed: '全部收货' },
 };
 
+function formatCurrencyAmount(value, row) {
+  const symbol = row.currency === '人民币' ? '¥' : `${row.currency || 'CNY'} `;
+  return `${symbol}${formatAmount(value)}`;
+}
+
+const qtyCell = (value) => value ?? 0;
+
 export const tableColumns = [
+  { key: 'orderNo', label: '单号', defaultWidth: 180, minWidth: 160, maxWidth: 240, ellipsis: true, link: true },
   { key: 'date', label: '单据日期', defaultWidth: 112, minWidth: 96, maxWidth: 160, ellipsis: true, sortable: true },
-  { key: 'mode', label: '业务模式', defaultWidth: 100, minWidth: 88, maxWidth: 160, ellipsis: true },
-  { key: 'orderNo', label: '单据编号', defaultWidth: 200, minWidth: 160, maxWidth: 280, ellipsis: true, link: true },
-  { key: 'supplier', label: '供应商', defaultWidth: 200, minWidth: 120, maxWidth: 280, ellipsis: true },
-  { key: 'settleSupplier', label: '结算供应商', defaultWidth: 200, minWidth: 120, maxWidth: 280, ellipsis: true },
-  { key: 'settlePeriod', label: '结算期限', defaultWidth: 120, minWidth: 88, maxWidth: 160, ellipsis: true },
-  { key: 'currency', label: '币别', defaultWidth: 90, minWidth: 76, maxWidth: 130, ellipsis: true, render: (value) => value || '人民币' },
-  { key: 'salesman', label: '业务员', defaultWidth: 160, minWidth: 100, maxWidth: 220, ellipsis: true },
-  { key: 'department', label: '部门', defaultWidth: 160, minWidth: 100, maxWidth: 220, ellipsis: true },
-  { key: 'auditStatus', label: '审核状态', defaultWidth: 100, minWidth: 96, maxWidth: 180, ellipsis: true, render: (value) => orderStatusLabels.auditStatus[value], tone: (value) => value === 'pending' ? 'text-erp-warning' : 'text-erp-success' },
-  { key: 'executionStatus', label: '执行状态', defaultWidth: 100, minWidth: 96, maxWidth: 180, ellipsis: true, render: (value) => orderStatusLabels.executionStatus[value], tone: (value) => value === 'not_started' ? 'text-erp-warning' : value === 'partial' ? 'text-erp-info' : 'text-erp-success' },
-  { key: 'inboundStatus', label: '入库状态', defaultWidth: 100, minWidth: 96, maxWidth: 180, ellipsis: true, render: (value) => orderStatusLabels.inboundStatus[value], tone: (value) => value === 'not_received' ? 'text-erp-warning' : value === 'partial' ? 'text-erp-info' : 'text-erp-success' },
-  { key: 'closeStatus', label: '关闭状态', defaultWidth: 100, minWidth: 96, maxWidth: 180, ellipsis: true, render: (value) => orderStatusLabels.closeStatus[value], tone: (value) => value === 'open' ? 'text-erp-warning' : 'text-erp-success' },
-  { key: 'paymentStatus', label: '订单付款状态', defaultWidth: 110, minWidth: 96, maxWidth: 200, ellipsis: true, render: (value) => orderStatusLabels.paymentStatus[value], tone: (value) => value === 'unpaid' ? 'text-erp-warning' : value === 'partial' ? 'text-erp-info' : 'text-erp-success' },
-  { key: 'amount', label: '成交金额', defaultWidth: 148, minWidth: 120, maxWidth: 200, ellipsis: true, align: 'right', sortable: true, render: (value) => value ? value.toLocaleString('zh-CN', { minimumFractionDigits: 2 }) : '' },
-  { key: 'executedAmount', label: '已执行金额', defaultWidth: 148, minWidth: 120, maxWidth: 200, ellipsis: true, align: 'right', sortable: true, render: (value) => value ? value.toLocaleString('zh-CN', { minimumFractionDigits: 2 }) : '' },
+  { key: 'supplier', label: '供应商', defaultWidth: 200, minWidth: 140, maxWidth: 280, ellipsis: true, render: (value) => resolveOptionLabel(value, supplierOptions) },
+  { key: 'warehouse', label: '收货仓库', defaultWidth: 160, minWidth: 120, maxWidth: 220, ellipsis: true, render: (value) => resolveOptionLabel(value, warehouseOptions) },
+  { key: 'deliveryDate', label: '承诺交期', defaultWidth: 112, minWidth: 96, maxWidth: 160, ellipsis: true, sortable: true, render: (value) => value || EMPTY_PLACEHOLDER },
+  { key: 'auditStatus', label: '审核状态', defaultWidth: 96, minWidth: 88, maxWidth: 140, ellipsis: true, render: (value) => orderStatusLabels.auditStatus[value] || value, tone: (value) => (value === 'approved' ? 'text-erp-success' : value === 'pending' ? 'text-erp-info' : 'text-erp-warning') },
+  { key: 'businessStatus', label: '业务状态', defaultWidth: 96, minWidth: 88, maxWidth: 140, ellipsis: true, render: (value) => orderStatusLabels.businessStatus[value] || value, tone: (value) => (value === 'normal' ? 'text-erp-success' : 'text-erp-danger') },
+  { key: 'receiveStatus', label: '收货状态', defaultWidth: 96, minWidth: 88, maxWidth: 140, ellipsis: true, render: (value) => orderStatusLabels.receiveStatus[value] || value, tone: (value) => (value === 'completed' ? 'text-erp-success' : value === 'partial' ? 'text-erp-info' : 'text-erp-warning') },
+  { key: 'totalOrderQty', label: '总采购数量', defaultWidth: 104, minWidth: 88, maxWidth: 140, ellipsis: true, align: 'right', sortable: true, render: qtyCell },
+  { key: 'totalPushableQty', label: '可下推数量', defaultWidth: 104, minWidth: 88, maxWidth: 140, ellipsis: true, align: 'right', sortable: true, render: qtyCell },
+  { key: 'receivedQty', label: '累计入库数量', defaultWidth: 112, minWidth: 96, maxWidth: 140, ellipsis: true, align: 'right', sortable: true, render: qtyCell },
+  { key: 'amount', label: '价税合计', defaultWidth: 132, minWidth: 112, maxWidth: 180, ellipsis: true, align: 'right', sortable: true, render: (value, row) => formatCurrencyAmount(value, row) },
+  { key: 'taxAmount', label: '税额', defaultWidth: 112, minWidth: 96, maxWidth: 160, ellipsis: true, align: 'right', render: (value, row) => formatCurrencyAmount(value, row) },
+  { key: 'netAmount', label: '金额', defaultWidth: 132, minWidth: 112, maxWidth: 180, ellipsis: true, align: 'right', sortable: true, render: (value, row) => formatCurrencyAmount(value, row) },
+  { key: 'remark', label: '备注', defaultWidth: 160, minWidth: 120, maxWidth: 240, ellipsis: true, render: (value) => value || EMPTY_PLACEHOLDER },
+  { key: 'createdAt', label: '创建时间', defaultWidth: 160, minWidth: 140, maxWidth: 200, ellipsis: true, sortable: true },
+  { key: 'updatedAt', label: '最后更新时间', defaultWidth: 160, minWidth: 140, maxWidth: 200, ellipsis: true, sortable: true },
 ];

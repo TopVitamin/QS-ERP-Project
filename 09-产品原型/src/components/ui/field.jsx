@@ -9,6 +9,9 @@ const fieldControlBaseClassName =
 const fieldControlUnderlineClassName =
   `${fieldControlBaseClassName} rounded-none border-x-0 border-t-0 border-b border-erp-border-control bg-transparent px-2.5 hover:border-b-erp-primary/70 focus-visible:border-b-erp-primary aria-expanded:border-b-erp-primary data-[state=open]:border-b-erp-primary disabled:border-b-erp-border-light disabled:bg-transparent disabled:text-erp-text-disabled`;
 
+export const fieldInvalidClassName =
+  'border-b-erp-danger hover:border-b-erp-primary/70 focus-visible:border-b-erp-danger aria-expanded:border-b-erp-danger data-[state=open]:border-b-erp-danger aria-invalid:border-b-erp-danger';
+
 const fieldControlBoxedClassName =
   `${fieldControlBaseClassName} rounded-erp-control border border-erp-border-control bg-erp-surface-panel px-2.5 hover:border-erp-primary/70 focus-visible:border-erp-primary focus-visible:ring-1 focus-visible:ring-erp-primary/15 aria-expanded:border-erp-primary data-[state=open]:border-erp-primary disabled:border-erp-border-light disabled:bg-transparent disabled:text-erp-text-disabled`;
 

@@ -1,11 +1,13 @@
 import { NotificationCenterPage } from '../pages/NotificationCenterPage.jsx';
 import { ProfilePage } from '../pages/ProfilePage.jsx';
-import { PurchaseInboundCreatePage, PurchaseInboundEditPage } from '../pages/PurchaseInboundFormPage.jsx';
 import { PurchaseInboundDetailPage } from '../pages/PurchaseInboundDetailPage.jsx';
 import { PurchaseInboundListPage } from '../pages/PurchaseInboundListPage.jsx';
 import { PurchaseOrderCreatePage, PurchaseOrderEditPage } from '../pages/PurchaseOrderFormPage.jsx';
 import { PurchaseOrderDetailPage } from '../pages/PurchaseOrderDetailPage.jsx';
 import { PurchaseOrderListPage } from '../pages/PurchaseOrderListPage.jsx';
+import { PurchaseReceiptNoticeCreatePage, PurchaseReceiptNoticeEditPage } from '../pages/PurchaseReceiptNoticeFormPage.jsx';
+import { PurchaseReceiptNoticeDetailPage } from '../pages/PurchaseReceiptNoticeDetailPage.jsx';
+import { PurchaseReceiptNoticeListPage } from '../pages/PurchaseReceiptNoticeListPage.jsx';
 import { ExportCenterPage, ImportCenterPage } from '../pages/TransferCenterPage.jsx';
 import { WarehouseListPage } from '../pages/WarehouseListPage.jsx';
 import { createPlaceholderPage } from '../pages/PlaceholderPage.jsx';
@@ -24,6 +26,30 @@ export const PAGE_REGISTRY = {
     navId: 'purchase',
     component: PurchaseInboundListPage,
   },
+  'purchase-receipt-notice': {
+    id: 'purchase-receipt-notice',
+    title: '采购收货通知单列表',
+    navId: 'purchase',
+    component: PurchaseReceiptNoticeListPage,
+  },
+  'purchase-receipt-notice-create': {
+    id: 'purchase-receipt-notice-create',
+    title: '创建采购收货通知单',
+    navId: 'purchase',
+    component: PurchaseReceiptNoticeCreatePage,
+  },
+  'purchase-receipt-notice-edit': {
+    id: 'purchase-receipt-notice-edit',
+    title: '编辑采购收货通知单',
+    navId: 'purchase',
+    component: PurchaseReceiptNoticeEditPage,
+  },
+  'purchase-receipt-notice-detail': {
+    id: 'purchase-receipt-notice-detail',
+    title: '采购收货通知单详情',
+    navId: 'purchase',
+    component: PurchaseReceiptNoticeDetailPage,
+  },
   'purchase-order-create': {
     id: 'purchase-order-create',
     title: '新增采购订单',
@@ -41,18 +67,6 @@ export const PAGE_REGISTRY = {
     title: '采购订单详情',
     navId: 'purchase',
     component: PurchaseOrderDetailPage,
-  },
-  'purchase-inbound-create': {
-    id: 'purchase-inbound-create',
-    title: '新增采购入库单',
-    navId: 'purchase',
-    component: PurchaseInboundCreatePage,
-  },
-  'purchase-inbound-edit': {
-    id: 'purchase-inbound-edit',
-    title: '修改采购入库单',
-    navId: 'purchase',
-    component: PurchaseInboundEditPage,
   },
   'purchase-inbound-detail': {
     id: 'purchase-inbound-detail',

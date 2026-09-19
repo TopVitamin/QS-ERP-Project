@@ -1,3 +1,7 @@
+import { INCOMPLETE_MENU_TAG, isNavModuleAccessible, isPageImplemented } from '../../config/implementedPages.js';
+import { cn } from '../../lib/utils.js';
+import { NavMenuStatusTag } from './NavMenuStatusTag.jsx';
+
 export function NavigationFlyout({ groups = [], left = 141, top, maxHeight, activePageId, onSelect }) {
   return (
     <div
@@ -10,17 +14,33 @@ export function NavigationFlyout({ groups = [], left = 141, top, maxHeight, acti
           <section key={group.title} className="min-w-0">
             <h2 className="border-b border-erp-sidebar-border pb-2.5 text-[13px] font-semibold text-erp-sidebar-flyout-muted">{group.title}</h2>
             <div className="mt-2 space-y-0.5">
-              {group.items.map((item) => (
-                <button
-                  key={item.pageId}
-                  type="button"
-                  className={`flex w-full items-center justify-between gap-2 rounded-erp-control px-1.5 text-left text-[13px] leading-8 transition-colors hover:bg-erp-sidebar-flyout-hover hover:text-erp-primary-soft ${activePageId === item.pageId ? 'bg-erp-sidebar-flyout-hover text-erp-primary-soft' : 'text-erp-sidebar-flyout-text'}`}
-                  onClick={() => onSelect?.(item.pageId)}
-                >
-                  <span className="truncate">{item.label}</span>
-                  {item.tag && <span className="shrink-0 rounded-[3px] border border-erp-sidebar-flyout-border px-1 text-[10px] leading-4">{item.tag}</span>}
-                </button>
-              ))}
+              {group.items.map((item) => {
+                const implemented = isPageImplemented(item.pageId);
+                const isActive = activePageId === item.pageId;
+                return (
+                  <button
+                    key={item.pageId}
+                    type="button"
+                    disabled={!implemented}
+                    title={implemented ? item.label : `${item.label}（${INCOMPLETE_MENU_TAG}）`}
+                    aria-disabled={!implemented}
+                    className={cn(
+                      'flex w-full items-center justify-between gap-2 rounded-erp-control px-1.5 text-left text-[13px] leading-8 transition-colors',
+                      implemented
+                        ? isActive
+                          ? 'bg-erp-sidebar-flyout-hover text-erp-primary-soft hover:bg-erp-sidebar-flyout-hover hover:text-erp-primary-soft'
+                          : 'text-erp-sidebar-flyout-text hover:bg-erp-sidebar-flyout-hover hover:text-erp-primary-soft'
+                        : 'cursor-not-allowed text-erp-sidebar-flyout-muted/70 opacity-55 hover:bg-transparent',
+                    )}
+                    onClick={() => {
+                      if (implemented) onSelect?.(item.pageId);
+                    }}
+                  >
+                    <span className="truncate">{item.label}</span>
+                    {!implemented && <NavMenuStatusTag />}
+                  </button>
+                );
+              })}
             </div>
           </section>
         ))}

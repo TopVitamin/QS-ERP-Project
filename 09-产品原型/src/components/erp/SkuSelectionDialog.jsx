@@ -5,7 +5,7 @@ import { Checkbox } from '../ui/checkbox.jsx';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog.jsx';
 import { Input } from '../ui/input.jsx';
 import { cn } from '../../lib/utils.js';
-import { formatAmount } from '../../lib/format.js';
+import { EMPTY_PLACEHOLDER, formatAmount } from '../../lib/format.js';
 
 function normalizeSkuOption(option) {
   return {
@@ -13,10 +13,10 @@ function normalizeSkuOption(option) {
     value: String(option.value),
     skuCode: option.skuCode || String(option.value),
     productName: option.productName || option.label || String(option.value),
-    barcode: option.barcode || '—',
-    spec: option.spec || '—',
-    unit: option.unit || '—',
-    availableStock: option.availableStock ?? '—',
+    barcode: option.barcode || EMPTY_PLACEHOLDER,
+    spec: option.spec || EMPTY_PLACEHOLDER,
+    unit: option.unit || EMPTY_PLACEHOLDER,
+    availableStock: option.availableStock ?? EMPTY_PLACEHOLDER,
     referencePrice: option.referencePrice ?? null,
   };
 }
@@ -186,7 +186,7 @@ export function SkuSelectionDialog({
                         <td className="truncate border-r border-erp-border-table-column px-2 text-erp-text-muted" title={option.barcode}>{option.barcode}</td>
                         <td className="border-r border-erp-border-table-column px-2 text-erp-text-muted">{option.unit}</td>
                         <td className="border-r border-erp-border-table-column px-2 text-right text-erp-text-muted">{option.availableStock}</td>
-                        <td className="px-2 text-right text-erp-text-muted">{option.referencePrice == null ? '—' : `¥ ${formatAmount(option.referencePrice)}`}</td>
+                        <td className="px-2 text-right text-erp-text-muted">{option.referencePrice == null ? EMPTY_PLACEHOLDER : `¥ ${formatAmount(option.referencePrice)}`}</td>
                       </tr>
                     );
                   })}

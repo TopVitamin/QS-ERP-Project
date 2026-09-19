@@ -11,7 +11,7 @@ function compareValues(a, b) {
   return String(a ?? '').localeCompare(String(b ?? ''), 'zh-CN', { numeric: true });
 }
 
-export function useListPageState({ initialRows, initialFilters, filterRows, initialVisibility, storageKey, columns = [] }) {
+export function useListPageState({ initialRows, initialFilters, filterRows, initialVisibility, storageKey, columns = [], initialSort = null }) {
   const [rows, setRows] = useState(() => readMockRows(storageKey, initialRows));
   const skipPersistRef = useRef(false);
   const [draftFilters, setDraftFilters] = useState(initialFilters);
@@ -22,7 +22,7 @@ export function useListPageState({ initialRows, initialFilters, filterRows, init
   const [selectedIds, setSelectedIds] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSizeState] = useState(20);
-  const [sort, setSort] = useState(null);
+  const [sort, setSort] = useState(initialSort);
 
   const filteredRows = useMemo(() => rows.filter((row) => filterRows(row, appliedFilters)), [rows, appliedFilters, filterRows]);
   const sortedRows = useMemo(() => {

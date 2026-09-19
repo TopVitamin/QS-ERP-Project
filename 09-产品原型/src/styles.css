@@ -229,7 +229,23 @@ button {
 }
 
 .table-scroll {
-  scrollbar-color: rgb(var(--erp-text-secondary)) rgb(var(--erp-surface-muted));
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--erp-text-secondary) / 0.55) rgb(var(--erp-surface-muted));
+}
+
+.table-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.table-scroll::-webkit-scrollbar-thumb {
+  border: 1px solid rgb(var(--erp-surface-muted));
+  border-radius: 999px;
+  background: rgb(var(--erp-text-secondary) / 0.55);
+}
+
+.table-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--erp-text-secondary) / 0.75);
 }
 
 .erp-table-cell {

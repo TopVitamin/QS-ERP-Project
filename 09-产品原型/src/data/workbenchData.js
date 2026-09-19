@@ -1,8 +1,8 @@
 export const quickLaunches = [
   { label: '采购订单', description: '新建采购订单', icon: 'order', tone: 'blue', pageId: 'purchase-order-create' },
-  { label: '采购入库', description: '登记到货入库', icon: 'inbound', tone: 'cyan', pageId: 'purchase-inbound-create' },
+  { label: '采购收货通知', description: '查看收货执行', icon: 'list', tone: 'cyan', pageId: 'purchase-receipt-notice' },
   { label: '采购订单列表', description: '查看订单执行', icon: 'list', tone: 'violet', pageId: 'purchase-order' },
-  { label: '采购入库列表', description: '查看入库进度', icon: 'warehouse', tone: 'orange', pageId: 'purchase-inbound' },
+  { label: '采购入库列表', description: '查看入库结果', icon: 'warehouse', tone: 'orange', pageId: 'purchase-inbound' },
   { label: '待审核处理', description: '处理待办单据', icon: 'review', tone: 'pink', action: '打开待审核事项' },
   { label: '库存预警', description: '关注库存风险', icon: 'warning', tone: 'green', action: '库存预警将在后续模块接入' },
 ];
@@ -10,14 +10,14 @@ export const quickLaunches = [
 export const todoCategories = {
   采购: [
     { count: 8, label: '采购订单 / 待审核', tone: 'primary', pageId: 'purchase-order' },
-    { count: 4, label: '采购入库 / 待确认', tone: 'success', pageId: 'purchase-inbound' },
+    { count: 1, label: '采购入库 / 推送失败', tone: 'danger', pageId: 'purchase-inbound' },
     { count: 28, label: '采购订单 / 待入库', tone: 'warning', pageId: 'purchase-order' },
     { count: 2, label: '采购价格 / 待复核', tone: 'danger', action: '采购价格复核将在后续模块接入' },
   ],
   仓存: [
     { count: 7, label: '商品 / 库存预警', tone: 'danger', action: '库存预警将在后续模块接入' },
     { count: 6, label: '采购订单 / 待入库', tone: 'warning', pageId: 'purchase-order' },
-    { count: 4, label: '采购入库 / 待确认', tone: 'primary', pageId: 'purchase-inbound' },
+    { count: 1, label: '采购入库 / 推送失败', tone: 'primary', pageId: 'purchase-inbound' },
     { count: 3, label: '调拨任务 / 待处理', tone: 'success', action: '调拨任务将在后续模块接入' },
   ],
   全部: [
@@ -30,7 +30,7 @@ export const todoCategories = {
 
 export const realtimeMetrics = [
   { label: '采购订单（5 张）', value: '131,609.50', description: '今日已审核采购订单金额' },
-  { label: '采购入库（2 张）', value: '8,000.00', description: '今日已确认入库含税金额' },
+  { label: '采购入库（2 张）', value: '8,000.00', description: '今日已生成入库单金额' },
   { label: '待入库数量', value: '28', description: '当前采购订单剩余待入库' },
   { label: '新增供应商', value: '3', description: '本月新增供应商档案' },
 ];
@@ -38,7 +38,7 @@ export const realtimeMetrics = [
 export const workbenchWarnings = [
   { label: '最低库存不足商品', count: 8, tone: 'danger' },
   { label: '采购订单交期预警', count: 6, tone: 'warning' },
-  { label: '待确认入库单', count: 4, tone: 'primary' },
+  { label: '采购入库推送失败', count: 2, tone: 'primary' },
   { label: '供应商对账待处理', count: 3, tone: 'warning' },
   { label: '采购价格异常', count: 2, tone: 'danger' },
 ];

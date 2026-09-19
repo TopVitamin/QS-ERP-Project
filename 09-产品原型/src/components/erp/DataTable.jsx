@@ -1,15 +1,36 @@
 import * as ContextMenuPrimitive from '@radix-ui/react-context-menu';
-import { ArrowDown, ArrowUp, ArrowUpDown, ClipboardCopy, Maximize2, RotateCcw } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ClipboardCopy, Maximize2, RotateCcw } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { EMPTY_PLACEHOLDER } from '../../lib/format.js';
 import { cn } from '../../lib/utils.js';
 import { Button } from '../ui/button.jsx';
 import { Checkbox } from '../ui/checkbox.jsx';
 import { ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '../ui/context-menu.jsx';
 import { ConfirmDialog } from '../ui/alert-dialog.jsx';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu.jsx';
 import { HintTooltip } from '../ui/tooltip.jsx';
 
-export function DataTable({ rows, autoFitRows = rows, columns, selectedIds, onToggleRow, onToggleAll, rowActions = [], onRowAction, onCellClick, onFeedback, sort, onSort, pinnedKeys = [], emptyText = '暂无数据' }) {
-  const operationColumnWidth = Math.max(208, rowActions.length * 44 + 20);
+export function DataTable({
+  rows,
+  autoFitRows = rows,
+  columns,
+  selectedIds,
+  onToggleRow,
+  onToggleAll,
+  rowActions = [],
+  rowActionsMaxVisible,
+  onRowAction,
+  onCellClick,
+  onFeedback,
+  sort,
+  onSort,
+  pinnedKeys = [],
+  emptyText = '暂无数据',
+}) {
+  const operationColumnWidth = useMemo(
+    () => computeOperationColumnWidth(rows, rowActions, rowActionsMaxVisible),
+    [rows, rowActions, rowActionsMaxVisible],
+  );
   const selectionColumnWidth = 48;
   const [columnWidths, setColumnWidths] = useState(() => Object.fromEntries(columns.map((column) => [column.key, column.defaultWidth])));
   const [containerWidth, setContainerWidth] = useState(0);
@@ -219,7 +240,7 @@ export function DataTable({ rows, autoFitRows = rows, columns, selectedIds, onTo
               </th>
               );
             })}
-            <th scope="col" className="table-operation-sticky erp-table-head-cell sticky right-0 z-30 bg-erp-surface-table-head px-3 text-left font-normal text-erp-text-section">操作</th>
+            <th scope="col" className="table-operation-sticky erp-table-head-cell sticky right-0 z-30 bg-erp-surface-table-head px-1.5 text-left font-normal text-erp-text-section">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -295,10 +316,13 @@ export function DataTable({ rows, autoFitRows = rows, columns, selectedIds, onTo
                     </td>
                   );
                 })}
-                <td className={`table-operation-sticky erp-table-cell sticky right-0 z-10 px-3 ${rowClass} group-hover:bg-erp-surface-hover`}>
-                  <div className="flex items-center justify-start gap-1 whitespace-nowrap text-[12px]">
-                    {actions.map((action) => <RowAction key={action.id} action={action} row={row} onAction={onRowAction} />)}
-                  </div>
+                <td className={`table-operation-sticky erp-table-cell sticky right-0 z-10 px-1.5 ${rowClass} group-hover:bg-erp-surface-hover`}>
+                  <RowActionsCell
+                    actions={actions}
+                    row={row}
+                    onAction={onRowAction}
+                    maxVisible={rowActionsMaxVisible}
+                  />
                 </td>
               </tr>
             );
@@ -393,6 +417,71 @@ function EllipsisCell({ as: Element = 'span', content, ellipsis = true, classNam
   return <HintTooltip content={isTruncated ? content : undefined}>{element}</HintTooltip>;
 }
 
+function estimateActionButtonWidth(label) {
+  const text = String(label || '');
+  return Math.min(76, Math.max(26, text.length * 12 + 8));
+}
+
+function computeOperationColumnWidth(rows, rowActions, maxVisible) {
+  if (!rowActions.length) return 0;
+
+  const limit = maxVisible != null ? Math.max(0, maxVisible) : rowActions.length;
+  const cellPadding = 12;
+  const actionGap = 6;
+  let maxWidth = 0;
+
+  const measureRows = rows.length ? rows : [null];
+  for (const row of measureRows) {
+    const actions = row
+      ? rowActions.filter((action) => !action.visibleWhen || action.visibleWhen(row))
+      : rowActions;
+    const visibleActions = limit ? actions.slice(0, limit) : actions;
+    const overflow = limit ? actions.length > limit : false;
+    const buttonsWidth = visibleActions.reduce((sum, action) => sum + estimateActionButtonWidth(action.label), 0);
+    const visibleCount = visibleActions.length + (overflow ? 1 : 0);
+    const gapsWidth = visibleCount > 1 ? (visibleCount - 1) * actionGap : 0;
+    const moreWidth = overflow ? estimateActionButtonWidth('更多') + 12 : 0;
+    maxWidth = Math.max(maxWidth, buttonsWidth + moreWidth + gapsWidth + cellPadding);
+  }
+
+  return Math.max(maxWidth, 72);
+}
+
+function RowActionsCell({ actions, row, onAction, maxVisible }) {
+  if (!actions.length) return <span className="text-erp-text-muted">{EMPTY_PLACEHOLDER}</span>;
+
+  const limit = maxVisible != null ? Math.max(0, maxVisible) : actions.length;
+  const visibleActions = maxVisible != null ? actions.slice(0, limit) : actions;
+  const overflowActions = maxVisible != null ? actions.slice(limit) : [];
+
+  return (
+    <div className="flex items-center justify-start gap-1.5 whitespace-nowrap text-[12px]">
+      {visibleActions.map((action) => (
+        <RowAction key={action.id} action={action} row={row} onAction={onAction} />
+      ))}
+      {overflowActions.length > 0 && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="text"
+              size="compact"
+              className="h-7 gap-0.5 rounded-erp-control px-1 text-[12px] font-normal hover:bg-erp-primary-soft hover:text-erp-primary"
+            >
+              更多
+              <ChevronDown className="h-3.5 w-3.5 text-erp-text-muted" strokeWidth={2} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {overflowActions.map((action) => (
+              <OverflowRowAction key={action.id} action={action} row={row} onAction={onAction} />
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </div>
+  );
+}
+
 function RowAction({ action, row, onAction }) {
   const disabled = action.disabledWhen?.(row) || false;
   const trigger = (
@@ -400,7 +489,12 @@ function RowAction({ action, row, onAction }) {
       variant={action.variant || 'text'}
       size="compact"
       disabled={disabled}
-      className="h-7 gap-1 rounded-erp-control px-2 text-[12px] font-normal hover:bg-erp-primary-soft hover:text-erp-primary"
+      className={cn(
+        'h-7 gap-1 rounded-erp-control px-1 text-[12px] font-normal',
+        action.variant === 'danger'
+          ? 'text-erp-danger hover:bg-erp-danger/10 hover:text-erp-danger'
+          : 'hover:bg-erp-primary-soft hover:text-erp-primary',
+      )}
       onClick={() => onAction?.(action.id, row)}
     >
       {action.label}
@@ -408,4 +502,42 @@ function RowAction({ action, row, onAction }) {
   );
   if (!action.confirm) return trigger;
   return <ConfirmDialog trigger={trigger} title={action.confirm.title} description={action.confirm.description} confirmLabel={action.confirm.confirmLabel || '确认'} confirmVariant={action.confirm.confirmVariant || 'primary'} onConfirm={() => onAction?.(action.id, row)} />;
+}
+
+function OverflowRowAction({ action, row, onAction }) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const disabled = action.disabledWhen?.(row) || false;
+  const danger = action.variant === 'danger' || action.confirm?.confirmVariant === 'danger';
+
+  if (!action.confirm) {
+    return (
+      <DropdownMenuItem disabled={disabled} onSelect={() => onAction?.(action.id, row)}>
+        {action.label}
+      </DropdownMenuItem>
+    );
+  }
+
+  return (
+    <>
+      <DropdownMenuItem
+        disabled={disabled}
+        className={danger ? 'text-erp-danger data-[highlighted]:text-erp-danger' : undefined}
+        onSelect={() => setConfirmOpen(true)}
+      >
+        {action.label}
+      </DropdownMenuItem>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={action.confirm.title}
+        description={action.confirm.description}
+        confirmLabel={action.confirm.confirmLabel || '确认'}
+        confirmVariant={action.confirm.confirmVariant || 'primary'}
+        onConfirm={() => {
+          onAction?.(action.id, row);
+          setConfirmOpen(false);
+        }}
+      />
+    </>
+  );
 }
