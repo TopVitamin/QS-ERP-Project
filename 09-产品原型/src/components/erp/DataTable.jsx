@@ -27,9 +27,10 @@ export function DataTable({
   pinnedKeys = [],
   emptyText = '暂无数据',
 }) {
+  const showOperationColumn = rowActions.length > 0;
   const operationColumnWidth = useMemo(
-    () => computeOperationColumnWidth(rows, rowActions, rowActionsMaxVisible),
-    [rows, rowActions, rowActionsMaxVisible],
+    () => (showOperationColumn ? computeOperationColumnWidth(rows, rowActions, rowActionsMaxVisible) : 0),
+    [rows, rowActions, rowActionsMaxVisible, showOperationColumn],
   );
   const selectionColumnWidth = 48;
   const [columnWidths, setColumnWidths] = useState(() => Object.fromEntries(columns.map((column) => [column.key, column.defaultWidth])));
@@ -184,7 +185,7 @@ export function DataTable({
         <colgroup>
           <col style={{ width: selectionColumnWidth }} />
           {columns.map((column) => <col key={column.key} style={{ width: getEffectiveColumnWidth(column) }} />)}
-          <col style={{ width: operationColumnWidth }} />
+          {showOperationColumn && <col style={{ width: operationColumnWidth }} />}
         </colgroup>
         <thead className="sticky top-0 z-20 h-7 bg-erp-surface-table-head text-[12px] font-normal text-erp-text-section">
           <tr className="h-7">
@@ -240,13 +241,15 @@ export function DataTable({
               </th>
               );
             })}
-            <th scope="col" className="table-operation-sticky erp-table-head-cell sticky right-0 z-30 bg-erp-surface-table-head px-1.5 text-left font-normal text-erp-text-section">操作</th>
+            {showOperationColumn && (
+              <th scope="col" className="table-operation-sticky erp-table-head-cell sticky right-0 z-30 bg-erp-surface-table-head px-1.5 text-left font-normal text-erp-text-section">操作</th>
+            )}
           </tr>
         </thead>
         <tbody>
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={columns.length + 2} className="h-32 border-b border-erp-border-table-row text-center text-[12px] text-erp-text-muted">{emptyText}</td>
+              <td colSpan={columns.length + (showOperationColumn ? 2 : 1)} className="h-32 border-b border-erp-border-table-row text-center text-[12px] text-erp-text-muted">{emptyText}</td>
             </tr>
           ) : rows.map((row) => {
             const selected = selectedIds.includes(row.id);
@@ -316,14 +319,16 @@ export function DataTable({
                     </td>
                   );
                 })}
-                <td className={`table-operation-sticky erp-table-cell sticky right-0 z-10 px-1.5 ${rowClass} group-hover:bg-erp-surface-hover`}>
-                  <RowActionsCell
-                    actions={actions}
-                    row={row}
-                    onAction={onRowAction}
-                    maxVisible={rowActionsMaxVisible}
-                  />
-                </td>
+                {showOperationColumn && (
+                  <td className={`table-operation-sticky erp-table-cell sticky right-0 z-10 px-1.5 ${rowClass} group-hover:bg-erp-surface-hover`}>
+                    <RowActionsCell
+                      actions={actions}
+                      row={row}
+                      onAction={onRowAction}
+                      maxVisible={rowActionsMaxVisible}
+                    />
+                  </td>
+                )}
               </tr>
             );
           })}

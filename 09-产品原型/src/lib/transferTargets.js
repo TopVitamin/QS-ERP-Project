@@ -2,7 +2,7 @@ import { inboundOrders } from '../data/inboundData.js';
 import { auditStatusLabels, INBOUND_STORAGE_KEY, kingdeePushStatusLabels } from '../lib/inboundLogic.js';
 import { orderStatusLabels, orders } from '../data/orderData.js';
 import { receiptNotices } from '../data/receiptNoticeData.js';
-import { noticeStatusLabels } from './receiptNoticeLogic.js';
+import { noticeStatusLabels, receiptModeLabels } from './receiptNoticeLogic.js';
 import { warehouseStatusLabels, warehouses } from '../data/warehouseData.js';
 import { EMPTY_PLACEHOLDER } from './format.js';
 import { readMockRows } from './mockStorage.js';
@@ -49,6 +49,7 @@ const purchaseReceiptNoticeFields = [
   { key: 'sourceOrderNo', label: '来源采购订单' },
   { key: 'supplier', label: '供应商' },
   { key: 'warehouse', label: '收货仓库' },
+  { key: 'receiptMode', label: '收货处理方式', options: toOptions(receiptModeLabels) },
   { key: 'status', label: '单据状态', options: toOptions(noticeStatusLabels) },
   { key: 'totalNotifyQty', label: '通知数量' },
   { key: 'totalReceivedQty', label: '实收数量' },
@@ -85,7 +86,7 @@ export const transferTargets = [
     keyLabel: '实体仓编码',
     auditField: 'auditStatus',
     auditDraftValue: 'draft',
-    importDefaults: { useStatus: 'disabled' },
+    importDefaults: { useStatus: 'enabled' },
     importable: true,
     sampleRows: [
       ['WH-XM-001', '厦门仓', '自营', '直连', '仓库作业系统', '福建省厦门市湖里区物流园 2 号库', '陈仓管', '0592-6666 1000', '启用'],
@@ -98,12 +99,13 @@ export const transferTargets = [
   {
     id: 'purchase-order',
     label: '采购订单',
-    storageKey: 'qs-erp:purchase-orders:v1',
+    storageKey: 'qs-erp:purchase-orders:v4',
     seedRows: orders,
     fileName: '采购订单',
     keyField: 'orderNo',
     keyLabel: '单据编号',
     importable: false,
+    demoImport: true,
     fields: purchaseOrderFields,
   },
   {

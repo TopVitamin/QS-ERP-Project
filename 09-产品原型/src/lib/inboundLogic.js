@@ -4,7 +4,7 @@ import { nextDocumentNo } from './documentNo.js';
 import { upsertMockRow, readMockRows } from './mockStorage.js';
 import { loadOrderById, nowStamp, NOTICE_STORAGE_KEY } from './purchaseOrderLogic.js';
 
-export const INBOUND_STORAGE_KEY = 'qs-erp:purchase-inbounds:v2';
+export const INBOUND_STORAGE_KEY = 'qs-erp:purchase-inbounds:v3';
 
 export const auditStatusLabels = {
   approved: '已审核',
@@ -19,10 +19,6 @@ export const kingdeePushStatusLabels = {
 
 const KINGDEE_AUTO_RETRY_MAX = 3;
 const kingdeeTimers = new Map();
-
-export function canRetryKingdeePush(row) {
-  return row?.auditStatus === 'approved' && row?.kingdeePushStatus === 'push_failed';
-}
 
 export function enrichInboundLine(line) {
   const sku = skuOptions.find((item) => item.value === line.product);
@@ -59,6 +55,7 @@ export function normalizeInboundRow(row) {
     taxAmount: totals.taxAmount,
     netAmount: totals.netAmount,
     totalAmount: totals.netAmount,
+    businessDate: row.businessDate || String(row.actualInboundTime || '').slice(0, 10),
     updatedAt: row.updatedAt || nowStamp(),
     updater: row.updater || '系统',
   };
@@ -224,13 +221,6 @@ export function generateInboundFromNotice(noticeRow) {
 
   simulateKingdeePush(inbound.id);
   return inbound;
-}
-
-export function applyRetryKingdeePush(row) {
-  if (!canRetryKingdeePush(row)) {
-    throw new Error('当前状态不可重推金蝶');
-  }
-  return scheduleKingdeeAttempt(row.id, 1, false);
 }
 
 export function buildSeedInboundFromNotice(noticeRow, orderRow, overrides = {}) {

@@ -1,6 +1,6 @@
 import { resolveOptionLabel } from '../lib/codeName.js';
 import { EMPTY_PLACEHOLDER } from '../lib/format.js';
-import { normalizeNoticeRow, noticeStatusLabels } from '../lib/receiptNoticeLogic.js';
+import { formatReceiptMode, normalizeNoticeRow, noticeStatusLabels } from '../lib/receiptNoticeLogic.js';
 import { supplierOptions, warehouseOptions } from './masterData.js';
 
 const seedNotices = [
@@ -11,6 +11,7 @@ const seedNotices = [
     sourceOrderNo: 'CGDD-20260918-0002',
     supplier: 'SUP000002',
     warehouse: 'WH000002',
+    receiptMode: 'warehouse',
     status: 'pending_receive',
     remark: '第二批发货',
     pushTime: '2026-09-18 16:00:00',
@@ -43,6 +44,7 @@ const seedNotices = [
     sourceOrderNo: 'CGDD-20260918-0002',
     supplier: 'SUP000002',
     warehouse: 'WH000002',
+    receiptMode: 'warehouse',
     status: 'received',
     remark: '',
     inboundId: 'inbound-seed-1',
@@ -76,6 +78,7 @@ const seedNotices = [
     sourceOrderNo: 'CGDD-20260918-0002',
     supplier: 'SUP000002',
     warehouse: 'WH000002',
+    receiptMode: 'warehouse',
     status: 'received',
     remark: '少收演示后入库',
     inboundId: 'inbound-seed-2',
@@ -109,6 +112,7 @@ const seedNotices = [
     sourceOrderNo: 'CGDD-20260920-0006',
     supplier: 'SUP000001',
     warehouse: 'WH000001',
+    receiptMode: 'warehouse',
     status: 'push_failed',
     remark: '推送失败演示',
     pushTime: '',
@@ -158,6 +162,7 @@ export const receiptNoticeColumns = [
   { key: 'sourceOrderNo', label: '来源采购订单', defaultWidth: 180, minWidth: 160, maxWidth: 240, ellipsis: true, link: true },
   { key: 'supplier', label: '供应商', defaultWidth: 200, minWidth: 140, maxWidth: 280, ellipsis: true, render: (value) => resolveOptionLabel(value, supplierOptions) },
   { key: 'warehouse', label: '收货仓库', defaultWidth: 160, minWidth: 120, maxWidth: 220, ellipsis: true, render: (value) => resolveOptionLabel(value, warehouseOptions) },
+  { key: 'receiptMode', label: '收货处理方式', defaultWidth: 120, minWidth: 110, maxWidth: 160, ellipsis: true, render: (value) => formatReceiptMode(value) },
   { key: 'status', label: '单据状态', defaultWidth: 96, minWidth: 88, maxWidth: 140, ellipsis: true, render: (value) => noticeStatusLabels[value] || value, tone: (value) => (value === 'received' ? 'text-erp-success' : value === 'pending_receive' ? 'text-erp-info' : value === 'push_failed' || value === 'cancelled' ? 'text-erp-danger' : 'text-erp-warning') },
   { key: 'totalNotifyQty', label: '通知数量', defaultWidth: 96, minWidth: 80, maxWidth: 120, ellipsis: true, align: 'right', sortable: true, render: qtyCell },
   { key: 'totalReceivedQty', label: '实收数量', defaultWidth: 96, minWidth: 80, maxWidth: 120, ellipsis: true, align: 'right', sortable: true, render: qtyCell },

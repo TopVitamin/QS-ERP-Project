@@ -191,7 +191,7 @@ renderAfterLines: ({ row, onOpenPage }) =>
 ## 导入导出与消息
 
 - 导入导出对象统一注册在 `lib/transferTargets.js`（字段、必填、枚举、keyField、storageKey）；页面入口用 `TransferDropdown`／`ImportExportActions`，流程走 `ImportWizardDialog`／`ExportWizardDialog`，不要在页面里另写导入导出。
-- 导入规则：按 `keyField` 匹配，已存在更新非空字段、不存在新增，导入后统一回 `auditStatus: draft` 等人工审核；新对象接入前先在 02/03 里把字段与校验规则定下来，`importable: false` 的对象列表页**不展示导入按钮**，仅保留导出。
+- 导入规则：按 `keyField` 匹配，已存在更新非空字段、不存在新增，导入后统一回 `auditStatus: draft` 等人工审核；新对象接入前先在 02/03 里把字段与校验规则定下来。`importable: false` 的对象不进导入中心、列表默认不展示导入按钮；Demo 需要保留导入向导时加 `demoImport: true`，按钮和向导标明 Mock。
 - 所有导出都是异步任务，写入 `lib/taskStore.js`（`qs-erp:transfer-tasks:v1`），完成时推 `transfer` 类消息；导入导出中心两页共用 `TransferCenterPage`。
 - 消息统一走 `lib/notificationStore.js` + `hooks/useNotifications.js`（分类：待办／业务／导入导出／系统），偏好走 `lib/preferences.js`；文件解析与生成统一用 `lib/spreadsheet.js`（xlsx 按需加载，csv/tsv 自解析）。
 

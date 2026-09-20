@@ -1,11 +1,6 @@
-import { useState } from 'react';
 import { DocumentDetailPage } from '../components/erp/DocumentDetailPage.jsx';
 import { buildCreateMetaFields } from '../components/erp/DocumentMetaTabsCard.jsx';
 import { buildInboundOperationLogs } from '../lib/operationLog.js';
-import {
-  PurchaseInboundActionDialogs,
-  PurchaseInboundDetailHeaderActions,
-} from '../components/erp/PurchaseInboundActionDialogs.jsx';
 import { usePurchaseInboundRow } from '../hooks/usePurchaseInboundRow.js';
 import { resolveOptionLabel } from '../lib/codeName.js';
 import { EMPTY_PLACEHOLDER, formatAmount } from '../lib/format.js';
@@ -14,7 +9,7 @@ import { supplierOptions, warehouseOptions } from '../data/masterData.js';
 import { getInboundStatusBadges } from '../data/inboundData.js';
 import { orders } from '../data/orderData.js';
 import { receiptNotices } from '../data/receiptNoticeData.js';
-import { auditStatusLabels, kingdeePushStatusLabels, loadInboundById, refreshInboundLines } from '../lib/inboundLogic.js';
+import { refreshInboundLines } from '../lib/inboundLogic.js';
 import { loadOrderById } from '../lib/purchaseOrderLogic.js';
 import { loadNoticeById } from '../lib/receiptNoticeLogic.js';
 
@@ -122,36 +117,7 @@ const inboundDetailConfig = {
   },
 };
 
-export function PurchaseInboundDetailPage({ onFeedback, onOpenPage, context }) {
+export function PurchaseInboundDetailPage({ onOpenPage, context }) {
   const row = usePurchaseInboundRow(context);
-  const [dialog, setDialog] = useState(null);
-
-  function handleDialogComplete(result) {
-    if (result?.message) onFeedback?.(result.message, result.type || 'success');
-    if (result?.row) {
-      onOpenPage?.('purchase-inbound-detail', { row: loadInboundById(result.row.id) || result.row });
-    }
-    setDialog(null);
-  }
-
-  const config = {
-    ...inboundDetailConfig,
-    renderHeaderActions: () => (
-      <PurchaseInboundDetailHeaderActions
-        row={row}
-        onAction={(id, currentRow) => setDialog({ type: id, row: currentRow })}
-      />
-    ),
-  };
-
-  return (
-    <>
-      <DocumentDetailPage context={{ row }} onOpenPage={onOpenPage} config={config} />
-      <PurchaseInboundActionDialogs
-        dialog={dialog}
-        onClose={() => setDialog(null)}
-        onComplete={handleDialogComplete}
-      />
-    </>
-  );
+  return <DocumentDetailPage context={{ row }} onOpenPage={onOpenPage} config={inboundDetailConfig} />;
 }

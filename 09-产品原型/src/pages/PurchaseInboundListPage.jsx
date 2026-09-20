@@ -1,7 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { DocumentListPage } from '../components/erp/DocumentListPage.jsx';
 import { ImportExportActions } from '../components/erp/ImportExportActions.jsx';
-import { PurchaseInboundActionDialogs } from '../components/erp/PurchaseInboundActionDialogs.jsx';
 import { getTransferTarget } from '../lib/transferTargets.js';
 import { matchesMultiSelect, statusMultiSelectField } from '../lib/listFilters.js';
 import { supplierOptions, warehouseOptions } from '../data/masterData.js';
@@ -15,10 +14,8 @@ import {
 } from '../data/inboundData.js';
 import {
   auditStatusLabels,
-  canRetryKingdeePush,
   INBOUND_STORAGE_KEY,
   kingdeePushStatusLabels,
-  loadInboundById,
 } from '../lib/inboundLogic.js';
 
 const initialFilters = {
@@ -82,18 +79,7 @@ function handleCellClick(column, row, { onOpenPage }) {
   }
 }
 
-function createRowActionHandler(openDialog) {
-  return function handleRowAction(id, row) {
-    const latest = loadInboundById(row.id) || row;
-    if (id === 'retry-kingdee') {
-      openDialog({ type: 'retry-kingdee', row: latest });
-    }
-  };
-}
-
 export function PurchaseInboundListPage(props) {
-  const [dialog, setDialog] = useState(null);
-
   const listConfig = useMemo(() => ({
     title: '采购入库单',
     rows: inboundOrders,
@@ -104,7 +90,7 @@ export function PurchaseInboundListPage(props) {
     columns: inboundColumns,
     columnOptions,
     filterFields: createFilterFields(inboundOrders),
-    defaultSort: { key: 'actualInboundTime', direction: 'desc' },
+    defaultSort: { key: 'businessDate', direction: 'desc' },
     headerActions: [
       {
         id: 'import-export',
@@ -120,29 +106,11 @@ export function PurchaseInboundListPage(props) {
       },
     ],
     toolbarActions: [],
-    rowActionsMaxVisible: 3,
-    rowActions: [
-      { id: 'retry-kingdee', label: '重推金蝶', visibleWhen: (row) => canRetryKingdeePush(row) },
-    ],
+    rowActions: [],
     resetMessage: '筛选条件已重置',
     queryMessage: '已执行采购入库单查询',
     onCellClick: handleCellClick,
-    onRowAction: createRowActionHandler(setDialog),
   }), []);
 
-  function handleDialogComplete(result) {
-    if (result?.message) props.onFeedback?.(result.message, result.type || 'success');
-    setDialog(null);
-  }
-
-  return (
-    <>
-      <DocumentListPage {...props} config={listConfig} />
-      <PurchaseInboundActionDialogs
-        dialog={dialog}
-        onClose={() => setDialog(null)}
-        onComplete={handleDialogComplete}
-      />
-    </>
-  );
+  return <DocumentListPage {...props} config={listConfig} />;
 }

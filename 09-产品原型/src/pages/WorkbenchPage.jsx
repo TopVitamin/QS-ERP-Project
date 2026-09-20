@@ -12,6 +12,7 @@ export function WorkbenchPage({ onFeedback, onOpenPage }) {
         <header className="mb-2 flex h-8 items-center justify-between">
           <div className="flex items-center gap-3">
             <h1 className="text-[20px] font-semibold tracking-tight text-erp-text-title">首页</h1>
+            <span className="text-[11px] text-erp-text-muted">演示入口，工作台一期后置</span>
           </div>
           <div className="flex items-center gap-3 text-[11px] text-erp-text-muted">
             <span>数据更新于 15:30</span>

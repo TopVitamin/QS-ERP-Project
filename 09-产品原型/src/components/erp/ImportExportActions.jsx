@@ -8,14 +8,15 @@ export function ImportExportActions({ target, scopeSource, defaultColumnKeys, no
   const [dialogType, setDialogType] = useState(null);
   if (!target) return null;
 
-  const showImport = target.importable !== false;
+  const showImport = target.importable !== false || target.demoImport;
+  const importLabel = target.demoImport ? '导入（Mock）' : '导入';
 
   return (
     <span className="inline-flex items-center gap-2">
       {showImport && (
-        <Button variant="outline" size="compact" aria-label={`导入${target.label}`} onClick={() => setDialogType('import')}>
+        <Button variant="outline" size="compact" aria-label={importLabel} onClick={() => setDialogType('import')}>
           <Upload className="h-3.5 w-3.5" strokeWidth={1.9} />
-          <span>导入</span>
+          <span>{importLabel}</span>
         </Button>
       )}
       <Button variant="outline" size="compact" aria-label={`导出${target.label}`} onClick={() => setDialogType('export')}>
@@ -30,7 +31,9 @@ export function ImportExportActions({ target, scopeSource, defaultColumnKeys, no
           onOpenChange={(next) => { if (!next) setDialogType(null); }}
           onOpenPage={onOpenPage}
           onCompleted={(task) => {
-            notify?.(`导入完成：新增 ${task.createdCount} 条、更新 ${task.updatedCount} 条`, 'success');
+            notify?.(target.demoImport
+              ? `导入完成（Mock演示）：新增 ${task.createdCount} 条、更新 ${task.updatedCount} 条`
+              : `导入完成：新增 ${task.createdCount} 条、更新 ${task.updatedCount} 条`, 'success');
             onCompleted?.(task);
           }}
         />

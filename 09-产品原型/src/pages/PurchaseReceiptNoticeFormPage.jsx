@@ -3,6 +3,7 @@ import { DocumentEditorFrame, EditorCard } from '../components/erp/DocumentEdito
 import { FormFields } from '../components/erp/FormControl.jsx';
 import { LineItemTable } from '../components/erp/LineItemTable.jsx';
 import { resolveOptionLabel } from '../lib/codeName.js';
+import { toSelectOptions } from '../lib/options.js';
 import { erpFieldGridClassName } from '../styles/typography.js';
 import { supplierOptions, warehouseOptions } from '../data/masterData.js';
 import { getNoticeStatusBadges } from '../data/receiptNoticeData.js';
@@ -11,6 +12,8 @@ import {
   canEditRemark,
   createReceiptNotice,
   loadNoticeById,
+  receiptModeLabels,
+  resolveReceiptMode,
   updateNoticeRemark,
   validateNoticeForCreate,
 } from '../lib/receiptNoticeLogic.js';
@@ -26,12 +29,23 @@ function getSourceOrder(context) {
   return null;
 }
 
+function receiptModeField({ required = false, disabled = false } = {}) {
+  return {
+    key: 'receiptMode',
+    label: required ? '收货处理方式 *' : '收货处理方式',
+    type: 'radio',
+    options: toSelectOptions(receiptModeLabels),
+    disabled,
+  };
+}
+
 function buildCreateFields(orderRow) {
   return [
     { key: 'noticeNo', label: '单号', type: 'disabled', getValue: (form) => form.noticeNo },
     { key: 'sourceOrderNo', label: '来源采购订单', type: 'disabled', getValue: () => orderRow?.orderNo || '' },
     { key: 'supplier', label: '供应商', type: 'disabled', getValue: (form) => resolveOptionLabel(form.supplier, supplierOptions) },
     { key: 'warehouse', label: '收货仓库', type: 'disabled', getValue: (form) => resolveOptionLabel(form.warehouse, warehouseOptions) },
+    receiptModeField({ required: true }),
     { key: 'remark', label: '备注', type: 'textarea', className: 'col-span-3', placeholder: '请输入备注' },
   ];
 }
@@ -42,6 +56,7 @@ function buildEditFields() {
     { key: 'sourceOrderNo', label: '来源采购订单', type: 'disabled', getValue: (form) => form.sourceOrderNo },
     { key: 'supplier', label: '供应商', type: 'disabled', getValue: (form) => resolveOptionLabel(form.supplier, supplierOptions) },
     { key: 'warehouse', label: '收货仓库', type: 'disabled', getValue: (form) => resolveOptionLabel(form.warehouse, warehouseOptions) },
+    receiptModeField({ disabled: true }),
     { key: 'remark', label: '备注', type: 'textarea', className: 'col-span-3', placeholder: '请输入备注' },
   ];
 }
@@ -156,6 +171,7 @@ export function PurchaseReceiptNoticeEditPage({ context, onFeedback, onOpenPage 
     }
     setForm({
       ...latest,
+      receiptMode: resolveReceiptMode(latest),
       lines: latest.lines.map((line) => ({ ...line })),
     });
     setDirty(false);

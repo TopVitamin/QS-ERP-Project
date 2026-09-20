@@ -19,9 +19,11 @@ export const IMPLEMENTED_PAGE_IDS = new Set([
   'import-center',
   'export-center',
   'notification-center',
+  'profile',
 ]);
 
 export function isPageImplemented(pageId) {
+  // 工作台一期后置，侧栏仍保留演示入口。
   if (pageId === 'home') return true;
   return IMPLEMENTED_PAGE_IDS.has(pageId);
 }

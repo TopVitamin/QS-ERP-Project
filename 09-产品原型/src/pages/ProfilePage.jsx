@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { CircleUserRound, MessageSquare } from 'lucide-react';
 import { Button } from '../components/ui/button.jsx';
+import { Input } from '../components/ui/input.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select.jsx';
 import { Switch } from '../components/ui/switch.jsx';
 import { currentAccount, themeSwatchColors } from '../data/accountData.js';
@@ -14,15 +15,17 @@ import { typography } from '../styles/typography.js';
 
 function getHomeOptions() {
   return [
-    { value: 'home', label: '首页' },
-    ...['purchase-order', 'purchase-inbound']
+    { value: 'purchase-order', label: '采购订单列表' },
+    ...['purchase-receipt-notice', 'purchase-inbound']
       .filter((pageId) => isPageImplemented(pageId))
       .map((pageId) => ({ value: pageId, label: PAGE_REGISTRY[pageId]?.title || pageId })),
+    { value: 'home', label: '工作台（演示）' },
   ];
 }
 
 export function ProfilePage({ theme, onThemeChange, onFeedback, onOpenPage }) {
   const [preferences, setPreferences] = useState(readPreferences);
+  const [passwordForm, setPasswordForm] = useState({ current: '', next: '', confirm: '' });
   const notifications = useNotifications();
   const unreadCount = notifications.filter((item) => !item.read).length;
   const homeOptions = getHomeOptions();
@@ -108,7 +111,7 @@ export function ProfilePage({ theme, onThemeChange, onFeedback, onOpenPage }) {
                 <div className="flex items-center justify-between gap-6">
                   <div>
                     <div className="text-[12px] text-erp-text">默认首页</div>
-                    <div className="mt-0.5 text-[11px] text-erp-text-muted">下次打开系统时生效</div>
+                    <div className="mt-0.5 text-[11px] text-erp-text-muted">下次打开系统时生效；工作台为一期后置的演示入口</div>
                   </div>
                   <Select value={preferences.defaultHome} onValueChange={(value) => updatePreference({ defaultHome: value })}>
                     <SelectTrigger variant="boxed" className="w-44" aria-label="默认首页"><SelectValue /></SelectTrigger>
@@ -119,6 +122,46 @@ export function ProfilePage({ theme, onThemeChange, onFeedback, onOpenPage }) {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+            </section>
+
+            <section className="rounded-erp-section bg-erp-surface-panel p-4" aria-label="修改密码">
+              <h2 className="border-b border-erp-border-light pb-3 text-[13px] font-medium text-erp-text-title">修改密码</h2>
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                <PasswordField
+                  label="原密码"
+                  value={passwordForm.current}
+                  onChange={(value) => setPasswordForm((current) => ({ ...current, current: value }))}
+                />
+                <PasswordField
+                  label="新密码"
+                  value={passwordForm.next}
+                  onChange={(value) => setPasswordForm((current) => ({ ...current, next: value }))}
+                />
+                <PasswordField
+                  label="确认新密码"
+                  value={passwordForm.confirm}
+                  onChange={(value) => setPasswordForm((current) => ({ ...current, confirm: value }))}
+                />
+              </div>
+              <div className="mt-3 flex justify-end">
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    if (!passwordForm.current || !passwordForm.next || !passwordForm.confirm) {
+                      onFeedback?.('请填写原密码和新密码', 'error');
+                      return;
+                    }
+                    if (passwordForm.next !== passwordForm.confirm) {
+                      onFeedback?.('两次输入的新密码不一致', 'error');
+                      return;
+                    }
+                    setPasswordForm({ current: '', next: '', confirm: '' });
+                    onFeedback?.('密码已更新（演示）', 'success');
+                  }}
+                >
+                  保存新密码
+                </Button>
               </div>
             </section>
 
@@ -151,5 +194,21 @@ function InfoRow({ label, value }) {
       <dt className="shrink-0 text-erp-text-muted">{label}</dt>
       <dd className="min-w-0 truncate text-erp-text" title={String(value)}>{value}</dd>
     </div>
+  );
+}
+
+function PasswordField({ label, value, onChange }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-[12px] text-erp-text">{label}</span>
+      <Input
+        type="password"
+        variant="boxed"
+        aria-label={label}
+        autoComplete="off"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </label>
   );
 }

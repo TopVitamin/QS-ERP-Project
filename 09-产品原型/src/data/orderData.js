@@ -22,11 +22,11 @@ const seedOrders = [
 ];
 
 export const orders = seedOrders.map((order, index) => normalizeOrderRow({
+  ...order,
   id: `order-${index + 1}`,
   creator: '张三',
-  createdAt: order.updatedAt,
   updater: '张三',
-  ...order,
+  createdAt: order.submittedAt || `${order.date} 09:00:00`,
 }));
 
 export const orderStatusLabels = {
@@ -58,6 +58,6 @@ export const tableColumns = [
   { key: 'taxAmount', label: '税额', defaultWidth: 112, minWidth: 96, maxWidth: 160, ellipsis: true, align: 'right', render: (value, row) => formatCurrencyAmount(value, row) },
   { key: 'netAmount', label: '金额', defaultWidth: 132, minWidth: 112, maxWidth: 180, ellipsis: true, align: 'right', sortable: true, render: (value, row) => formatCurrencyAmount(value, row) },
   { key: 'remark', label: '备注', defaultWidth: 160, minWidth: 120, maxWidth: 240, ellipsis: true, render: (value) => value || EMPTY_PLACEHOLDER },
-  { key: 'createdAt', label: '创建时间', defaultWidth: 160, minWidth: 140, maxWidth: 200, ellipsis: true, sortable: true },
+  { key: 'createdAt', label: '创建时间', defaultWidth: 160, minWidth: 140, maxWidth: 200, ellipsis: true, sortable: true }, // 列表默认按创建时间倒序
   { key: 'updatedAt', label: '最后更新时间', defaultWidth: 160, minWidth: 140, maxWidth: 200, ellipsis: true, sortable: true },
 ];

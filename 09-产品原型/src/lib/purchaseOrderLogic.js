@@ -4,7 +4,7 @@ import { emptyFieldMessage } from './formValidation.js';
 import { hasNegativePrice } from './validation.js';
 import { upsertMockRow, readMockRows, writeMockRows } from './mockStorage.js';
 
-export const ORDER_STORAGE_KEY = 'qs-erp:purchase-orders:v1';
+export const ORDER_STORAGE_KEY = 'qs-erp:purchase-orders:v4';
 export const NOTICE_STORAGE_KEY = 'qs-erp:purchase-receipt-notices:v1';
 
 const BLOCKING_NOTICE_STATUSES = new Set(['pushing', 'pending_receive', 'cancelling']);
@@ -184,6 +184,7 @@ export function findZeroPriceLines(form) {
 export function normalizeOrderRow(row) {
   const lines = refreshOrderLines(row.lines || []);
   const totals = computeLinesTotals(lines);
+  const stamp = nowStamp();
   return {
     ...row,
     lines,
@@ -194,8 +195,9 @@ export function normalizeOrderRow(row) {
     receivedQty: sumReceivedQty(lines),
     totalPushableQty: computeTotalPushableQty({ ...row, lines }),
     receiveStatus: computeReceiveStatus(lines),
-    updatedAt: nowStamp(),
-    updater: '当前用户',
+    createdAt: row.createdAt || stamp,
+    updatedAt: stamp,
+    updater: row.updater || '当前用户',
   };
 }
 

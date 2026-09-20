@@ -145,7 +145,7 @@ const orderListConfig = {
   columns: tableColumns,
   columnOptions,
   filterFields,
-  defaultSort: { key: 'updatedAt', direction: 'desc' },
+  defaultSort: { key: 'createdAt', direction: 'desc' },
   headerActions: [
     { id: 'create', label: '新增', icon: Plus, variant: 'primary' },
     {

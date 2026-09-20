@@ -15,7 +15,7 @@ import { receiptNotices } from './receiptNoticeData.js';
 /**
  * 演示种子只保留 2 条，与采购收货通知单、采购订单链路对齐：
  * 1. 推送成功：notice-seed-2 → order-2
- * 2. 推送失败：notice-seed-failed → order-2（供列表「重推金蝶」演示）
+ * 2. 推送失败：notice-seed-failed → order-2（失败后到系统集成中心重推，本列表无重推按钮）
  *
  * storageKey 升级后会丢弃浏览器里旧的测试入库单。
  */
@@ -80,6 +80,7 @@ const qtyCell = (value) => value ?? 0;
 
 export const inboundColumns = [
   { key: 'inboundNo', label: '单号', defaultWidth: 190, minWidth: 170, maxWidth: 240, ellipsis: true, link: true },
+  { key: 'businessDate', label: '业务日期', defaultWidth: 112, minWidth: 96, maxWidth: 160, ellipsis: true, sortable: true },
   { key: 'sourceNoticeNo', label: '来源采购收货通知单', defaultWidth: 190, minWidth: 170, maxWidth: 240, ellipsis: true, link: true },
   { key: 'sourceOrderNo', label: '来源采购订单', defaultWidth: 180, minWidth: 160, maxWidth: 240, ellipsis: true, link: true },
   { key: 'supplier', label: '供应商', defaultWidth: 200, minWidth: 140, maxWidth: 280, ellipsis: true, render: (value) => resolveOptionLabel(value, supplierOptions) },

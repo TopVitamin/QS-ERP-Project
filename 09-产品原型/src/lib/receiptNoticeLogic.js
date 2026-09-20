@@ -23,6 +23,20 @@ export const noticeStatusLabels = {
   cancelled: '已取消',
 };
 
+export const receiptModeLabels = {
+  warehouse: '仓库收货',
+  virtual: '虚拟入库',
+};
+
+export function resolveReceiptMode(rowOrValue) {
+  const value = typeof rowOrValue === 'string' ? rowOrValue : rowOrValue?.receiptMode;
+  return value === 'virtual' ? 'virtual' : 'warehouse';
+}
+
+export function formatReceiptMode(rowOrValue) {
+  return receiptModeLabels[resolveReceiptMode(rowOrValue)];
+}
+
 export function enrichNoticeLine(line) {
   const sku = skuOptions.find((item) => item.value === line.product);
   const notifyQty = Number(line.notifyQty || 0);
@@ -79,6 +93,7 @@ export function normalizeNoticeRow(row) {
   const lines = refreshNoticeLines(row.lines || []);
   return {
     ...row,
+    receiptMode: resolveReceiptMode(row),
     lines,
     totalNotifyQty: sumNoticeQty(lines),
     totalReceivedQty: sumNoticeReceivedQty(lines),
@@ -143,6 +158,7 @@ export function buildNoticeFormFromOrder(orderRow) {
     sourceOrderNo: orderRow.orderNo,
     supplier: orderRow.supplier,
     warehouse: orderRow.warehouse,
+    receiptMode: 'warehouse',
     status: 'pending_push',
     remark: '',
     lines,
@@ -150,6 +166,9 @@ export function buildNoticeFormFromOrder(orderRow) {
 }
 
 export function validateNoticeForCreate(form) {
+  if (form.receiptMode !== 'warehouse' && form.receiptMode !== 'virtual') {
+    return '请选择收货处理方式';
+  }
   if (!form.lines?.length) {
     return '当前采购订单没有可下推数量';
   }
@@ -247,6 +266,11 @@ export function createReceiptNotice(orderRow, form) {
 
   const existingNos = readMockRows(NOTICE_STORAGE_KEY, []).map((row) => row.noticeNo);
   const noticeNo = nextDocumentNo('CGSHTZ', new Date().toISOString().slice(0, 10), existingNos);
+  const receiptMode = resolveReceiptMode(form);
+
+  if (receiptMode === 'virtual') {
+    return createVirtualReceiptNotice(orderRow, form, activeLines, noticeNo);
+  }
 
   const notice = persistNotice({
     id: `notice-${Date.now()}`,
@@ -255,6 +279,7 @@ export function createReceiptNotice(orderRow, form) {
     sourceOrderNo: orderRow.orderNo,
     supplier: orderRow.supplier,
     warehouse: orderRow.warehouse,
+    receiptMode,
     status: 'pending_push',
     remark: form.remark || '',
     pushTime: '',
@@ -268,6 +293,54 @@ export function createReceiptNotice(orderRow, form) {
   const nextOrder = occupyOrderLines(orderRow, activeLines);
   simulateAutoPush(notice.id);
   return { notice, order: nextOrder };
+}
+
+function removeNoticeById(noticeId) {
+  writeMockRows(
+    NOTICE_STORAGE_KEY,
+    readMockRows(NOTICE_STORAGE_KEY, []).filter((item) => item.id !== noticeId),
+  );
+}
+
+function createVirtualReceiptNotice(orderRow, form, activeLines, noticeNo) {
+  const stamp = nowStamp();
+  const receivedLines = activeLines.map((line) => enrichNoticeLine({
+    ...line,
+    receivedQty: Number(line.notifyQty || 0),
+  }));
+
+  const notice = persistNotice({
+    id: `notice-${Date.now()}`,
+    noticeNo,
+    sourceOrderId: orderRow.id,
+    sourceOrderNo: orderRow.orderNo,
+    supplier: orderRow.supplier,
+    warehouse: orderRow.warehouse,
+    receiptMode: 'virtual',
+    status: 'received',
+    remark: form.remark || '',
+    pushTime: '',
+    finalReceiveTime: stamp,
+    pushFailReason: '',
+    creator: '当前用户',
+    createdAt: stamp,
+    lines: receivedLines,
+  });
+
+  occupyOrderLines(orderRow, receivedLines);
+  substituteOrderOccupancy(loadOrderById(orderRow.id) || orderRow, receivedLines);
+  const inbound = generateInboundFromNotice(loadNoticeById(notice.id) || notice);
+
+  if (!inbound) {
+    removeNoticeById(notice.id);
+    persistOrder(orderRow);
+    throw new Error('虚拟入库生成入库单失败，未创建通知单');
+  }
+
+  return {
+    notice: loadNoticeById(notice.id) || notice,
+    order: loadOrderById(orderRow.id) || orderRow,
+  };
 }
 
 export function simulateAutoPush(noticeId, { forceFail = false } = {}) {

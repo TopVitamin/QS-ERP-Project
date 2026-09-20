@@ -10,20 +10,21 @@ import { reconcileTransferTasks } from './lib/transferService.js';
 import { erpThemePresets } from './styles/tokens.js';
 import { WorkbenchPage } from './pages/WorkbenchPage.jsx';
 
-const DEFAULT_VIEW_ID = 'home';
+const DEFAULT_PAGE_ID = 'purchase-order';
 
-function resolvePreferredHome() {
+function resolveStartupView() {
   const preferred = readPreferences().defaultHome;
-  if (preferred && preferred !== 'home' && isPageImplemented(preferred)) return preferred;
-  return null;
+  if (preferred === 'home') return 'home';
+  if (preferred && isPageImplemented(preferred)) return preferred;
+  return DEFAULT_PAGE_ID;
 }
 
 export function App() {
   const [openTabs, setOpenTabs] = useState(() => {
-    const preferredHome = resolvePreferredHome();
-    return preferredHome ? [preferredHome] : [];
+    const startup = resolveStartupView();
+    return startup === 'home' ? [] : [startup];
   });
-  const [activeView, setActiveView] = useState(() => resolvePreferredHome() ?? DEFAULT_VIEW_ID);
+  const [activeView, setActiveView] = useState(() => resolveStartupView());
   const [pageContexts, setPageContexts] = useState({});
   const [theme, setTheme] = useState(() => {
     const stored = readPreferences().theme;
@@ -84,7 +85,8 @@ export function App() {
       const nextTabs = current.filter((id) => id !== pageId);
       if (activeView === pageId) {
         if (nextTabs.length === 0) {
-          setActiveView('home');
+          setActiveView(DEFAULT_PAGE_ID);
+          return [DEFAULT_PAGE_ID];
         } else {
           const closedIndex = current.indexOf(pageId);
           setActiveView(nextTabs[Math.min(closedIndex, nextTabs.length - 1)]);

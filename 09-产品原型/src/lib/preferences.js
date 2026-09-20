@@ -1,10 +1,10 @@
 import { readMockRows, subscribeMockRows, writeMockRows } from './mockStorage.js';
 
-export const PREFERENCES_STORAGE_KEY = 'qs-erp:preferences:v1';
+export const PREFERENCES_STORAGE_KEY = 'qs-erp:preferences:v2';
 
 const defaultPreferences = {
   theme: 'blue',
-  defaultHome: 'home',
+  defaultHome: 'purchase-order',
   messageEnabled: true,
 };
 

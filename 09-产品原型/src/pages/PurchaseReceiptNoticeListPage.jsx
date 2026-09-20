@@ -19,6 +19,8 @@ import {
   loadNoticeById,
   NOTICE_STORAGE_KEY,
   noticeStatusLabels,
+  receiptModeLabels,
+  resolveReceiptMode,
 } from '../lib/receiptNoticeLogic.js';
 
 const initialFilters = {
@@ -26,6 +28,7 @@ const initialFilters = {
   sourceOrderNo: '',
   supplier: '',
   warehouse: '',
+  receiptMode: [],
   status: [],
   createdAtRange: { from: '', to: '' },
   productCode: '',
@@ -46,6 +49,7 @@ function createFilterFields(rows) {
     { key: 'sourceOrderNo', label: '来源采购订单', type: 'select', options: buildSourceOrderFilterOptions(rows) },
     { key: 'supplier', label: '供应商', type: 'select', options: [{ value: '', label: '全部供应商' }, ...supplierOptions] },
     { key: 'warehouse', label: '收货仓库', type: 'select', options: [{ value: '', label: '全部仓库' }, ...warehouseOptions] },
+    statusMultiSelectField('receiptMode', '收货处理方式', receiptModeLabels),
     statusMultiSelectField('status', '单据状态', noticeStatusLabels),
     { key: 'productCode', label: '商品编码', type: 'search', placeholder: '请输入商品编码' },
     { key: 'barcode', label: '商品条码', type: 'search', placeholder: '请输入商品条码' },
@@ -65,6 +69,7 @@ function filterRows(row, filters) {
     && (!filters.sourceOrderNo || row.sourceOrderNo === filters.sourceOrderNo)
     && (!filters.supplier || row.supplier === filters.supplier)
     && (!filters.warehouse || row.warehouse === filters.warehouse)
+    && matchesMultiSelect(resolveReceiptMode(row), filters.receiptMode)
     && matchesMultiSelect(row.status, filters.status)
     && matchDateRange(row.createdAt, filters.createdAtRange)
     && (!productCode || row.lines?.some((line) => String(line.productCode || '').toLowerCase().includes(productCode)))

@@ -103,7 +103,7 @@ export function buildReceiptNoticeOperationLogs(row) {
     time: row.createdAt,
     operator: row.creator,
     action: '创建',
-    remark: '下推创建采购收货通知单',
+    remark: row.receiptMode === 'virtual' ? '下推创建采购收货通知单（虚拟入库）' : '下推创建采购收货通知单',
   });
 
   if (row.pushTime) {
@@ -120,7 +120,7 @@ export function buildReceiptNoticeOperationLogs(row) {
       time: row.finalReceiveTime,
       operator: '系统',
       action: '收货完成',
-      remark: '仓库回传收货结果',
+      remark: row.receiptMode === 'virtual' ? '按通知数量确认收货' : '仓库回传收货结果',
     });
   }
 

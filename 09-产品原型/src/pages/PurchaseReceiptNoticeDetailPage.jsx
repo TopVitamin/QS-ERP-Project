@@ -13,7 +13,7 @@ import { resolveOptionLabel } from '../lib/codeName.js';
 import { EMPTY_PLACEHOLDER } from '../lib/format.js';
 import { supplierOptions, warehouseOptions } from '../data/masterData.js';
 import { getNoticeStatusBadges } from '../data/receiptNoticeData.js';
-import { loadNoticeById, refreshNoticeLines } from '../lib/receiptNoticeLogic.js';
+import { formatReceiptMode, loadNoticeById, refreshNoticeLines } from '../lib/receiptNoticeLogic.js';
 import { orders } from '../data/orderData.js';
 import { loadOrderById } from '../lib/purchaseOrderLogic.js';
 
@@ -46,6 +46,7 @@ function buildNoticeInfoFields({ detail, row, onOpenPage }) {
     { key: 'sourceOrderNo', label: '来源采购订单', value: buildSourceOrderLink(detail, onOpenPage) },
     { key: 'supplier', label: '供应商', value: resolveOptionLabel(detail.supplier, supplierOptions) },
     { key: 'warehouse', label: '收货仓库', value: resolveOptionLabel(detail.warehouse, warehouseOptions) },
+    { key: 'receiptMode', label: '收货处理方式', value: formatReceiptMode(detail) },
     { key: 'pushTime', label: '推送时间', value: row.pushTime || EMPTY_PLACEHOLDER },
     { key: 'finalReceiveTime', label: '最终收货确认时间', value: row.finalReceiveTime || EMPTY_PLACEHOLDER },
   ];

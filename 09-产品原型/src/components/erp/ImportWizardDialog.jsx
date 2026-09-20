@@ -292,7 +292,10 @@ export function ImportWizardDialog({ open, onOpenChange, target, onCompleted, on
       <DialogContent aria-describedby={undefined} className="flex h-[min(620px,calc(100vh-32px))] w-[min(920px,calc(100vw-32px))] flex-col gap-0 overflow-hidden p-0">
         <DialogHeader className="shrink-0 space-y-0 border-b border-erp-border-header p-0">
           <div className="px-4 pb-3 pt-4 pr-12">
-            <DialogTitle className="text-[16px]">导入{target.label}</DialogTitle>
+            <DialogTitle className="text-[16px]">导入{target.label}{target.demoImport ? '（Mock演示）' : ''}</DialogTitle>
+            {target.demoImport && (
+              <p className="mt-1 text-[12px] text-erp-warning">本导入仅为Demo Mock，不作为正式{target.label}导入。</p>
+            )}
           </div>
           <div className="px-4 pb-3">
             <WizardSteps steps={steps} current={step} />

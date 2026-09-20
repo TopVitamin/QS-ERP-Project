@@ -1,8 +1,10 @@
 import { formatFormDate, parseFormDate } from '../../lib/formDate.js';
+import { cn } from '../../lib/utils.js';
 import { fieldInvalidClassName } from '../ui/field.jsx';
 import { DatePicker } from '../ui/date-picker.jsx';
 import { FormField } from '../ui/form-field.jsx';
 import { Input } from '../ui/input.jsx';
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group.jsx';
 import { SelectField } from '../ui/select-field.jsx';
 import { Textarea } from '../ui/textarea.jsx';
 
@@ -34,6 +36,32 @@ export function FormControl({ field, value, form, onChange, invalid = false }) {
         invalid={invalid}
         className={invalidClassName}
       />
+    );
+  }
+
+  if (field.type === 'radio') {
+    const disabled = typeof field.disabled === 'function' ? field.disabled(form) : field.disabled;
+    return (
+      <RadioGroup
+        value={value || ''}
+        onValueChange={onChange}
+        aria-label={ariaLabel}
+        disabled={disabled}
+        className={cn('h-7 gap-4', invalidClassName)}
+      >
+        {(field.options || []).filter((option) => option.value).map((option) => (
+          <label
+            key={option.value}
+            className={cn(
+              'flex items-center gap-1.5 text-[12px]',
+              disabled ? 'cursor-not-allowed text-erp-disabled' : 'cursor-pointer text-erp-text',
+            )}
+          >
+            <RadioGroupItem value={option.value} aria-label={option.label} disabled={disabled} />
+            <span>{option.label}</span>
+          </label>
+        ))}
+      </RadioGroup>
     );
   }
 

@@ -14,11 +14,23 @@ import { GlobalSearch } from './GlobalSearch.jsx';
 import { NotificationCenter } from './NotificationCenter.jsx';
 import { PageTabs } from './PageTabs.jsx';
 import { cn } from '../../lib/utils.js';
+import { readPreferences } from '../../lib/preferences.js';
 import { erpThemePresets } from '../../styles/tokens.js';
 
 export function TopHeader({ tabs = [], activeView, onTabSelect, onTabClose, onTabAction, onAction, onOpenPage, theme = 'blue', onThemeChange }) {
   function showAction(message) {
     onAction?.(message);
+  }
+
+  const preferredHome = readPreferences().defaultHome || 'purchase-order';
+  const isHomeActive = preferredHome === 'home' ? activeView === 'home' : activeView === preferredHome;
+
+  function openPreferredHome() {
+    if (preferredHome === 'home') {
+      onTabSelect?.('home');
+      return;
+    }
+    onOpenPage?.(preferredHome);
   }
 
   return (
@@ -29,9 +41,9 @@ export function TopHeader({ tabs = [], activeView, onTabSelect, onTabClose, onTa
           aria-label="首页"
           className={cn(
             'flex w-10 shrink-0 items-center justify-center border-r border-erp-border-strong',
-            activeView === 'home' ? 'bg-erp-surface-panel' : 'hover:bg-erp-surface-panel/60',
+            activeView === 'home' || isHomeActive ? 'bg-erp-surface-panel' : 'hover:bg-erp-surface-panel/60',
           )}
-          onClick={() => onTabSelect?.('home')}
+          onClick={openPreferredHome}
         >
           <Home className="h-[18px] w-[18px]" strokeWidth={1.8} />
         </button>
