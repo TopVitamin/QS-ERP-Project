@@ -65,8 +65,6 @@ const noticeDetailConfig = {
   getDetail: getNoticeDetail,
   title: (detail) => `采购收货通知单详情${detail.noticeNo ? ` · ${detail.noticeNo}` : ''}`,
   getStatusBadges: (row) => getNoticeStatusBadges(row),
-  canEdit: (row) => row.status === 'pending_push' || row.status === 'push_failed',
-  editLabel: '编辑',
   rowKey: (detail) => detail.noticeNo,
   sections: [
     {
@@ -135,10 +133,16 @@ export function PurchaseReceiptNoticeDetailPage({ onFeedback, onOpenPage, contex
         )
         : null
     ),
-    renderHeaderActions: () => (
+    renderHeaderActions: ({ onOpenPage: openPage }) => (
       <PurchaseReceiptNoticeDetailHeaderActions
         row={row}
-        onAction={(id, currentRow) => setDialog({ type: id, row: currentRow })}
+        onAction={(id, currentRow) => {
+          if (id === 'edit') {
+            openPage?.('purchase-receipt-notice-edit', { row: currentRow });
+            return;
+          }
+          setDialog({ type: id, row: currentRow });
+        }}
       />
     ),
   };

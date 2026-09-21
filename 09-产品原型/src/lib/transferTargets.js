@@ -111,7 +111,7 @@ export const transferTargets = [
   {
     id: 'purchase-receipt-notice',
     label: '采购收货通知单',
-    storageKey: 'qs-erp:purchase-receipt-notices:v1',
+    storageKey: 'qs-erp:purchase-receipt-notices:v2',
     seedRows: receiptNotices,
     fileName: '采购收货通知单',
     keyField: 'noticeNo',

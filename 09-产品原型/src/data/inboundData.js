@@ -1,5 +1,5 @@
 import { resolveOptionLabel } from '../lib/codeName.js';
-import { EMPTY_PLACEHOLDER, formatAmount } from '../lib/format.js';
+import { formatAmount } from '../lib/format.js';
 import {
   auditStatusLabels,
   buildSeedInboundFromNotice,
@@ -8,7 +8,7 @@ import {
   loadAllInbounds,
   normalizeInboundRow,
 } from '../lib/inboundLogic.js';
-import { supplierOptions, warehouseOptions } from './masterData.js';
+import { currencyOptions, supplierOptions, warehouseOptions } from './masterData.js';
 import { orders } from './orderData.js';
 import { receiptNotices } from './receiptNoticeData.js';
 
@@ -71,11 +71,6 @@ export function getInboundStatusBadges(row) {
   return badges;
 }
 
-function formatCurrencyAmount(value, row) {
-  const symbol = row.currency === '人民币' ? '¥' : `${row.currency || 'CNY'} `;
-  return `${symbol}${formatAmount(value)}`;
-}
-
 const qtyCell = (value) => value ?? 0;
 
 export const inboundColumns = [
@@ -84,12 +79,12 @@ export const inboundColumns = [
   { key: 'sourceNoticeNo', label: '来源采购收货通知单', defaultWidth: 190, minWidth: 170, maxWidth: 240, ellipsis: true, link: true },
   { key: 'sourceOrderNo', label: '来源采购订单', defaultWidth: 180, minWidth: 160, maxWidth: 240, ellipsis: true, link: true },
   { key: 'supplier', label: '供应商', defaultWidth: 200, minWidth: 140, maxWidth: 280, ellipsis: true, render: (value) => resolveOptionLabel(value, supplierOptions) },
-  { key: 'currency', label: '币别', defaultWidth: 88, minWidth: 72, maxWidth: 120, ellipsis: true, render: (value) => value || EMPTY_PLACEHOLDER },
+  { key: 'currency', label: '币别', defaultWidth: 112, minWidth: 96, maxWidth: 140, ellipsis: true, render: (value) => resolveOptionLabel(value, currencyOptions) },
   { key: 'warehouse', label: '入库仓库', defaultWidth: 160, minWidth: 120, maxWidth: 220, ellipsis: true, render: (value) => resolveOptionLabel(value, warehouseOptions) },
   { key: 'auditStatus', label: '审核状态', defaultWidth: 96, minWidth: 88, maxWidth: 140, ellipsis: true, render: (value) => auditStatusLabels[value] || value, tone: () => 'text-erp-success' },
   { key: 'kingdeePushStatus', label: '金蝶推送状态', defaultWidth: 112, minWidth: 96, maxWidth: 160, ellipsis: true, render: (value) => kingdeePushStatusLabels[value] || value, tone: (value) => (value === 'push_success' ? 'text-erp-success' : value === 'push_failed' ? 'text-erp-danger' : value === 'pushing' ? 'text-erp-info' : 'text-erp-warning') },
   { key: 'totalInboundQty', label: '实际入库数量', defaultWidth: 112, minWidth: 96, maxWidth: 140, ellipsis: true, align: 'right', sortable: true, render: qtyCell },
-  { key: 'totalAmount', label: '金额', defaultWidth: 132, minWidth: 112, maxWidth: 180, ellipsis: true, align: 'right', sortable: true, render: (value, row) => formatCurrencyAmount(value, row) },
+  { key: 'totalAmount', label: '金额', defaultWidth: 132, minWidth: 112, maxWidth: 180, ellipsis: true, align: 'right', sortable: true, render: (value) => formatAmount(value) },
 ];
 
 export function buildSourceNoticeFilterOptions(rows = []) {

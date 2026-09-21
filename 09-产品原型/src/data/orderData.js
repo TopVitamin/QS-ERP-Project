@@ -1,7 +1,7 @@
 import { resolveOptionLabel } from '../lib/codeName.js';
 import { EMPTY_PLACEHOLDER, formatAmount } from '../lib/format.js';
 import { enrichOrderLine, normalizeOrderRow } from '../lib/purchaseOrderLogic.js';
-import { supplierOptions, warehouseOptions } from './masterData.js';
+import { currencyOptions, supplierOptions, warehouseOptions } from './masterData.js';
 
 function enrichSampleLine(line) {
   return enrichOrderLine(line);
@@ -35,11 +35,6 @@ export const orderStatusLabels = {
   receiveStatus: { not_received: '未收货', partial: '部分收货', completed: '全部收货' },
 };
 
-function formatCurrencyAmount(value, row) {
-  const symbol = row.currency === '人民币' ? '¥' : `${row.currency || 'CNY'} `;
-  return `${symbol}${formatAmount(value)}`;
-}
-
 const qtyCell = (value) => value ?? 0;
 
 export const tableColumns = [
@@ -54,9 +49,10 @@ export const tableColumns = [
   { key: 'totalOrderQty', label: '总采购数量', defaultWidth: 104, minWidth: 88, maxWidth: 140, ellipsis: true, align: 'right', sortable: true, render: qtyCell },
   { key: 'totalPushableQty', label: '可下推数量', defaultWidth: 104, minWidth: 88, maxWidth: 140, ellipsis: true, align: 'right', sortable: true, render: qtyCell },
   { key: 'receivedQty', label: '累计入库数量', defaultWidth: 112, minWidth: 96, maxWidth: 140, ellipsis: true, align: 'right', sortable: true, render: qtyCell },
-  { key: 'amount', label: '价税合计', defaultWidth: 132, minWidth: 112, maxWidth: 180, ellipsis: true, align: 'right', sortable: true, render: (value, row) => formatCurrencyAmount(value, row) },
-  { key: 'taxAmount', label: '税额', defaultWidth: 112, minWidth: 96, maxWidth: 160, ellipsis: true, align: 'right', render: (value, row) => formatCurrencyAmount(value, row) },
-  { key: 'netAmount', label: '金额', defaultWidth: 132, minWidth: 112, maxWidth: 180, ellipsis: true, align: 'right', sortable: true, render: (value, row) => formatCurrencyAmount(value, row) },
+  { key: 'currency', label: '币别', defaultWidth: 112, minWidth: 96, maxWidth: 140, ellipsis: true, render: (value) => resolveOptionLabel(value, currencyOptions) },
+  { key: 'amount', label: '价税合计', defaultWidth: 112, minWidth: 96, maxWidth: 160, ellipsis: true, align: 'right', sortable: true, render: (value) => formatAmount(value) },
+  { key: 'taxAmount', label: '税额', defaultWidth: 104, minWidth: 88, maxWidth: 140, ellipsis: true, align: 'right', render: (value) => formatAmount(value) },
+  { key: 'netAmount', label: '金额', defaultWidth: 112, minWidth: 96, maxWidth: 160, ellipsis: true, align: 'right', sortable: true, render: (value) => formatAmount(value) },
   { key: 'remark', label: '备注', defaultWidth: 160, minWidth: 120, maxWidth: 240, ellipsis: true, render: (value) => value || EMPTY_PLACEHOLDER },
   { key: 'createdAt', label: '创建时间', defaultWidth: 160, minWidth: 140, maxWidth: 200, ellipsis: true, sortable: true }, // 列表默认按创建时间倒序
   { key: 'updatedAt', label: '最后更新时间', defaultWidth: 160, minWidth: 140, maxWidth: 200, ellipsis: true, sortable: true },

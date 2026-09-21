@@ -146,8 +146,8 @@ export function PurchaseReceiptNoticeListPage(props) {
     rowActions: [
       { id: 'edit', label: '编辑', visibleWhen: (row) => canEditRemark(row) },
       { id: 'retry', label: '重试推送', visibleWhen: (row) => canRetryPush(row) },
-      { id: 'cancel', label: '取消', visibleWhen: (row) => canCancelNotice(row) },
-      { id: 'apply-cancel', label: '取消', visibleWhen: (row) => canApplyCancelNotice(row) },
+      { id: 'cancel', label: '取消', visibleWhen: (row) => canCancelNotice(row), variant: 'danger' },
+      { id: 'apply-cancel', label: '取消', visibleWhen: (row) => canApplyCancelNotice(row), variant: 'danger' },
     ],
     resetMessage: '筛选条件已重置',
     queryMessage: '已执行采购收货通知单查询',

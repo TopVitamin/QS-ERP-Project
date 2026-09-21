@@ -44,8 +44,8 @@ export function DocumentDetailFrame({
           <StatusBadgeList statuses={statuses} status={status} />
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-          {headerActions}
           <Button variant="outline" size="compact" onClick={onBack}>返回列表</Button>
+          {headerActions}
           {onEdit && (
             <Button variant="primary" size="compact" onClick={onEdit}>
               <Pencil className="h-3.5 w-3.5" strokeWidth={1.9} />

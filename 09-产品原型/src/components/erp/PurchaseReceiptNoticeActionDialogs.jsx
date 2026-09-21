@@ -12,6 +12,7 @@ import {
   applyMockReceipt,
   applyRetryPush,
   applyWarehouseCancelResult,
+  canEditRemark,
   clampMockLineReceipt,
   refreshNoticeLines,
 } from '../../lib/receiptNoticeLogic.js';
@@ -263,15 +264,18 @@ export function PurchaseReceiptNoticeDetailHeaderActions({ row, onAction }) {
 
   const actions = [];
 
-  if (row.status === 'pending_push' || row.status === 'push_failed') {
-    actions.push({ id: 'cancel', label: '取消', variant: 'outline' });
+  if (canEditRemark(row)) {
+    actions.push({ id: 'edit', label: '编辑', variant: 'primary' });
   }
   if (row.status === 'push_failed') {
     actions.push({ id: 'retry', label: '重试推送', variant: 'outline' });
   }
+  if (row.status === 'pending_push' || row.status === 'push_failed') {
+    actions.push({ id: 'cancel', label: '取消', variant: 'outline' });
+  }
   if (row.status === 'pending_receive') {
     actions.push({ id: 'apply-cancel', label: '取消', variant: 'outline' });
-    actions.push({ id: 'mock-receipt', label: '模拟仓库回传', variant: 'primary' });
+    actions.push({ id: 'mock-receipt', label: '模拟仓库回传', variant: 'outline' });
   }
   if (row.status === 'cancelling') {
     actions.push({ id: 'warehouse-cancel-demo', label: '模拟仓库回执', variant: 'outline' });

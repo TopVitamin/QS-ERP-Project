@@ -6,6 +6,9 @@ dist/
 build/
 *.local
 
+# Sites hosting config (kept local)
+.openai/
+
 # Prototype review screenshots (kept locally, not a deliverable)
 .openchamber/
 

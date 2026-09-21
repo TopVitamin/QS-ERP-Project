@@ -65,8 +65,8 @@ export const taxRateOptions = [
 ];
 
 export const currencyOptions = [
-  { value: '人民币', label: '人民币' },
-  { value: '美元', label: '美元' },
-  { value: '欧元', label: '欧元' },
-  { value: '港币', label: '港币' },
+  { value: '人民币', code: 'CNY', name: '人民币', label: 'CNY 人民币' },
+  { value: '美元', code: 'USD', name: '美元', label: 'USD 美元' },
+  { value: '欧元', code: 'EUR', name: '欧元', label: 'EUR 欧元' },
+  { value: '港币', code: 'HKD', name: '港币', label: 'HKD 港币' },
 ];

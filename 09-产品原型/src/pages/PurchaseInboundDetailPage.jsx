@@ -5,7 +5,7 @@ import { usePurchaseInboundRow } from '../hooks/usePurchaseInboundRow.js';
 import { resolveOptionLabel } from '../lib/codeName.js';
 import { EMPTY_PLACEHOLDER, formatAmount } from '../lib/format.js';
 import { currencySymbol } from '../lib/money.js';
-import { supplierOptions, warehouseOptions } from '../data/masterData.js';
+import { currencyOptions, supplierOptions, warehouseOptions } from '../data/masterData.js';
 import { getInboundStatusBadges } from '../data/inboundData.js';
 import { orders } from '../data/orderData.js';
 import { receiptNotices } from '../data/receiptNoticeData.js';
@@ -54,7 +54,7 @@ function buildInboundInfoFields({ detail, row, onOpenPage }) {
     },
     { key: 'supplier', label: '供应商', value: resolveOptionLabel(detail.supplier, supplierOptions) },
     { key: 'warehouse', label: '入库仓库', value: resolveOptionLabel(detail.warehouse, warehouseOptions) },
-    { key: 'currency', label: '币别', value: detail.currency || EMPTY_PLACEHOLDER },
+    { key: 'currency', label: '币别', value: resolveOptionLabel(detail.currency, currencyOptions) },
     { key: 'amount', label: '价税合计', value: `${currencySymbol(row.currency)} ${formatAmount(row.amount ?? 0)}` },
     { key: 'taxAmount', label: '税额', value: `${currencySymbol(row.currency)} ${formatAmount(row.taxAmount ?? 0)}` },
     { key: 'netAmount', label: '金额', value: `${currencySymbol(row.currency)} ${formatAmount(row.netAmount ?? 0)}` },

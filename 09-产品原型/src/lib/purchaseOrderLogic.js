@@ -5,7 +5,7 @@ import { hasNegativePrice } from './validation.js';
 import { upsertMockRow, readMockRows, writeMockRows } from './mockStorage.js';
 
 export const ORDER_STORAGE_KEY = 'qs-erp:purchase-orders:v4';
-export const NOTICE_STORAGE_KEY = 'qs-erp:purchase-receipt-notices:v1';
+export const NOTICE_STORAGE_KEY = 'qs-erp:purchase-receipt-notices:v2';
 
 const BLOCKING_NOTICE_STATUSES = new Set(['pushing', 'pending_receive', 'cancelling']);
 
