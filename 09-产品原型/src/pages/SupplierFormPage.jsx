@@ -7,6 +7,7 @@ import {
   partnerLevelOptions,
   supplierCategoryOptions,
 } from '../data/partnerMasterOptions.js';
+import { normalizePartnerAddress } from '../lib/internationalAddress.js';
 import { readMockRows } from '../lib/mockStorage.js';
 import {
   createEmptyAddress,
@@ -29,7 +30,7 @@ function getInitialForm(mode, context) {
       settlementMethod: context.row.settlementMethod || '',
       paymentTerms: context.row.paymentTerms || '',
       contacts: (context.row.contacts || []).map((item) => ({ ...item })),
-      addresses: (context.row.addresses || []).map((item) => ({ ...item })),
+      addresses: (context.row.addresses || []).map((item) => normalizePartnerAddress({ ...item })),
       banks: (context.row.banks || []).map((item) => ({ ...item })),
     };
   }

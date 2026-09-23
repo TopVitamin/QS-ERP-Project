@@ -8,6 +8,16 @@ import { EditorCard } from './DocumentEditorFrame.jsx';
 
 export { DetailField };
 
+/** 弹窗内只读详情分区：纯标题 + 内容，不用 EditorCard 的折叠与卡片边框。 */
+export function DialogViewSection({ title, children, className }) {
+  return (
+    <section className={cn('space-y-3', className)}>
+      {title ? <h3 className={typography.sectionTitle}>{title}</h3> : null}
+      {children}
+    </section>
+  );
+}
+
 function StatusBadgeList({ statuses, status }) {
   const items = statuses?.length
     ? statuses

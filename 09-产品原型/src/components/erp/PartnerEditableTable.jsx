@@ -11,9 +11,11 @@ export function PartnerEditableTable({
   onAdd,
   onRemove,
   onChange,
+  onPatch,
   onToggleDefault,
   defaultKey = 'isDefault',
   emptyLabel = '暂无明细，可点击添加',
+  minTableWidth = 960,
 }) {
   return (
     <div className="space-y-3 px-4 py-3">
@@ -26,7 +28,7 @@ export function PartnerEditableTable({
       </div>
       {rows.length ? (
         <div className="table-scroll overflow-x-auto">
-          <table className="w-full min-w-[960px] table-fixed border-collapse text-left text-[12px]">
+          <table className="w-full table-fixed border-collapse text-left text-[12px]" style={{ minWidth: minTableWidth }}>
             <thead className="h-7 border-b border-erp-border-table-header bg-erp-surface-table-head text-erp-text-section">
               <tr>
                 {columns.map((column) => (
@@ -40,18 +42,27 @@ export function PartnerEditableTable({
                 <tr key={row.id} className="h-9 border-b border-erp-border-table-row">
                   {columns.map((column) => (
                     <td key={column.key} className="border-r border-erp-border-table-column px-1.5 align-middle last:border-r-0">
-                      {column.type === 'select' ? (
+                      {column.renderCell ? (
+                        column.renderCell({
+                          row,
+                          onChange: (key, value) => onChange(row.id, key, value),
+                          onPatch: (patch) => onPatch?.(row.id, patch),
+                        })
+                      ) : column.type === 'select' ? (
                         <SelectField
                           value={row[column.key] || ''}
                           options={column.options || []}
                           placeholder={column.placeholder}
-                          onChange={(value) => onChange(row.id, column.key, value)}
+                          onValueChange={(value) => onChange(row.id, column.key, value)}
                         />
                       ) : column.type === 'switch' ? (
-                        <Switch
-                          checked={Boolean(row[column.key])}
-                          onCheckedChange={(checked) => onToggleDefault?.(row.id, checked)}
-                        />
+                        <div className="flex h-9 items-center">
+                          <Switch
+                            checked={Boolean(row[column.key])}
+                            onCheckedChange={(checked) => onToggleDefault?.(row.id, checked)}
+                            aria-label={column.label}
+                          />
+                        </div>
                       ) : (
                         <Input
                           value={row[column.key] || ''}

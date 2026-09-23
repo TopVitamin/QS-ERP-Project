@@ -24,10 +24,10 @@ function buildDetailFields(row) {
   return [
     { key: 'code', label: '物流商编码', value: row.code },
     { key: 'name', label: '物流商名称', value: row.name },
+    { key: 'useStatus', label: '使用状态', value: useStatusLabels[row.useStatus] || EMPTY_PLACEHOLDER },
     { key: 'contact', label: '联系人', value: row.contact || EMPTY_PLACEHOLDER },
     { key: 'phone', label: '联系电话', value: row.phone || EMPTY_PLACEHOLDER },
     { key: 'address', label: '联系地址', value: row.address || EMPTY_PLACEHOLDER, className: 'col-span-3' },
-    { key: 'useStatus', label: '使用状态', value: useStatusLabels[row.useStatus] || EMPTY_PLACEHOLDER },
     { key: 'creator', label: '创建人', value: row.creator || EMPTY_PLACEHOLDER },
     { key: 'createdAt', label: '创建时间', value: row.createdAt || EMPTY_PLACEHOLDER },
     { key: 'updater', label: '最后更新人', value: row.updater || EMPTY_PLACEHOLDER },
@@ -222,14 +222,14 @@ export function LogisticsCarrierDetailPage({ context, onFeedback, onOpenPage }) 
         title={!canCreateProduct ? '物流商启用后才能新增服务产品' : undefined}
         onClick={() => handleHeaderAction('add-product')}
       >
-        新增服务产品
+        新增
       </Button>
     </div>
   );
 
   const fields = buildDetailFields(row);
-  const baseFields = fields.slice(0, 5);
-  const metaFields = fields.slice(5);
+  const baseFields = fields.slice(0, 6);
+  const metaFields = fields.slice(6);
 
   const statusBadges = [{
     label: useStatusLabels[row.useStatus] || row.useStatus,
@@ -254,7 +254,7 @@ export function LogisticsCarrierDetailPage({ context, onFeedback, onOpenPage }) 
           actions={(
             <Button variant="outline" size="compact" disabled={!canCreateProduct} onClick={() => handleHeaderAction('add-product')}>
               <Plus className="h-3.5 w-3.5" strokeWidth={1.9} />
-              新增服务产品
+              新增
             </Button>
           )}
         >

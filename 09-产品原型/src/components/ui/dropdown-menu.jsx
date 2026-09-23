@@ -1,6 +1,7 @@
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
 import { Check, ChevronRight, Circle } from 'lucide-react';
 import { cn } from '../../lib/utils.js';
+import { popoverLayerClassName } from './overlay.jsx';
 
 export const DropdownMenu = DropdownMenuPrimitive.Root;
 export const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
@@ -11,7 +12,8 @@ export function DropdownMenuContent({ className, sideOffset = 5, ...props }) {
       <DropdownMenuPrimitive.Content
         sideOffset={sideOffset}
         className={cn(
-          'z-[100] max-h-[min(420px,calc(100vh-24px))] min-w-[148px] overflow-y-auto rounded-erp-overlay border border-erp-border-strong bg-erp-surface-panel p-1 text-erp-text shadow-erp-overlay',
+          'max-h-[min(420px,calc(100vh-24px))] min-w-[148px] overflow-y-auto rounded-erp-overlay border border-erp-border-strong bg-erp-surface-panel p-1 text-erp-text shadow-erp-overlay',
+          popoverLayerClassName,
           className,
         )}
         {...props}

@@ -1,10 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Button } from '../ui/button.jsx';
 import { ConfirmDialog } from '../ui/alert-dialog.jsx';
 import { SimpleDialog } from '../ui/dialog.jsx';
-import { FormFields } from './FormControl.jsx';
-import { DetailField, EditorCard } from './DocumentDetailFrame.jsx';
-import { erpFieldGridClassName } from '../../styles/typography.js';
+import {
+  buildMasterDataDialogTitle,
+  buildMetaViewFields,
+  DialogLeaveConfirm,
+  masterDataDialogFullSpanClassName,
+  MasterDataFormDialog,
+  useDialogFormState,
+} from './MasterDataFormDialog.jsx';
 import { EMPTY_PLACEHOLDER } from '../../lib/format.js';
 import { formatCodeName } from '../../lib/codeName.js';
 import {
@@ -29,36 +34,32 @@ import {
 import { resolvePhysicalLabel } from '../../data/warehouseData.js';
 import { StatusBadge } from './StatusBadge.jsx';
 
+function logicalRowToForm(item) {
+  return {
+    code: item.code,
+    name: item.name,
+    physicalWarehouseId: item.physicalWarehouseId,
+    stockStatus: item.stockStatus,
+    remark: item.remark || '',
+  };
+}
+
 function LogicalWarehouseFormDialog({ dialog, onClose, onComplete }) {
   const { mode, row, physicalRows, defaultPhysicalWarehouseId, existingRows } = dialog;
-  const isView = mode === 'view';
   const isEdit = mode === 'edit';
-  const [form, setForm] = useState(() => (row
-    ? {
-      code: row.code,
-      name: row.name,
-      physicalWarehouseId: row.physicalWarehouseId,
-      stockStatus: row.stockStatus,
-      remark: row.remark || '',
-    }
-    : createEmptyLogicalForm(defaultPhysicalWarehouseId)));
-  const [fieldErrors, setFieldErrors] = useState({});
-  const [dirty, setDirty] = useState(false);
-
-  useEffect(() => {
-    const nextForm = row
-      ? {
-        code: row.code,
-        name: row.name,
-        physicalWarehouseId: row.physicalWarehouseId,
-        stockStatus: row.stockStatus,
-        remark: row.remark || '',
-      }
-      : createEmptyLogicalForm(defaultPhysicalWarehouseId);
-    setForm(nextForm);
-    setFieldErrors({});
-    setDirty(false);
-  }, [row, defaultPhysicalWarehouseId, mode]);
+  const {
+    form,
+    fieldErrors,
+    setFieldErrors,
+    dirty,
+    updateField,
+  } = useDialogFormState({
+    row,
+    mode,
+    toForm: logicalRowToForm,
+    createEmpty: () => createEmptyLogicalForm(defaultPhysicalWarehouseId),
+    deps: [defaultPhysicalWarehouseId],
+  });
 
   const eligiblePhysicalOptions = useMemo(() => {
     const approved = physicalRows.filter((item) => item.auditStatus === 'approved' && item.useStatus === 'enabled');
@@ -66,19 +67,6 @@ function LogicalWarehouseFormDialog({ dialog, onClose, onComplete }) {
     const merged = current && !approved.some((item) => item.id === current.id) ? [current, ...approved] : approved;
     return merged.map((item) => ({ value: item.id, label: formatCodeName(item.code, item.name) }));
   }, [physicalRows, form.physicalWarehouseId]);
-
-  const title = mode === 'create' ? '新增逻辑仓' : mode === 'edit' ? '编辑逻辑仓' : '逻辑仓详情';
-
-  function updateField(key, value) {
-    setDirty(true);
-    setFieldErrors((current) => {
-      if (!current[key]) return current;
-      const next = { ...current };
-      delete next[key];
-      return next;
-    });
-    setForm((current) => ({ ...current, [key]: value }));
-  }
 
   function handleSave() {
     const result = validateLogicalForSave(form, existingRows, row?.id);
@@ -106,77 +94,53 @@ function LogicalWarehouseFormDialog({ dialog, onClose, onComplete }) {
     onClose?.();
   }
 
-  function handleCloseRequest() {
-    if (!dirty || isView) {
-      onClose?.();
-      return;
-    }
-    onComplete?.({ action: 'confirm-leave-logical', onConfirmLeave: onClose });
-  }
-
-  if (isView) {
-    const badges = buildLogicalStatusBadges(row);
-    return (
-      <SimpleDialog
-        open
-        onOpenChange={(open) => { if (!open) onClose?.(); }}
-        title={title}
-        className="max-w-3xl"
-        footer={<Button variant="outline" size="compact" onClick={() => onClose?.()}>关闭</Button>}
-      >
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            {badges.map((item) => <StatusBadge key={item.label} tone={item.tone}>{item.label}</StatusBadge>)}
-          </div>
-          <EditorCard title="基础信息">
-            <div className={erpFieldGridClassName}>
-              <DetailField label="逻辑仓编码" value={row.code} />
-              <DetailField label="逻辑仓名称" value={row.name} />
-              <DetailField label="所属实体仓" value={resolvePhysicalLabel(row.physicalWarehouseId, physicalRows)} />
-              <DetailField label="库存状态" value={stockStatusLabels[row.stockStatus] || EMPTY_PLACEHOLDER} />
-              <DetailField label="备注" value={row.remark || EMPTY_PLACEHOLDER} className="col-span-3" />
-            </div>
-          </EditorCard>
-          <EditorCard title="维护信息">
-            <div className={erpFieldGridClassName}>
-              <DetailField label="审核人" value={row.auditor || EMPTY_PLACEHOLDER} />
-              <DetailField label="审核时间" value={row.auditedAt || EMPTY_PLACEHOLDER} />
-              <DetailField label="创建人" value={row.creator || EMPTY_PLACEHOLDER} />
-              <DetailField label="创建时间" value={row.createdAt || EMPTY_PLACEHOLDER} />
-              <DetailField label="最后更新人" value={row.updater || EMPTY_PLACEHOLDER} />
-              <DetailField label="最后更新时间" value={row.updatedAt || EMPTY_PLACEHOLDER} />
-            </div>
-          </EditorCard>
-        </div>
-      </SimpleDialog>
-    );
-  }
-
-  const formFields = [
+  const badges = buildLogicalStatusBadges(row);
+  const fields = [
     { key: 'code', label: '逻辑仓编码', type: 'text', placeholder: '请输入逻辑仓编码', disabled: isEdit },
     { key: 'name', label: '逻辑仓名称', type: 'text', placeholder: '请输入逻辑仓名称' },
     { key: 'physicalWarehouseId', label: '所属实体仓 *', type: 'select', options: eligiblePhysicalOptions, placeholder: '请选择所属实体仓' },
     { key: 'stockStatus', label: '库存状态 *', type: 'select', options: stockStatusOptions, placeholder: '请选择库存状态' },
-    { key: 'remark', label: '备注', type: 'textarea', placeholder: '请输入逻辑仓说明', className: 'col-span-3' },
+    { key: 'remark', label: '备注', type: 'textarea', placeholder: '请输入逻辑仓说明', className: masterDataDialogFullSpanClassName },
+  ];
+
+  const viewSections = [
+    {
+      title: '基础信息',
+      fields: [
+        { label: '逻辑仓编码', value: row.code },
+        { label: '逻辑仓名称', value: row.name },
+        { label: '所属实体仓', value: resolvePhysicalLabel(row.physicalWarehouseId, physicalRows) },
+        { label: '库存状态', value: stockStatusLabels[row.stockStatus] || EMPTY_PLACEHOLDER },
+        { label: '备注', value: row.remark || EMPTY_PLACEHOLDER, className: masterDataDialogFullSpanClassName },
+      ],
+    },
+    {
+      title: '维护信息',
+      fields: buildMetaViewFields(row, [
+        { label: '审核人', value: row.auditor },
+        { label: '审核时间', value: row.auditedAt },
+      ]),
+    },
   ];
 
   return (
-    <SimpleDialog
-      open
-      onOpenChange={(open) => { if (!open) handleCloseRequest(); }}
-      title={title}
-      className="max-w-3xl"
-      footer={(
-        <>
-          <Button variant="outline" size="compact" onClick={handleCloseRequest}>取消</Button>
-          <Button variant="primary" size="compact" onClick={handleSave}>保存</Button>
-        </>
+    <MasterDataFormDialog
+      mode={mode}
+      title={buildMasterDataDialogTitle('逻辑仓', mode)}
+      titleExtra={(
+        <div className="flex flex-wrap items-center gap-1.5">
+          {badges.map((item) => <StatusBadge key={item.label} tone={item.tone}>{item.label}</StatusBadge>)}
+        </div>
       )}
-    >
-      <div className={erpFieldGridClassName}>
-        <FormFields fields={formFields} form={form} onFieldChange={updateField} fieldErrors={fieldErrors} />
-      </div>
-    </SimpleDialog>
+      onClose={onClose}
+      onSave={handleSave}
+      dirty={dirty}
+      form={form}
+      fields={fields}
+      fieldErrors={fieldErrors}
+      onFieldChange={updateField}
+      viewSections={viewSections}
+    />
   );
 }
 
@@ -191,43 +155,13 @@ export function WarehouseActionDialogs({ dialog, onClose, onComplete, physicalRo
   }
 
   if (type === 'logical-form') {
-    return (
-      <LogicalWarehouseFormDialog
-        dialog={dialog}
-        onClose={onClose}
-        onComplete={onComplete}
-      />
-    );
+    return <LogicalWarehouseFormDialog dialog={dialog} onClose={onClose} onComplete={onComplete} />;
   }
 
-  if (type === 'confirm-leave') {
+  if (type === 'confirm-leave' || type === 'confirm-leave-logical') {
     return (
-      <ConfirmDialog
-        open
-        onOpenChange={(open) => { if (!open) onClose?.(); }}
-        title="离开当前页面？"
-        description="离开后未保存的内容将丢失"
-        confirmLabel="确认离开"
-        cancelLabel="继续编辑"
-        confirmVariant="danger"
-        onConfirm={() => {
-          dialog.onConfirmLeave?.();
-          onClose?.();
-        }}
-      />
-    );
-  }
-
-  if (type === 'confirm-leave-logical') {
-    return (
-      <ConfirmDialog
-        open
-        onOpenChange={(open) => { if (!open) onClose?.(); }}
-        title="离开当前页面？"
-        description="离开后未保存的内容将丢失"
-        confirmLabel="确认离开"
-        cancelLabel="继续编辑"
-        confirmVariant="danger"
+      <DialogLeaveConfirm
+        onCancel={onClose}
         onConfirm={() => {
           dialog.onConfirmLeave?.();
           onClose?.();

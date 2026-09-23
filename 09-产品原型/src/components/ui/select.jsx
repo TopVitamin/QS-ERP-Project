@@ -2,6 +2,7 @@ import * as SelectPrimitive from '@radix-ui/react-select';
 import { Check, ChevronDown } from 'lucide-react';
 import { cn } from '../../lib/utils.js';
 import { getFieldControlClassName } from './field.jsx';
+import { popoverLayerClassName } from './overlay.jsx';
 
 export const Select = SelectPrimitive.Root;
 export const SelectGroup = SelectPrimitive.Group;
@@ -32,7 +33,8 @@ export function SelectContent({ className, children, position = 'popper', ...pro
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
         className={cn(
-          'relative z-[100] max-h-72 overflow-hidden rounded-erp-overlay border border-erp-border-strong bg-erp-surface-panel text-erp-text shadow-erp-overlay',
+          'relative max-h-72 overflow-hidden rounded-erp-overlay border border-erp-border-strong bg-erp-surface-panel text-erp-text shadow-erp-overlay',
+          popoverLayerClassName,
           position === 'popper' && 'w-max min-w-[var(--radix-select-trigger-width)] max-w-[min(560px,calc(100vw-24px))] translate-y-1',
           className,
         )}

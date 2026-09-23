@@ -1,4 +1,5 @@
 import { emptyFieldMessage } from './formValidation.js';
+import { createEmptyInternationalAddress } from './internationalAddress.js';
 
 export const auditLabels = {
   draft: '草稿',
@@ -181,6 +182,10 @@ export function validatePartnerBase(form, existingRows = [], currentId = null, e
   if (code && existingRows.some((row) => row.code === code && row.id !== currentId)) {
     fieldErrors.code = `${entityLabel.replace('编码', '')}编码已存在`;
   }
+  // 名称在同一对象内不允许重复（2026-09-23确认）。
+  if (name && existingRows.some((row) => row.name === name && row.id !== currentId)) {
+    fieldErrors.name = `${entityLabel.replace('编码', '')}名称已存在`;
+  }
 
   return fieldErrors;
 }
@@ -223,11 +228,7 @@ export function createEmptyAddress() {
   return {
     id: createLineId('address'),
     addressType: '办公',
-    country: '中国',
-    province: '',
-    city: '',
-    district: '',
-    detailAddress: '',
+    ...createEmptyInternationalAddress(),
     contactName: '',
     contactPhone: '',
     postalCode: '',

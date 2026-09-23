@@ -28,11 +28,12 @@ export function DataTable({
   emptyText = '暂无数据',
 }) {
   const showOperationColumn = rowActions.length > 0;
+  const showSelectionColumn = Boolean(onToggleRow);
   const operationColumnWidth = useMemo(
     () => (showOperationColumn ? computeOperationColumnWidth(rows, rowActions, rowActionsMaxVisible) : 0),
     [rows, rowActions, rowActionsMaxVisible, showOperationColumn],
   );
-  const selectionColumnWidth = 48;
+  const selectionColumnWidth = showSelectionColumn ? 48 : 0;
   const [columnWidths, setColumnWidths] = useState(() => Object.fromEntries(columns.map((column) => [column.key, column.defaultWidth])));
   const [containerWidth, setContainerWidth] = useState(0);
   const containerRef = useRef(null);
@@ -183,19 +184,21 @@ export function DataTable({
         >
           <table ref={tableRef} className="table-fixed border-separate border-spacing-0 text-left text-[12px] text-erp-text" style={{ width: tableWidth }}>
         <colgroup>
-          <col style={{ width: selectionColumnWidth }} />
+          {showSelectionColumn && <col style={{ width: selectionColumnWidth }} />}
           {columns.map((column) => <col key={column.key} style={{ width: getEffectiveColumnWidth(column) }} />)}
           {showOperationColumn && <col style={{ width: operationColumnWidth }} />}
         </colgroup>
         <thead className="sticky top-0 z-20 h-7 bg-erp-surface-table-head text-[12px] font-normal text-erp-text-section">
           <tr className="h-7">
-            <th scope="col" className="erp-table-head-cell sticky left-0 z-30 bg-erp-surface-table-head text-center">
-              <Checkbox
-                aria-label="选择当前页全部数据"
-                checked={allSelected ? true : someSelected ? 'indeterminate' : false}
-                onCheckedChange={(checked) => onToggleAll(checked === true)}
-              />
-            </th>
+            {showSelectionColumn && (
+              <th scope="col" className="erp-table-head-cell sticky left-0 z-30 bg-erp-surface-table-head text-center">
+                <Checkbox
+                  aria-label="选择当前页全部数据"
+                  checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+                  onCheckedChange={(checked) => onToggleAll?.(checked === true)}
+                />
+              </th>
+            )}
             {columns.map((column) => {
               const isSorted = sort?.key === column.key;
               const pinnedOffset = columnOffsets[column.key];
@@ -249,7 +252,7 @@ export function DataTable({
         <tbody>
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={columns.length + (showOperationColumn ? 2 : 1)} className="h-32 border-b border-erp-border-table-row text-center text-[12px] text-erp-text-muted">{emptyText}</td>
+              <td colSpan={columns.length + (showSelectionColumn ? 1 : 0) + (showOperationColumn ? 1 : 0)} className="h-32 border-b border-erp-border-table-row text-center text-[12px] text-erp-text-muted">{emptyText}</td>
             </tr>
           ) : rows.map((row) => {
             const selected = selectedIds.includes(row.id);
@@ -257,13 +260,15 @@ export function DataTable({
             const actions = rowActions.filter((action) => !action.visibleWhen || action.visibleWhen(row));
             return (
               <tr key={row.id} className={`group h-8 ${rowClass} hover:bg-erp-surface-hover`}>
-                <td className={cn('erp-table-cell sticky left-0 z-10 text-center', rowClass, 'group-hover:bg-erp-surface-hover')}>
-                  <Checkbox
-                    aria-label={`选择${row.orderNo || row.inboundNo || row.id}`}
-                    checked={selected}
-                    onCheckedChange={() => onToggleRow(row.id)}
-                  />
-                </td>
+                {showSelectionColumn && (
+                  <td className={cn('erp-table-cell sticky left-0 z-10 text-center', rowClass, 'group-hover:bg-erp-surface-hover')}>
+                    <Checkbox
+                      aria-label={`选择${row.orderNo || row.inboundNo || row.id}`}
+                      checked={selected}
+                      onCheckedChange={() => onToggleRow?.(row.id)}
+                    />
+                  </td>
+                )}
                 {columns.map((column) => {
                   const value = row[column.key];
                   const cell = column.render ? column.render(value, row) : (value === '' || value == null ? EMPTY_PLACEHOLDER : value);

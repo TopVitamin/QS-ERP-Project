@@ -28,6 +28,25 @@ import {
   logicalWarehouses,
   physicalWarehouses,
 } from '../data/warehouseData.js';
+import { getWarehouseAddressDetailFields, normalizeWarehouseAddress } from '../lib/warehouseAddress.js';
+
+function buildAddressContactFields(row) {
+  const address = getWarehouseAddressDetailFields(normalizeWarehouseAddress(row.warehouseAddress, row.address));
+  const fields = [
+    { key: 'countryRegion', label: '国家/地区', value: address.countryRegion || EMPTY_PLACEHOLDER },
+    { key: 'stateOrProvince', label: '省/州', value: address.stateOrProvince || EMPTY_PLACEHOLDER },
+    { key: 'city', label: address.isChina ? '市' : '城市', value: address.city || EMPTY_PLACEHOLDER },
+  ];
+  if (address.isChina) {
+    fields.push({ key: 'district', label: '区', value: address.district || EMPTY_PLACEHOLDER });
+  }
+  fields.push(
+    { key: 'detailAddress', label: '详细地址', value: address.detailAddress || EMPTY_PLACEHOLDER, className: 'col-span-3' },
+    { key: 'contact', label: '联系人', value: row.contact || EMPTY_PLACEHOLDER },
+    { key: 'phone', label: '联系电话', value: row.phone || EMPTY_PLACEHOLDER },
+  );
+  return fields;
+}
 
 function buildDetailFields(row) {
   return [
@@ -35,9 +54,6 @@ function buildDetailFields(row) {
     { key: 'name', label: '实体仓名称', value: row.name },
     { key: 'operationType', label: '运营类型', value: row.operationType || EMPTY_PLACEHOLDER },
     { key: 'remark', label: '备注', value: row.remark || EMPTY_PLACEHOLDER, className: 'col-span-3' },
-    { key: 'address', label: '仓库地址', value: row.address || EMPTY_PLACEHOLDER },
-    { key: 'contact', label: '联系人', value: row.contact || EMPTY_PLACEHOLDER },
-    { key: 'phone', label: '联系电话', value: row.phone || EMPTY_PLACEHOLDER },
     { key: 'dockingType', label: '对接方式', value: row.dockingType || EMPTY_PLACEHOLDER },
     { key: 'dockingSystem', label: '对接系统', value: row.dockingSystem || EMPTY_PLACEHOLDER },
     { key: 'thirdPartyCode', label: '第三方仓库编码', value: row.thirdPartyCode || EMPTY_PLACEHOLDER },
@@ -206,17 +222,17 @@ export function WarehouseDetailPage({ context, onFeedback, onOpenPage }) {
         title={!canCreateLogical ? '实体仓审核通过并启用后才能新增逻辑仓' : undefined}
         onClick={() => handleHeaderAction('add-logical')}
       >
-        新增逻辑仓
+        新增
       </Button>
     </div>
   );
 
   const fields = buildDetailFields(row);
   const baseFields = fields.slice(0, 4);
-  const addressFields = fields.slice(4, 7);
-  const dockingFields = fields.slice(7, 12);
-  const statusFields = fields.slice(12, 14);
-  const metaFields = fields.slice(14);
+  const addressFields = buildAddressContactFields(row);
+  const dockingFields = fields.slice(4, 9);
+  const statusFields = fields.slice(9, 13);
+  const metaFields = fields.slice(13);
 
   return (
     <>
@@ -246,7 +262,7 @@ export function WarehouseDetailPage({ context, onFeedback, onOpenPage }) {
           actions={(
             <Button variant="outline" size="compact" disabled={!canCreateLogical} onClick={() => handleHeaderAction('add-logical')}>
               <Plus className="h-3.5 w-3.5" strokeWidth={1.9} />
-              新增逻辑仓
+              新增
             </Button>
           )}
         >

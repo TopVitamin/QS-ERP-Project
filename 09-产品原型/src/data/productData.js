@@ -72,7 +72,7 @@ function buildSeedProduct(sku, index) {
     model: sku.productName.split(' ').slice(-1)[0] || '',
     spec: sku.spec,
     unit: sku.unit,
-    barcodes: sku.barcode ? [sku.barcode] : [],
+    barcodes: sku.barcode ? (index === 0 ? [sku.barcode, '6901001991'] : [sku.barcode]) : [],
     origin: '中国',
     remark: index === 0 ? '演示商品，已被业务引用' : '',
     salesLevel: index % 5 === 0 ? 'A' : 'unrated',

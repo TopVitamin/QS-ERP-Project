@@ -8,6 +8,7 @@ import { FormField } from '../ui/form-field.jsx';
 import { Input } from '../ui/input.jsx';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group.jsx';
 import { SelectField } from '../ui/select-field.jsx';
+import { Switch } from '../ui/switch.jsx';
 import { Textarea } from '../ui/textarea.jsx';
 
 export function FormControl({ field, value, form, onChange, invalid = false }) {
@@ -81,6 +82,20 @@ export function FormControl({ field, value, form, onChange, invalid = false }) {
         invalid={invalid}
         className={invalidClassName}
       />
+    );
+  }
+
+  if (field.type === 'switch') {
+    const disabled = typeof field.disabled === 'function' ? field.disabled(form) : field.disabled;
+    return (
+      <div className="flex h-7 items-center">
+        <Switch
+          checked={Boolean(value)}
+          onCheckedChange={onChange}
+          aria-label={ariaLabel}
+          disabled={disabled}
+        />
+      </div>
     );
   }
 

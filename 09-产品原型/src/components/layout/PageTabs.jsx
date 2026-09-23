@@ -136,8 +136,8 @@ export function PageTabs({ tabs = [], activeView, onTabSelect, onTabClose, onTab
             <DropdownMenuItem disabled={tabs.length <= 1} onSelect={() => onTabAction?.('closeOthers', activeView)}>
               关闭其他标签页
             </DropdownMenuItem>
-            <DropdownMenuItem disabled={tabs.length <= 1} onSelect={() => onTabAction?.('closeAll', activeView)}>
-              关闭全部标签页（保留当前）
+            <DropdownMenuItem disabled={tabs.length === 0} onSelect={() => onTabAction?.('closeAll', activeView)}>
+              关闭全部标签页
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

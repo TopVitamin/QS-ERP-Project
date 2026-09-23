@@ -7,6 +7,7 @@ import { erpFieldGridClassName } from '../../styles/typography.js';
 import { EMPTY_PLACEHOLDER } from '../../lib/format.js';
 import { readMockRows, subscribeMockRows, upsertMockRow, writeMockRows } from '../../lib/mockStorage.js';
 import { resolveCurrencyLabel } from '../../data/partnerMasterOptions.js';
+import { getInternationalAddressDetailFields, normalizePartnerAddress } from '../../lib/internationalAddress.js';
 import {
   auditLabels,
   buildPartnerStatusBadges,
@@ -112,9 +113,45 @@ export function PartnerMasterDetail({ context, config, onFeedback, onOpenPage })
 
   const addressColumns = [
     { key: 'addressType', label: '地址类型', defaultWidth: 90, minWidth: 80, maxWidth: 120, ellipsis: true },
-    { key: 'province', label: '省', defaultWidth: 80, minWidth: 70, maxWidth: 110, ellipsis: true },
-    { key: 'city', label: '市', defaultWidth: 80, minWidth: 70, maxWidth: 110, ellipsis: true },
-    { key: 'district', label: '区', defaultWidth: 80, minWidth: 70, maxWidth: 110, ellipsis: true },
+    {
+      key: 'countryRegion',
+      label: '国家/地区',
+      defaultWidth: 110,
+      minWidth: 96,
+      maxWidth: 150,
+      ellipsis: true,
+      render: (_, row) => getInternationalAddressDetailFields(row).countryRegion || EMPTY_PLACEHOLDER,
+    },
+    {
+      key: 'stateOrProvince',
+      label: '省/州',
+      defaultWidth: 90,
+      minWidth: 80,
+      maxWidth: 120,
+      ellipsis: true,
+      render: (_, row) => getInternationalAddressDetailFields(row).stateOrProvince || EMPTY_PLACEHOLDER,
+    },
+    {
+      key: 'city',
+      label: '市',
+      defaultWidth: 90,
+      minWidth: 80,
+      maxWidth: 120,
+      ellipsis: true,
+      render: (_, row) => getInternationalAddressDetailFields(row).city || EMPTY_PLACEHOLDER,
+    },
+    {
+      key: 'district',
+      label: '区',
+      defaultWidth: 80,
+      minWidth: 70,
+      maxWidth: 110,
+      ellipsis: true,
+      render: (_, row) => {
+        const detail = getInternationalAddressDetailFields(row);
+        return detail.isChina ? (detail.district || EMPTY_PLACEHOLDER) : EMPTY_PLACEHOLDER;
+      },
+    },
     { key: 'detailAddress', label: '详细地址', defaultWidth: 200, minWidth: 160, maxWidth: 280, ellipsis: true },
     { key: 'contactName', label: '地址联系人', defaultWidth: 100, minWidth: 88, maxWidth: 140, ellipsis: true },
     { key: 'contactPhone', label: '联系电话', defaultWidth: 110, minWidth: 96, maxWidth: 150, ellipsis: true },
@@ -154,7 +191,7 @@ export function PartnerMasterDetail({ context, config, onFeedback, onOpenPage })
           </div>
         </EditorCard>
         <DetailSubtable title="联系人" rows={row.contacts} columns={contactColumns} emptyText="暂无联系人" />
-        <DetailSubtable title="地址" rows={row.addresses} columns={addressColumns} emptyText="暂无地址" />
+        <DetailSubtable title="地址" rows={(row.addresses || []).map(normalizePartnerAddress)} columns={addressColumns} emptyText="暂无地址" />
         <DetailSubtable title="银行信息" rows={row.banks} columns={bankColumns} emptyText="暂无银行信息" />
         {config.renderBusinessInfo && (
           <EditorCard title="工商信息">
@@ -171,12 +208,12 @@ export function PartnerMasterDetail({ context, config, onFeedback, onOpenPage })
           <div className={erpFieldGridClassName}>
             <DetailField label="审核状态" value={auditLabels[row.auditStatus] || EMPTY_PLACEHOLDER} />
             <DetailField label="使用状态" value={useStatusLabels[row.useStatus] || EMPTY_PLACEHOLDER} />
+            <DetailField label="审核人" value={row.auditor || EMPTY_PLACEHOLDER} />
+            <DetailField label="审核时间" value={row.auditedAt || EMPTY_PLACEHOLDER} />
           </div>
         </EditorCard>
         <EditorCard title="维护信息">
           <div className={erpFieldGridClassName}>
-            <DetailField label="审核人" value={row.auditor || EMPTY_PLACEHOLDER} />
-            <DetailField label="审核时间" value={row.auditedAt || EMPTY_PLACEHOLDER} />
             <DetailField label="创建人" value={row.creator || EMPTY_PLACEHOLDER} />
             <DetailField label="创建时间" value={row.createdAt || EMPTY_PLACEHOLDER} />
             <DetailField label="最后更新人" value={row.updater || EMPTY_PLACEHOLDER} />

@@ -1,6 +1,7 @@
 import { emptyFieldMessage } from './formValidation.js';
+import { createEmptyWarehouseAddress, formatWarehouseAddress, normalizeWarehouseAddress } from './warehouseAddress.js';
 
-export const PHYSICAL_STORAGE_KEY = 'qs-erp:physical-warehouses:v3';
+export const PHYSICAL_STORAGE_KEY = 'qs-erp:physical-warehouses:v4';
 export const LOGICAL_STORAGE_KEY = 'qs-erp:logical-warehouses:v3';
 
 export const physicalAuditLabels = {
@@ -149,6 +150,9 @@ export function validatePhysicalForSave(form, existingRows = [], currentId = nul
   if (code && existingRows.some((row) => row.code === code && row.id !== currentId)) {
     fieldErrors.code = '实体仓编码已存在';
   }
+  if (name && existingRows.some((row) => row.name === name && row.id !== currentId)) {
+    fieldErrors.name = '实体仓名称已存在';
+  }
 
   if (Object.keys(fieldErrors).length) return { fieldErrors };
   return null;
@@ -166,6 +170,9 @@ export function validateLogicalForSave(form, existingRows = [], currentId = null
 
   if (code && existingRows.some((row) => row.code === code && row.id !== currentId)) {
     fieldErrors.code = '逻辑仓编码已存在';
+  }
+  if (name && existingRows.some((row) => row.name === name && row.physicalWarehouseId === form.physicalWarehouseId && row.id !== currentId)) {
+    fieldErrors.name = '同一实体仓下逻辑仓名称已存在';
   }
 
   if (Object.keys(fieldErrors).length) return { fieldErrors };
@@ -226,7 +233,7 @@ export function createEmptyPhysicalForm() {
     name: '',
     operationType: '',
     remark: '',
-    address: '',
+    warehouseAddress: createEmptyWarehouseAddress(),
     contact: '',
     phone: '',
     dockingType: '',
@@ -234,6 +241,34 @@ export function createEmptyPhysicalForm() {
     thirdPartyCode: '',
     thirdPartyOwner: '',
     authConfig: '',
+  };
+}
+
+export function physicalRowToForm(row) {
+  if (!row) return createEmptyPhysicalForm();
+  return {
+    code: row.code || '',
+    name: row.name || '',
+    operationType: row.operationType || '',
+    remark: row.remark || '',
+    warehouseAddress: normalizeWarehouseAddress(row.warehouseAddress, row.address),
+    contact: row.contact || '',
+    phone: row.phone || '',
+    dockingType: row.dockingType || '',
+    dockingSystem: row.dockingSystem || '',
+    thirdPartyCode: row.thirdPartyCode || '',
+    thirdPartyOwner: row.thirdPartyOwner || '',
+    authConfig: row.authConfig || '',
+  };
+}
+
+export function physicalFormToRow(form, existingRow = {}) {
+  const warehouseAddress = normalizeWarehouseAddress(form.warehouseAddress);
+  return {
+    ...existingRow,
+    ...form,
+    warehouseAddress,
+    address: formatWarehouseAddress(warehouseAddress),
   };
 }
 

@@ -142,7 +142,7 @@ export function LogisticsProductListPage({ onFeedback, onOpenPage }) {
   const headerActions = [
     {
       id: 'create-product',
-      label: '新增物流服务产品',
+      label: '新增',
       icon: Plus,
       variant: 'primary',
       disabled: !canAddServiceProduct(carrierRows),

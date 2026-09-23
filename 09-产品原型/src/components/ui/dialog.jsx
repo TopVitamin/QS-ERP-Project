@@ -22,7 +22,14 @@ const dialogSizeClassName = {
   sm: 'w-[360px]',
   md: 'w-[480px]',
   lg: 'w-[640px]',
+  form: 'w-[min(768px,calc(100vw-32px))]',
   xl: 'w-[800px]',
+};
+
+const dialogSizeByColumns = {
+  1: 'md',
+  2: 'lg',
+  4: 'xl',
 };
 
 export function DialogContent({ className, size = 'md', showClose = true, children, ...props }) {
@@ -44,7 +51,7 @@ export function DialogContent({ className, size = 'md', showClose = true, childr
               variant="ghost"
               size="icon"
               aria-label="关闭"
-              className="absolute right-3 top-3 h-7 w-7 text-erp-text-muted hover:text-erp-text"
+              className="absolute right-3 top-3 z-10 h-7 w-7 text-erp-text-muted hover:text-erp-text"
             >
               <X className="h-4 w-4" strokeWidth={1.8} />
             </Button>
@@ -77,19 +84,66 @@ export function SimpleDialog({
   onOpenChange,
   trigger,
   title,
+  titleExtra,
   description,
   children,
   footer,
-  size = 'md',
+  size,
+  columns,
+  framed,
+  className,
   showClose = true,
 }) {
+  const resolvedSize = size ?? dialogSizeByColumns[columns] ?? 'md';
+  const isFramed = framed ?? columns != null;
+
+  if (isFramed) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        {trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : null}
+        <DialogContent
+          size={resolvedSize}
+          className={cn('flex flex-col gap-0 overflow-hidden p-0', className)}
+          showClose={showClose}
+        >
+          {(title || titleExtra || description) && (
+            <DialogHeader className="shrink-0 space-y-0 border-b border-erp-border-header p-0">
+              <div className="px-4 pb-3 pt-4 pr-12">
+                {(title || titleExtra) ? (
+                  <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+                    {title ? <DialogTitle className="text-[16px]">{title}</DialogTitle> : null}
+                    {titleExtra}
+                  </div>
+                ) : null}
+                {description ? <DialogDescription className="mt-1">{description}</DialogDescription> : null}
+              </div>
+            </DialogHeader>
+          )}
+          <div className="min-h-0 overflow-y-auto px-4 py-4">
+            {children}
+          </div>
+          {footer ? (
+            <DialogFooter className="mt-0 shrink-0 justify-end border-t border-erp-border-header px-4 py-3">
+              {footer}
+            </DialogFooter>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : null}
-      <DialogContent size={size} showClose={showClose}>
-        {(title || description) && (
+      <DialogContent size={resolvedSize} className={className} showClose={showClose}>
+        {(title || titleExtra || description) && (
           <DialogHeader>
-            {title ? <DialogTitle>{title}</DialogTitle> : null}
+            {(title || titleExtra) ? (
+              <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+                {title ? <DialogTitle>{title}</DialogTitle> : null}
+                {titleExtra}
+              </div>
+            ) : null}
             {description ? <DialogDescription>{description}</DialogDescription> : null}
           </DialogHeader>
         )}

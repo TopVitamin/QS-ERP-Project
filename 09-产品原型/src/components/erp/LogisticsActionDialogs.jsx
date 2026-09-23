@@ -1,15 +1,19 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { ConfirmDialog } from '../ui/alert-dialog.jsx';
 import { SimpleDialog } from '../ui/dialog.jsx';
 import { Button } from '../ui/button.jsx';
-import { FormFields } from './FormControl.jsx';
-import { DetailField, EditorCard } from './DocumentDetailFrame.jsx';
-import { StatusBadge } from './StatusBadge.jsx';
 import { Switch } from '../ui/switch.jsx';
 import { FormField } from '../ui/form-field.jsx';
-import { erpFieldGridClassName } from '../../styles/typography.js';
+import {
+  buildMasterDataDialogTitle,
+  buildMetaViewFields,
+  DialogLeaveConfirm,
+  masterDataDialogFullSpanClassName,
+  MasterDataFormDialog,
+  renderUseStatusTitleExtra,
+  useDialogFormState,
+} from './MasterDataFormDialog.jsx';
 import { EMPTY_PLACEHOLDER } from '../../lib/format.js';
-import { useStatusLabels } from '../../lib/partnerMasterLogic.js';
 import {
   applyDisable,
   buildCarrierOptions,
@@ -30,30 +34,19 @@ import {
 
 function CarrierFormDialog({ dialog, onClose, onComplete }) {
   const { mode, row, existingRows } = dialog;
-  const isView = mode === 'view';
   const isEdit = mode === 'edit';
-  const [form, setForm] = useState(() => (row ? carrierToForm(row) : createEmptyCarrierForm()));
-  const [fieldErrors, setFieldErrors] = useState({});
-  const [dirty, setDirty] = useState(false);
-
-  useEffect(() => {
-    setForm(row ? carrierToForm(row) : createEmptyCarrierForm());
-    setFieldErrors({});
-    setDirty(false);
-  }, [row, mode]);
-
-  const title = mode === 'create' ? '新增物流商' : mode === 'edit' ? '编辑物流商' : '物流商详情';
-
-  function updateField(key, value) {
-    setDirty(true);
-    setFieldErrors((current) => {
-      if (!current[key]) return current;
-      const next = { ...current };
-      delete next[key];
-      return next;
-    });
-    setForm((current) => ({ ...current, [key]: value }));
-  }
+  const {
+    form,
+    fieldErrors,
+    setFieldErrors,
+    dirty,
+    updateField,
+  } = useDialogFormState({
+    row,
+    mode,
+    toForm: carrierToForm,
+    createEmpty: createEmptyCarrierForm,
+  });
 
   function handleSave() {
     const result = validateCarrierForSave(form, existingRows, row?.id);
@@ -70,85 +63,54 @@ function CarrierFormDialog({ dialog, onClose, onComplete }) {
     onClose?.();
   }
 
-  function handleCloseRequest() {
-    if (!dirty || isView) {
-      onClose?.();
-      return;
-    }
-    onComplete?.({ action: 'confirm-leave', onConfirmLeave: onClose });
-  }
-
-  if (isView) {
-    return (
-      <SimpleDialog
-        open
-        onOpenChange={(open) => { if (!open) onClose?.(); }}
-        title={title}
-        className="max-w-3xl"
-        footer={<Button variant="outline" size="compact" onClick={() => onClose?.()}>关闭</Button>}
-      >
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge tone={row.useStatus === 'disabled' ? 'neutral' : 'success'}>
-              {useStatusLabels[row.useStatus]}
-            </StatusBadge>
-          </div>
-          <EditorCard title="基础信息">
-            <div className={erpFieldGridClassName}>
-              <DetailField label="物流商编码" value={row.code} />
-              <DetailField label="物流商名称" value={row.name} />
-              <DetailField label="联系人" value={row.contact || EMPTY_PLACEHOLDER} />
-              <DetailField label="联系电话" value={row.phone || EMPTY_PLACEHOLDER} />
-              <DetailField label="联系地址" value={row.address || EMPTY_PLACEHOLDER} className="col-span-3" />
-            </div>
-          </EditorCard>
-          <EditorCard title="维护信息">
-            <div className={erpFieldGridClassName}>
-              <DetailField label="创建人" value={row.creator || EMPTY_PLACEHOLDER} />
-              <DetailField label="创建时间" value={row.createdAt || EMPTY_PLACEHOLDER} />
-              <DetailField label="最后更新人" value={row.updater || EMPTY_PLACEHOLDER} />
-              <DetailField label="最后更新时间" value={row.updatedAt || EMPTY_PLACEHOLDER} />
-            </div>
-          </EditorCard>
-        </div>
-      </SimpleDialog>
-    );
-  }
-
   const fields = [
     { key: 'code', label: '物流商编码 *', type: 'text', placeholder: '请输入物流商编码', disabled: isEdit },
     { key: 'name', label: '物流商名称 *', type: 'text', placeholder: '请输入承运企业名称' },
     { key: 'contact', label: '联系人', type: 'text', placeholder: '请输入联系人' },
     { key: 'phone', label: '联系电话', type: 'text', placeholder: '请输入联系电话' },
-    { key: 'address', label: '联系地址', type: 'text', placeholder: '请输入联系地址', className: 'col-span-3' },
+    { key: 'address', label: '联系地址', type: 'text', placeholder: '请输入联系地址', className: masterDataDialogFullSpanClassName },
+  ];
+
+  const viewSections = [
+    {
+      title: '基础信息',
+      fields: [
+        { label: '物流商编码', value: row.code },
+        { label: '物流商名称', value: row.name },
+        { label: '联系人', value: row.contact || EMPTY_PLACEHOLDER },
+        { label: '联系电话', value: row.phone || EMPTY_PLACEHOLDER },
+        { label: '联系地址', value: row.address || EMPTY_PLACEHOLDER, className: masterDataDialogFullSpanClassName },
+      ],
+    },
+    {
+      title: '维护信息',
+      fields: buildMetaViewFields(row),
+    },
   ];
 
   return (
-    <SimpleDialog
-      open
-      onOpenChange={(open) => { if (!open) handleCloseRequest(); }}
-      title={title}
-      className="max-w-3xl"
-      footer={(
-        <>
-          <Button variant="outline" size="compact" onClick={handleCloseRequest}>取消</Button>
-          <Button variant="primary" size="compact" onClick={handleSave}>保存</Button>
-        </>
-      )}
-    >
-      <div className="space-y-4">
-        <div className={erpFieldGridClassName}>
-          <FormFields fields={fields} form={form} onFieldChange={updateField} fieldErrors={fieldErrors} />
-        </div>
-        <FormField label="使用状态" fieldKey="useStatus">
+    <MasterDataFormDialog
+      mode={mode}
+      title={buildMasterDataDialogTitle('物流商', mode)}
+      titleExtra={renderUseStatusTitleExtra(row?.useStatus)}
+      onClose={onClose}
+      onSave={handleSave}
+      dirty={dirty}
+      form={form}
+      fields={fields}
+      fieldErrors={fieldErrors}
+      onFieldChange={updateField}
+      viewSections={viewSections}
+      formExtras={(
+        <FormField label="使用状态" fieldKey="useStatus" className={masterDataDialogFullSpanClassName}>
           <Switch
             checked={form.useStatus === 'enabled'}
             onCheckedChange={(checked) => updateField('useStatus', checked ? 'enabled' : 'disabled')}
             aria-label="使用状态"
           />
         </FormField>
-      </div>
-    </SimpleDialog>
+      )}
+    />
   );
 }
 
@@ -161,35 +123,25 @@ function createProductFormState(row, defaultCarrierId) {
 
 function ProductFormDialog({ dialog, onClose, onComplete }) {
   const { mode, row, existingRows, carriers, defaultCarrierId } = dialog;
-  const isView = mode === 'view';
   const isEdit = mode === 'edit';
-  const [form, setForm] = useState(() => createProductFormState(row, defaultCarrierId));
-  const [fieldErrors, setFieldErrors] = useState({});
-  const [dirty, setDirty] = useState(false);
-
-  useEffect(() => {
-    setForm(createProductFormState(row, defaultCarrierId));
-    setFieldErrors({});
-    setDirty(false);
-  }, [row, mode, defaultCarrierId]);
+  const {
+    form,
+    fieldErrors,
+    setFieldErrors,
+    dirty,
+    updateField,
+  } = useDialogFormState({
+    row,
+    mode,
+    toForm: productToForm,
+    createEmpty: () => createProductFormState(null, defaultCarrierId),
+    deps: [defaultCarrierId],
+  });
 
   const carrierOptions = useMemo(
     () => buildCarrierOptions(carriers, form.carrierId),
     [carriers, form.carrierId],
   );
-
-  const title = mode === 'create' ? '新增物流服务产品' : mode === 'edit' ? '编辑物流服务产品' : '物流服务产品详情';
-
-  function updateField(key, value) {
-    setDirty(true);
-    setFieldErrors((current) => {
-      if (!current[key]) return current;
-      const next = { ...current };
-      delete next[key];
-      return next;
-    });
-    setForm((current) => ({ ...current, [key]: value }));
-  }
 
   function handleSave() {
     const result = validateProductForSave(form, existingRows, carriers, row?.id);
@@ -206,50 +158,6 @@ function ProductFormDialog({ dialog, onClose, onComplete }) {
     onClose?.();
   }
 
-  function handleCloseRequest() {
-    if (!dirty || isView) {
-      onClose?.();
-      return;
-    }
-    onComplete?.({ action: 'confirm-leave', onConfirmLeave: onClose });
-  }
-
-  if (isView) {
-    return (
-      <SimpleDialog
-        open
-        onOpenChange={(open) => { if (!open) onClose?.(); }}
-        title={title}
-        className="max-w-3xl"
-        footer={<Button variant="outline" size="compact" onClick={() => onClose?.()}>关闭</Button>}
-      >
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge tone={row.useStatus === 'disabled' ? 'neutral' : 'success'}>
-              {useStatusLabels[row.useStatus]}
-            </StatusBadge>
-          </div>
-          <EditorCard title="基础信息">
-            <div className={erpFieldGridClassName}>
-              <DetailField label="物流服务产品编码" value={row.code} />
-              <DetailField label="物流服务产品名称" value={row.name} />
-              <DetailField label="所属物流商" value={resolveCarrierLabel(row.carrierId, carriers)} />
-              <DetailField label="运输类型" value={renderTransportType(row.transportType)} />
-            </div>
-          </EditorCard>
-          <EditorCard title="维护信息">
-            <div className={erpFieldGridClassName}>
-              <DetailField label="创建人" value={row.creator || EMPTY_PLACEHOLDER} />
-              <DetailField label="创建时间" value={row.createdAt || EMPTY_PLACEHOLDER} />
-              <DetailField label="最后更新人" value={row.updater || EMPTY_PLACEHOLDER} />
-              <DetailField label="最后更新时间" value={row.updatedAt || EMPTY_PLACEHOLDER} />
-            </div>
-          </EditorCard>
-        </div>
-      </SimpleDialog>
-    );
-  }
-
   const fields = [
     { key: 'code', label: '物流服务产品编码 *', type: 'text', placeholder: '请输入产品编码', disabled: isEdit },
     { key: 'name', label: '物流服务产品名称 *', type: 'text', placeholder: '请输入物流服务名称' },
@@ -257,32 +165,45 @@ function ProductFormDialog({ dialog, onClose, onComplete }) {
     { key: 'transportType', label: '运输类型', type: 'select', options: [{ value: '', label: '请选择运输类型' }, ...transportTypeOptions], placeholder: '请选择运输类型' },
   ];
 
+  const viewSections = [
+    {
+      title: '基础信息',
+      fields: [
+        { label: '物流服务产品编码', value: row.code },
+        { label: '物流服务产品名称', value: row.name },
+        { label: '所属物流商', value: resolveCarrierLabel(row.carrierId, carriers) },
+        { label: '运输类型', value: renderTransportType(row.transportType) },
+      ],
+    },
+    {
+      title: '维护信息',
+      fields: buildMetaViewFields(row),
+    },
+  ];
+
   return (
-    <SimpleDialog
-      open
-      onOpenChange={(open) => { if (!open) handleCloseRequest(); }}
-      title={title}
-      className="max-w-3xl"
-      footer={(
-        <>
-          <Button variant="outline" size="compact" onClick={handleCloseRequest}>取消</Button>
-          <Button variant="primary" size="compact" onClick={handleSave}>保存</Button>
-        </>
-      )}
-    >
-      <div className="space-y-4">
-        <div className={erpFieldGridClassName}>
-          <FormFields fields={fields} form={form} onFieldChange={updateField} fieldErrors={fieldErrors} />
-        </div>
-        <FormField label="使用状态" fieldKey="useStatus">
+    <MasterDataFormDialog
+      mode={mode}
+      title={buildMasterDataDialogTitle('物流服务产品', mode)}
+      titleExtra={renderUseStatusTitleExtra(row?.useStatus)}
+      onClose={onClose}
+      onSave={handleSave}
+      dirty={dirty}
+      form={form}
+      fields={fields}
+      fieldErrors={fieldErrors}
+      onFieldChange={updateField}
+      viewSections={viewSections}
+      formExtras={(
+        <FormField label="使用状态" fieldKey="useStatus" className={masterDataDialogFullSpanClassName}>
           <Switch
             checked={form.useStatus === 'enabled'}
             onCheckedChange={(checked) => updateField('useStatus', checked ? 'enabled' : 'disabled')}
             aria-label="使用状态"
           />
         </FormField>
-      </div>
-    </SimpleDialog>
+      )}
+    />
   );
 }
 
@@ -306,13 +227,8 @@ export function LogisticsActionDialogs({ dialog, onClose, onComplete, carriers =
 
   if (type === 'confirm-leave') {
     return (
-      <ConfirmDialog
-        open
-        onOpenChange={(open) => { if (!open) onClose?.(); }}
-        title="离开当前弹窗？"
-        description="离开后未保存的内容将丢失"
-        confirmLabel="确认离开"
-        confirmVariant="danger"
+      <DialogLeaveConfirm
+        onCancel={onClose}
         onConfirm={() => {
           dialog.onConfirmLeave?.();
           onClose?.();
@@ -362,17 +278,14 @@ export function LogisticsActionDialogs({ dialog, onClose, onComplete, carriers =
 
   if (type === 'delete-carrier') {
     const blockReason = getCarrierDeleteBlockReason(row, products);
-    if (blockReason) {
-      return (
-        <SimpleDialog open onOpenChange={(open) => { if (!open) onClose?.(); }} title="无法删除物流商">
-          <p className="text-[12px] text-erp-text-muted">{blockReason}</p>
-          <div className="mt-4 flex justify-end">
-            <Button variant="outline" size="compact" onClick={() => onClose?.()}>知道了</Button>
-          </div>
-        </SimpleDialog>
-      );
-    }
-    return (
+    return blockReason ? (
+      <SimpleDialog open onOpenChange={(open) => { if (!open) onClose?.(); }} title="无法删除物流商">
+        <p className="text-[12px] text-erp-text-muted">{blockReason}</p>
+        <div className="mt-4 flex justify-end">
+          <Button variant="outline" size="compact" onClick={() => onClose?.()}>知道了</Button>
+        </div>
+      </SimpleDialog>
+    ) : (
       <ConfirmDialog
         open
         onOpenChange={(open) => { if (!open) onClose?.(); }}
@@ -387,17 +300,14 @@ export function LogisticsActionDialogs({ dialog, onClose, onComplete, carriers =
 
   if (type === 'delete-product') {
     const blockReason = getProductDeleteBlockReason(row);
-    if (blockReason) {
-      return (
-        <SimpleDialog open onOpenChange={(open) => { if (!open) onClose?.(); }} title="无法删除物流服务产品">
-          <p className="text-[12px] text-erp-text-muted">{blockReason}</p>
-          <div className="mt-4 flex justify-end">
-            <Button variant="outline" size="compact" onClick={() => onClose?.()}>知道了</Button>
-          </div>
-        </SimpleDialog>
-      );
-    }
-    return (
+    return blockReason ? (
+      <SimpleDialog open onOpenChange={(open) => { if (!open) onClose?.(); }} title="无法删除物流服务产品">
+        <p className="text-[12px] text-erp-text-muted">{blockReason}</p>
+        <div className="mt-4 flex justify-end">
+          <Button variant="outline" size="compact" onClick={() => onClose?.()}>知道了</Button>
+        </div>
+      </SimpleDialog>
+    ) : (
       <ConfirmDialog
         open
         onOpenChange={(open) => { if (!open) onClose?.(); }}

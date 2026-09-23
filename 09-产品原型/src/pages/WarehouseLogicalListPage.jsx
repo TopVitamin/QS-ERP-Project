@@ -152,7 +152,7 @@ export function WarehouseLogicalListPage({ onFeedback, onOpenPage }) {
   const headerActions = [
     {
       id: 'create-logical',
-      label: '新增逻辑仓',
+      label: '新增',
       icon: Plus,
       variant: 'primary',
       disabled: !canAddLogicalWarehouse(physicalRows),

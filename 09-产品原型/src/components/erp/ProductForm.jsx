@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Upload, X } from 'lucide-react';
 import { DocumentEditorFrame, EditorCard } from './DocumentEditorFrame.jsx';
 import { FormFields } from './FormControl.jsx';
 import { ProductActionDialogs } from './ProductActionDialogs.jsx';
@@ -7,7 +7,6 @@ import { ProductCategorySelect } from './ProductCategorySelect.jsx';
 import { Button } from '../ui/button.jsx';
 import { FormField } from '../ui/form-field.jsx';
 import { Input } from '../ui/input.jsx';
-import { Switch } from '../ui/switch.jsx';
 import { SelectField } from '../ui/select-field.jsx';
 import { Combobox } from '../ui/combobox.jsx';
 import { erpFieldGridClassName } from '../../styles/typography.js';
@@ -37,26 +36,35 @@ function focusFirstFieldError(fieldErrors) {
 
 function BarcodeInput({ value, onChange, onValidate }) {
   const [draft, setDraft] = useState('');
+  const [error, setError] = useState('');
+  const barcodes = value || [];
 
   function addBarcode() {
     const next = draft.trim();
     if (!next) return;
-    if ((value || []).includes(next)) {
-      setDraft('');
+    if (barcodes.includes(next)) {
+      setError('该条码已被使用');
       return;
     }
     const duplicateError = onValidate?.(next);
-    if (duplicateError) return;
-    onChange([...(value || []), next]);
+    if (duplicateError) {
+      setError(duplicateError);
+      return;
+    }
+    setError('');
+    onChange([...barcodes, next]);
     setDraft('');
   }
 
   return (
-    <div className="col-span-3 space-y-2" data-field-key="barcodes">
+    <div className="max-w-xl space-y-2" data-field-key="barcodes">
       <div className="flex gap-2">
         <Input
           value={draft}
-          onChange={(event) => setDraft(event.target.value)}
+          onChange={(event) => {
+            setDraft(event.target.value);
+            if (error) setError('');
+          }}
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
               event.preventDefault();
@@ -65,45 +73,97 @@ function BarcodeInput({ value, onChange, onValidate }) {
           }}
           placeholder="输入条码后回车添加"
           aria-label="商品条码"
+          aria-invalid={error ? true : undefined}
         />
         <Button type="button" variant="outline" size="compact" onClick={addBarcode}>添加</Button>
       </div>
-      <div className="flex flex-wrap gap-1.5">
-        {(value || []).map((barcode) => (
-          <span key={barcode} className="inline-flex items-center gap-1 rounded border border-erp-border-card bg-erp-surface px-2 py-0.5 text-[12px]">
-            {barcode}
-            <button type="button" className="text-erp-text-muted hover:text-erp-danger" onClick={() => onChange(value.filter((item) => item !== barcode))} aria-label={`删除条码${barcode}`}>
-              <X className="h-3 w-3" />
-            </button>
-          </span>
-        ))}
-      </div>
+      {error && <p className="text-[12px] text-erp-danger">{error}</p>}
+      {barcodes.length > 0 && (
+        <ul className="border-t border-erp-border-card">
+          {barcodes.map((barcode) => (
+            <li key={barcode} className="flex items-center justify-between gap-3 border-b border-erp-border-card py-2">
+              <span className="min-w-0 truncate text-[12px] leading-5 text-erp-text">{barcode}</span>
+              <Button
+                type="button"
+                variant="text"
+                size="compact"
+                className="h-6 shrink-0 px-0 text-[12px]"
+                onClick={() => onChange(barcodes.filter((item) => item !== barcode))}
+                aria-label={`删除条码${barcode}`}
+              >
+                删除
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
 
 function ImageSlot({ label, value, onChange }) {
+  const inputRef = useRef(null);
+
+  function handleFileSelect(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => onChange(String(reader.result || ''));
+    reader.readAsDataURL(file);
+    event.target.value = '';
+  }
+
   return (
     <div className="space-y-1.5">
       <div className="text-[12px] text-erp-text-muted">{label}</div>
-      <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded border border-erp-border-card bg-erp-surface">
-        {value ? <img src={value} alt={label} className="h-full w-full object-cover" /> : <span className="text-[10px] text-erp-text-muted">无图</span>}
-      </div>
+      <button
+        type="button"
+        className={cn(
+          'group relative flex h-20 w-20 cursor-pointer items-center justify-center overflow-hidden rounded border border-dashed transition-colors',
+          value
+            ? 'border-erp-border-card bg-erp-surface'
+            : 'border-erp-border-control bg-erp-surface hover:border-erp-primary hover:bg-erp-primary-soft',
+        )}
+        onClick={() => inputRef.current?.click()}
+        aria-label={value ? `更换${label}` : `上传${label}`}
+      >
+        {value ? (
+          <>
+            <img src={value} alt={label} className="h-full w-full object-cover" />
+            <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 transition-opacity group-hover:opacity-100">
+              <Upload className="size-4" strokeWidth={1.8} />
+            </span>
+            <span
+              role="button"
+              tabIndex={0}
+              className="absolute right-1 top-1 inline-flex size-5 items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition-opacity hover:bg-erp-danger group-hover:opacity-100"
+              aria-label={`删除${label}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onChange('');
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onChange('');
+                }
+              }}
+            >
+              <X className="size-3" strokeWidth={2} />
+            </span>
+          </>
+        ) : (
+          <Upload className="size-5 text-erp-text-muted transition-colors group-hover:text-erp-primary" strokeWidth={1.6} />
+        )}
+      </button>
       <input
+        ref={inputRef}
         type="file"
         accept="image/*"
-        className="block w-full text-[11px] text-erp-text-muted"
-        onChange={(event) => {
-          const file = event.target.files?.[0];
-          if (!file) return;
-          const reader = new FileReader();
-          reader.onload = () => onChange(String(reader.result || ''));
-          reader.readAsDataURL(file);
-        }}
+        className="hidden"
+        onChange={handleFileSelect}
       />
-      {value && (
-        <Button type="button" variant="text" size="compact" className="h-6 px-0 text-[11px]" onClick={() => onChange('')}>删除</Button>
-      )}
     </div>
   );
 }
@@ -131,7 +191,6 @@ export function ProductForm({ mode, context, config, onFeedback, onOpenPage }) {
   const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(form));
   const [fieldErrors, setFieldErrors] = useState({});
   const [dialog, setDialog] = useState(null);
-  const [barcodeError, setBarcodeError] = useState('');
   const dirty = JSON.stringify(form) !== savedSnapshot;
 
   const existingRows = useMemo(() => readMockRows(config.storageKey, config.seedRows), [config.storageKey, config.seedRows]);
@@ -153,7 +212,6 @@ export function ProductForm({ mode, context, config, onFeedback, onOpenPage }) {
     setForm(nextForm);
     setSavedSnapshot(JSON.stringify(nextForm));
     setFieldErrors({});
-    setBarcodeError('');
   }, [mode, context?.row?.id, isEdit]);
 
   function updateField(key, value) {
@@ -187,12 +245,7 @@ export function ProductForm({ mode, context, config, onFeedback, onOpenPage }) {
 
   function validateBarcode(barcode) {
     const duplicate = existingRows.find((row) => row.id !== context?.row?.id && (row.barcodes || []).includes(barcode));
-    if (duplicate) {
-      setBarcodeError('该条码已被使用');
-      return '该条码已被使用';
-    }
-    setBarcodeError('');
-    return null;
+    return duplicate ? '该条码已被使用' : null;
   }
 
   function getReturnPageId() {
@@ -273,8 +326,12 @@ export function ProductForm({ mode, context, config, onFeedback, onOpenPage }) {
                 onFieldChange={updateField}
                 fieldErrors={fieldErrors}
               />
-              <BarcodeInput value={form.barcodes} onChange={(value) => updateField('barcodes', value)} onValidate={validateBarcode} />
-              {barcodeError && <div className="col-span-3 text-[12px] text-erp-danger">{barcodeError}</div>}
+            </div>
+          </EditorCard>
+
+          <EditorCard title="商品条码">
+            <div className="p-4">
+              <BarcodeInput key={isEdit ? context?.row?.id || 'edit' : 'create'} value={form.barcodes} onChange={(value) => updateField('barcodes', value)} onValidate={validateBarcode} />
             </div>
           </EditorCard>
 
@@ -373,11 +430,9 @@ export function ProductForm({ mode, context, config, onFeedback, onOpenPage }) {
 
           <EditorCard title="库存预警">
             <div className={cn('grid gap-x-5 gap-y-3 p-4', erpFieldGridClassName)}>
-              <FormField label="是否启用库存预警" fieldKey="stockAlertEnabled">
-                <Switch checked={form.stockAlertEnabled} onCheckedChange={(value) => updateField('stockAlertEnabled', value)} aria-label="是否启用库存预警" />
-              </FormField>
               <FormFields
                 fields={[
+                  { key: 'stockAlertEnabled', label: '是否启用库存预警', type: 'switch' },
                   { key: 'minStock', label: '最低库存数量', type: 'text', placeholder: '基本单位', disabled: !form.stockAlertEnabled },
                   { key: 'maxStock', label: '最高库存数量', type: 'text', placeholder: '基本单位' },
                   { key: 'safetyStock', label: '安全库存数量', type: 'text', placeholder: '基本单位' },
@@ -400,17 +455,11 @@ export function ProductForm({ mode, context, config, onFeedback, onOpenPage }) {
                   ariaLabel="是否含电池"
                 />
               </FormField>
-              <FormField label="是否批次管理" fieldKey="batchManaged">
-                <Switch checked={form.batchManaged} onCheckedChange={(value) => updateField('batchManaged', value)} aria-label="是否批次管理" />
-              </FormField>
-              <FormField label="是否序列号管理" fieldKey="serialManaged">
-                <Switch checked={form.serialManaged} onCheckedChange={(value) => updateField('serialManaged', value)} aria-label="是否序列号管理" />
-              </FormField>
-              <FormField label="是否保质期管理" fieldKey="shelfLifeManaged">
-                <Switch checked={form.shelfLifeManaged} onCheckedChange={(value) => updateField('shelfLifeManaged', value)} aria-label="是否保质期管理" />
-              </FormField>
               <FormFields
                 fields={[
+                  { key: 'batchManaged', label: '是否批次管理', type: 'switch' },
+                  { key: 'serialManaged', label: '是否序列号管理', type: 'switch' },
+                  { key: 'shelfLifeManaged', label: '是否保质期管理', type: 'switch' },
                   { key: 'shelfLifeDays', label: '保质期天数', type: 'text', placeholder: '天', disabled: !form.shelfLifeManaged },
                   { key: 'nearExpiryDays', label: '临期预警天数', type: 'text', placeholder: '天' },
                 ]}

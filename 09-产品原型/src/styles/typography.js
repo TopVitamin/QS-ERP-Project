@@ -52,3 +52,25 @@ export const typography = {
 
 /** Six-column field grid used by filters, forms, and detail cards. */
 export const erpFieldGridClassName = 'grid grid-cols-6 gap-x-5 gap-y-3 px-4 py-4';
+
+/** Default column count for master-data form dialogs. */
+export const dialogFormColumns = 2;
+
+/** Dialog form grids — separate from page-level 6-column erpFieldGridClassName. */
+export const dialogFieldGridClassName = {
+  1: 'grid grid-cols-1 gap-x-5 gap-y-3',
+  2: 'grid grid-cols-2 gap-x-5 gap-y-3',
+  4: 'grid grid-cols-4 gap-x-5 gap-y-3',
+};
+
+/** Full-width span within dialog grids. */
+export const dialogFieldFullSpanClassName = {
+  1: 'col-span-1',
+  2: 'col-span-2',
+  4: 'col-span-4',
+};
+
+/** @param {1 | 2 | 4} [columns] */
+export function getDialogFieldGridClassName(columns = dialogFormColumns) {
+  return dialogFieldGridClassName[columns] ?? dialogFieldGridClassName[dialogFormColumns];
+}

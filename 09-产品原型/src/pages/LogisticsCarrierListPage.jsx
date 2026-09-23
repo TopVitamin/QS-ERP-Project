@@ -124,7 +124,7 @@ export function LogisticsCarrierListPage({ onFeedback, onOpenPage }) {
   const headerActions = [
     {
       id: 'create-carrier',
-      label: '新增物流商',
+      label: '新增',
       icon: Plus,
       variant: 'primary',
       onAction: () => openDialog({ type: 'carrier-form', mode: 'create', existingRows: carrierRows }),
@@ -158,7 +158,7 @@ export function LogisticsCarrierListPage({ onFeedback, onOpenPage }) {
         onRowAction={handleRowAction}
         rowActions={buildCarrierRowActions()}
         rowActionContext={{ products: productRows }}
-        emptyText="暂无物流商，点击「新增物流商」开始建档"
+        emptyText="暂无物流商，点击「新增」开始建档"
         emptyTextFiltered="没有符合条件的记录，请调整筛选条件"
         onFeedback={onFeedback}
       />

@@ -115,7 +115,7 @@ export function ProductDetailPage({ context, onFeedback, onOpenPage }) {
     </div>
   );
 
-  const barcodes = (row.barcodes || []).length ? (row.barcodes || []).join('、') : EMPTY_PLACEHOLDER;
+  const barcodes = row.barcodes || [];
 
   return (
     <>
@@ -137,12 +137,26 @@ export function ProductDetailPage({ context, onFeedback, onOpenPage }) {
               { key: 'brand', label: '品牌', value: row.brand || EMPTY_PLACEHOLDER },
               { key: 'model', label: '产品型号', value: row.model || EMPTY_PLACEHOLDER },
               { key: 'unit', label: '基本单位', value: row.unit || EMPTY_PLACEHOLDER },
-              { key: 'barcodes', label: '商品条码', value: barcodes, className: 'col-span-3' },
               { key: 'origin', label: '产地', value: row.origin || EMPTY_PLACEHOLDER },
               { key: 'spec', label: '规格描述', value: row.spec || EMPTY_PLACEHOLDER, className: 'col-span-3' },
               { key: 'remark', label: '商品备注', value: row.remark || EMPTY_PLACEHOLDER, className: 'col-span-3' },
             ]}
           />
+          <EditorCard title="商品条码">
+            <div className="p-4">
+              {barcodes.length === 0 ? (
+                <p className="text-[12px] leading-5 text-erp-text">{EMPTY_PLACEHOLDER}</p>
+              ) : (
+                <ul>
+                  {barcodes.map((barcode) => (
+                    <li key={barcode} className="border-b border-erp-border-card py-2 text-[12px] leading-5 text-erp-text last:border-b-0">
+                      {barcode}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </EditorCard>
           <DetailSection
             title="经营与状态"
             fields={[

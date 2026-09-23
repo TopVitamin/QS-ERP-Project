@@ -2,12 +2,19 @@ import { useEffect, useState } from 'react';
 import { DocumentEditorFrame, EditorCard } from './DocumentEditorFrame.jsx';
 import { FormFields } from './FormControl.jsx';
 import { PartnerActionDialogs } from './PartnerActionDialogs.jsx';
+import {
+  CityTableCell,
+  CountryRegionTableCell,
+  DetailAddressTableCell,
+  DistrictTableCell,
+  StateProvinceTableCell,
+} from './InternationalAddressTableCells.jsx';
 import { PartnerEditableTable } from './PartnerEditableTable.jsx';
 import { erpFieldGridClassName } from '../../styles/typography.js';
 import { upsertMockRow } from '../../lib/mockStorage.js';
 import {
-  addressTypeOptions,
   buildPartnerStatusBadges,
+  addressTypeOptions,
   contactTypeOptions,
   formatNow,
   toggleDefaultFlag,
@@ -60,6 +67,13 @@ export function PartnerMasterForm({
     setForm((current) => ({
       ...current,
       [key]: current[key].map((line) => (line.id === lineId ? { ...line, [lineKey]: value } : line)),
+    }));
+  }
+
+  function updateAddressLine(lineId, patch) {
+    setForm((current) => ({
+      ...current,
+      addresses: current.addresses.map((line) => (line.id === lineId ? { ...line, ...patch } : line)),
     }));
   }
 
@@ -127,14 +141,42 @@ export function PartnerMasterForm({
   ];
 
   const addressColumns = [
-    { key: 'addressType', label: '地址类型', type: 'select', options: addressTypeOptions, width: 90 },
-    { key: 'province', label: '省', type: 'text', placeholder: '省', width: 80 },
-    { key: 'city', label: '市', type: 'text', placeholder: '市', width: 80 },
-    { key: 'district', label: '区', type: 'text', placeholder: '区', width: 80 },
-    { key: 'detailAddress', label: '详细地址 *', type: 'text', placeholder: '请输入详细地址', width: 180 },
+    { key: 'addressType', label: '地址类型', type: 'select', options: addressTypeOptions, width: 100 },
+    {
+      key: 'countryRegion',
+      label: '国家/地区',
+      width: 130,
+      renderCell: ({ row, onPatch }) => <CountryRegionTableCell row={row} onPatch={onPatch} />,
+    },
+    {
+      key: 'stateOrProvince',
+      label: '省/州',
+      width: 110,
+      renderCell: ({ row, onPatch }) => <StateProvinceTableCell row={row} onPatch={onPatch} />,
+    },
+    {
+      key: 'city',
+      label: '市',
+      width: 110,
+      renderCell: ({ row, onPatch }) => <CityTableCell row={row} onPatch={onPatch} />,
+    },
+    {
+      key: 'district',
+      label: '区',
+      width: 100,
+      renderCell: ({ row, onPatch }) => <DistrictTableCell row={row} onPatch={onPatch} />,
+    },
+    {
+      key: 'detailAddress',
+      label: '详细地址 *',
+      width: 160,
+      renderCell: ({ row, onPatch }) => <DetailAddressTableCell row={row} onPatch={onPatch} />,
+    },
     { key: 'contactName', label: '地址联系人', type: 'text', placeholder: '联系人', width: 100 },
     { key: 'contactPhone', label: '联系电话', type: 'text', placeholder: '联系电话', width: 110 },
-    { key: 'isDefault', label: '默认地址', type: 'switch', width: 80 },
+    { key: 'postalCode', label: '邮政编码', type: 'text', placeholder: '邮政编码', width: 100 },
+    { key: 'isDefault', label: '默认地址', type: 'switch', width: 90 },
+    { key: 'remark', label: '地址备注', type: 'text', placeholder: '备注', width: 100 },
   ];
 
   const bankColumns = config.bankColumns || [
@@ -202,9 +244,11 @@ export function PartnerMasterForm({
                   title="地址明细"
                   rows={form.addresses}
                   columns={addressColumns}
+                  minTableWidth={1480}
                   onAdd={() => addLine('addresses', config.createAddress)}
                   onRemove={(lineId) => removeLine('addresses', lineId)}
                   onChange={(lineId, key, value) => updateLines('addresses', lineId, key, value)}
+                  onPatch={updateAddressLine}
                   onToggleDefault={(lineId, checked) => toggleDefault('addresses', lineId, checked)}
                   emptyLabel="暂无地址，可点击添加"
                 />

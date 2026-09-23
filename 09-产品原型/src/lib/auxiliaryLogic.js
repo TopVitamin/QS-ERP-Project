@@ -105,6 +105,9 @@ export function validateAuxiliaryForSave(form, existingRows = [], currentId = nu
   if (!name) fieldErrors.name = emptyFieldMessage('资料名称');
   const duplicate = existingRows.find((row) => row.type === form.type && row.code === code && row.id !== currentId);
   if (duplicate) fieldErrors.code = '资料编码已存在';
+  if (name && existingRows.some((row) => row.type === form.type && row.name === name && row.id !== currentId)) {
+    fieldErrors.name = '同一资料类型下资料名称已存在';
+  }
   if (Object.keys(fieldErrors).length) return { fieldErrors };
   return null;
 }
@@ -140,6 +143,11 @@ export function validateCategoryForSave(form, categories = [], currentId = null)
   if (form.level > 1) {
     if (!parent) fieldErrors.parentId = '上级分类与当前级别不符';
     else if (parent.level !== form.level - 1) fieldErrors.parentId = '上级分类与当前级别不符';
+  }
+
+  // 同一上级下分类名称不允许重复（2026-09-23确认）。
+  if (name && categories.some((row) => row.name === name && (row.parentId || null) === (form.parentId || null) && row.id !== currentId)) {
+    fieldErrors.name = '同一上级下分类名称已存在';
   }
 
   if (Object.keys(fieldErrors).length) return { fieldErrors };

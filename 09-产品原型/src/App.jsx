@@ -108,8 +108,7 @@ export function App() {
       const nextTabs = current.filter((id) => id !== pageId);
       if (activeView === pageId) {
         if (nextTabs.length === 0) {
-          setActiveView(DEFAULT_PAGE_ID);
-          return [DEFAULT_PAGE_ID];
+          setActiveView('home');
         } else {
           const closedIndex = current.indexOf(pageId);
           setActiveView(nextTabs[Math.min(closedIndex, nextTabs.length - 1)]);
@@ -120,11 +119,22 @@ export function App() {
   }
 
   function handleTabAction(action, pageId) {
-    if (openTabs.length <= 1) return;
-    const keepTab = openTabs.includes(pageId) ? pageId : openTabs[0];
-    if (action === 'closeOthers' || action === 'closeAll') {
-      setOpenTabs([keepTab]);
-      setActiveView(keepTab);
+    if (action === 'closeAll') {
+      if (openTabs.length === 0) return;
+      setOpenTabs([]);
+      setActiveView('home');
+      return;
+    }
+
+    if (action === 'closeOthers') {
+      if (openTabs.length <= 1) return;
+      if (pageId === 'home' || !openTabs.includes(pageId)) {
+        setOpenTabs([]);
+        setActiveView('home');
+        return;
+      }
+      setOpenTabs([pageId]);
+      setActiveView(pageId);
     }
   }
 

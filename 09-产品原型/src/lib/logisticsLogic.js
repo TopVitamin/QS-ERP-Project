@@ -73,6 +73,9 @@ export function validateCarrierForSave(form, existingRows = [], currentId = null
   if (code && existingRows.some((row) => row.code === code && row.id !== currentId)) {
     fieldErrors.code = '物流商编码已存在';
   }
+  if (name && existingRows.some((row) => row.name === name && row.id !== currentId)) {
+    fieldErrors.name = '物流商名称已存在';
+  }
   if (Object.keys(fieldErrors).length) return { fieldErrors };
   return null;
 }
@@ -86,6 +89,9 @@ export function validateProductForSave(form, existingRows = [], carriers = [], c
   if (!form.carrierId) fieldErrors.carrierId = '请选择所属物流商';
   if (code && existingRows.some((row) => row.code === code && row.id !== currentId)) {
     fieldErrors.code = '物流服务产品编码已存在';
+  }
+  if (name && existingRows.some((row) => row.name === name && row.id !== currentId)) {
+    fieldErrors.name = '物流服务产品名称已存在';
   }
   const carrier = carriers.find((item) => item.id === form.carrierId);
   if (form.carrierId && !carrier) fieldErrors.carrierId = '请选择所属物流商';
