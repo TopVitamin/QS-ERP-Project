@@ -5,6 +5,8 @@ import { ListPageHeader } from './ListPageHeader.jsx';
 import { PaginationBar } from './PaginationBar.jsx';
 
 export function ListPageFrame({ header, tabs, toolbar, table, pagination }) {
+  const { component: TableComponent = DataTable, ...tableProps } = table || {};
+
   return (
     <main className="flex min-h-0 flex-1 flex-col bg-erp-surface">
       <ListPageHeader {...header} />
@@ -12,8 +14,8 @@ export function ListPageFrame({ header, tabs, toolbar, table, pagination }) {
         <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-erp-section bg-erp-surface-panel">
           {tabs && <InnerTabs {...tabs} />}
           <BulkActionBar {...toolbar} />
-          <DataTable {...table} />
-          <PaginationBar {...pagination} />
+          <TableComponent {...tableProps} />
+          {pagination && <PaginationBar {...pagination} />}
         </section>
       </div>
     </main>

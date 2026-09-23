@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { ListPageFrame } from './ListPageFrame.jsx';
 import { useListPageActions } from '../../hooks/useListPageActions.js';
 import { useListPageState } from '../../hooks/useListPageState.js';
+import { hasActiveFilters } from '../../lib/listFilters.js';
 
 /**
  * 配置驱动的单据列表页。
@@ -62,7 +63,7 @@ export function DocumentListPage({ onFeedback, onOpenPage, config }) {
         },
         onQuery: () => {
           state.applyFilters();
-          notify(config.queryMessage || '查询已完成', 'success');
+          if (config.queryMessage !== null) notify(config.queryMessage || '查询已完成', 'success');
         },
         onAction: (id) => config.onHeaderAction?.(id, actionContext),
         actionContext,
@@ -91,6 +92,9 @@ export function DocumentListPage({ onFeedback, onOpenPage, config }) {
         onToggleRow: state.toggleRow,
         onToggleAll: state.togglePage,
         onFeedback,
+        emptyText: hasActiveFilters(state.appliedFilters)
+          ? (config.emptyTextFiltered || config.emptyText || '暂无数据')
+          : (config.emptyText || '暂无数据'),
         onCellClick: (column, row) => config.onCellClick?.(column, row, actionContext),
         onRowAction: (id, row) => config.onRowAction?.(id, row, actionContext),
         rowActions: config.rowActions,

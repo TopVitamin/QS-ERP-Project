@@ -84,6 +84,7 @@ export function DocumentEditorFrame({
               title="确认离开此页面？"
               description="当前修改尚未保存，离开后内容将丢失。"
               confirmLabel="确认离开"
+              cancelLabel="继续编辑"
               confirmVariant="primary"
               onConfirm={onCancel}
             />

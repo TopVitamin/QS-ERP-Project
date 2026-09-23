@@ -17,7 +17,9 @@ import {
   validateOrderForSubmit,
   validateOrderForSave,
 } from '../lib/purchaseOrderLogic.js';
-import { currencyOptions, supplierOptions, warehouseOptions } from '../data/masterData.js';
+import { currencyOptions } from '../data/masterData.js';
+import { getSelectableSupplierOptions } from '../data/supplierData.js';
+import { getSelectableLogicalWarehouseOptions } from '../data/warehouseData.js';
 import {
   defaultOrderForm,
   getEditableOrder,
@@ -69,7 +71,10 @@ function clearLinePrices(lines) {
   return lines.map((line) => ({ ...line, price: 0, taxRate: '13' }));
 }
 
-const orderFormFields = [
+function buildOrderFormFields() {
+  // 单据可选项按“审核通过且启用”实时过滤，供应商/逻辑仓取自主数据 Mock（基础资料PRD AC04/AC05）。
+  const supplierOptions = getSelectableSupplierOptions();
+  return [
   { key: 'orderNo', label: '单号', type: 'disabled', section: 'header' },
   { key: 'date', label: '单据日期 *', type: 'date', section: 'header' },
   {
@@ -100,9 +105,10 @@ const orderFormFields = [
   { key: 'taxAmountTotal', label: '税额', type: 'disabled', section: 'header', getValue: (form) => `${currencySymbol(form.currency)} ${formatAmount(computeLinesTotals(form.lines).taxAmount)}` },
   { key: 'netAmountTotal', label: '金额', type: 'disabled', section: 'header', getValue: (form) => `${currencySymbol(form.currency)} ${formatAmount(computeLinesTotals(form.lines).netAmount)}` },
   { key: 'remark', label: '备注', type: 'textarea', className: 'col-span-3', placeholder: '请输入备注', section: 'header' },
-  { key: 'warehouse', label: '收货仓库 *', type: 'select', options: warehouseOptions, section: 'delivery' },
+  { key: 'warehouse', label: '收货仓库 *', type: 'select', options: getSelectableLogicalWarehouseOptions(), section: 'delivery' },
   { key: 'deliveryDate', label: '承诺交期 *', type: 'date', section: 'delivery' },
-];
+  ];
+}
 
 function prepareOrderForm(form) {
   if (form.orderNo && form.orderNo !== '保存后自动生成') return form;
@@ -153,7 +159,7 @@ function buildOrderFormConfig({ onSubmitRequest }) {
     lineVariant: 'order',
     lineEditorOptions: purchaseLineEditorOptions,
     enableSkuPicker: true,
-    formFields: orderFormFields,
+    formFields: buildOrderFormFields(),
     navigateOnSave: false,
     getStatusBadges: ({ form, mode, context }) => (
       mode === 'edit' ? getOrderStatusBadges(toOrderRow(form, { context, shouldSubmit: false })) : []

@@ -26,9 +26,7 @@ export function DocumentFormPage({ mode = 'create', context, onFeedback, onOpenP
   const isCreate = mode === 'create';
   const contextId = context?.row?.id || 'create';
   const hiddenOnCreate = new Set(config.hiddenOnCreate || []);
-  const formFields = typeof config.formFields === 'function' ? config.formFields({ mode, context }) : config.formFields;
-  const fields = formFields.filter((field) => !(isCreate && hiddenOnCreate.has(field.key)));
-  const sections = groupFormFields(fields, config.fieldSections, config.infoSectionTitle);
+  const baseFormFields = typeof config.formFields === 'function' ? config.formFields({ mode, context }) : config.formFields;
 
   const {
     form,
@@ -59,6 +57,13 @@ export function DocumentFormPage({ mode = 'create', context, onFeedback, onOpenP
     onFeedback,
     onNavigate: () => onOpenPage?.(config.listPageId),
   });
+
+  const fields = baseFormFields.filter((field) => {
+    if (isCreate && hiddenOnCreate.has(field.key)) return false;
+    if (typeof field.visible === 'function' && !field.visible(form)) return false;
+    return true;
+  });
+  const sections = groupFormFields(fields, config.fieldSections, config.infoSectionTitle);
 
   const rawStatusBadges = config.getStatusBadges?.({ form, mode, context }) ?? [];
   const statusBadges = isCreate && config.showStatusOnCreate !== true ? [] : rawStatusBadges;

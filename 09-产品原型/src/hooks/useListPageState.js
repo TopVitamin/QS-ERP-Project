@@ -86,11 +86,13 @@ export function useListPageState({ initialRows, initialFilters, filterRows, init
   }
 
   function resetFilters() {
-    setDraftFilters({ ...initialFilters });
-    setAppliedFilters({ ...initialFilters });
+    // 重置只清空查询区条件与勾选：保留审核页签（审核状态由页签维护），排序回到模块默认。
+    const keepAuditStatus = 'auditStatus' in initialFilters ? { auditStatus: appliedFilters.auditStatus } : {};
+    setDraftFilters({ ...initialFilters, ...keepAuditStatus });
+    setAppliedFilters({ ...initialFilters, ...keepAuditStatus });
     setCurrentPage(1);
     setSelectedIds([]);
-    setSort(null);
+    setSort(initialSort);
   }
 
   function resetColumns() {

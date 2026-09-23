@@ -14,7 +14,7 @@ export function DataTable({
   rows,
   autoFitRows = rows,
   columns,
-  selectedIds,
+  selectedIds = [],
   onToggleRow,
   onToggleAll,
   rowActions = [],
@@ -266,7 +266,7 @@ export function DataTable({
                 </td>
                 {columns.map((column) => {
                   const value = row[column.key];
-                  const cell = column.render ? column.render(value, row) : value ?? '';
+                  const cell = column.render ? column.render(value, row) : (value === '' || value == null ? EMPTY_PLACEHOLDER : value);
                   const tone = column.tone ? column.tone(value, row) : '';
                   const isLinkCell = column.link && onCellClick;
                   const cellText = getCellText(cell);
@@ -489,6 +489,7 @@ function RowActionsCell({ actions, row, onAction, maxVisible }) {
 
 function RowAction({ action, row, onAction }) {
   const disabled = action.disabledWhen?.(row) || false;
+  // 有 confirm 的行内操作由 ConfirmDialog 接管确认，触发按钮不再直接执行，避免“确认框 + 模块弹窗”同时弹出。
   const trigger = (
     <Button
       variant={action.variant || 'text'}
@@ -500,7 +501,7 @@ function RowAction({ action, row, onAction }) {
           ? 'text-erp-danger hover:bg-erp-danger/10 hover:text-erp-danger'
           : 'hover:bg-erp-primary-soft hover:text-erp-primary',
       )}
-      onClick={() => onAction?.(action.id, row)}
+      onClick={action.confirm ? undefined : () => onAction?.(action.id, row)}
     >
       {action.label}
     </Button>

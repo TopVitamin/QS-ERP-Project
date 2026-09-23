@@ -32,9 +32,9 @@ export const seedTransferTasks = [
       { key: 'auditStatus', label: '审核状态' },
     ],
     rows: [
-      { code: 'WH-SZ-001', name: '深圳仓', operationType: '自营', dockingType: '直连', dockingSystem: '仓库作业系统', address: '广东省深圳市宝安区福永街道物流园 3 号库', contact: '阿盛', phone: '0755-8888 3201', useStatus: '启用', auditStatus: '已审核' },
-      { code: 'WH-DG-001', name: '东莞电商仓', operationType: '第三方', dockingType: 'SaaS中转', dockingSystem: '聚水潭', address: '广东省东莞市虎门镇电商产业园 B2 仓', contact: '陈仓管', phone: '0762-6666 1180', useStatus: '启用', auditStatus: '已审核' },
-      { code: 'WH-FBA-US', name: 'Amazon FBA（美国）', operationType: '第三方', dockingType: 'SaaS中转', dockingSystem: '领星', address: '美国加州安大略亚马逊运营中心', contact: '周磊', phone: '', useStatus: '启用', auditStatus: '已审核' },
+      { code: 'WH000001', name: '深圳仓', operationType: '自营', dockingType: '直连', dockingSystem: '仓库作业系统', address: '广东省深圳市宝安区福永街道物流园 3 号库', contact: '阿盛', phone: '0755-8888 3201', useStatus: '启用', auditStatus: '已审核' },
+      { code: 'WH000002', name: '东莞电商仓', operationType: '第三方', dockingType: 'SaaS中转', dockingSystem: '聚水潭', address: '广东省东莞市虎门镇电商产业园 B2 仓', contact: '陈仓管', phone: '0762-6666 1180', useStatus: '启用', auditStatus: '已审核' },
+      { code: 'WH000003', name: 'Amazon FBA（美国）', operationType: '第三方', dockingType: 'SaaS中转', dockingSystem: '领星', address: '美国加州安大略亚马逊运营中心', contact: '周磊', phone: '', useStatus: '启用', auditStatus: '已审核' },
     ],
     status: 'done',
     operator: '阿盛',

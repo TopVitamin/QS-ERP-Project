@@ -60,7 +60,7 @@ function buildInboundInfoFields({ detail, row, onOpenPage }) {
     { key: 'netAmount', label: '金额', value: `${currencySymbol(row.currency)} ${formatAmount(row.netAmount ?? 0)}` },
     { key: 'businessDate', label: '业务日期', value: detail.businessDate || EMPTY_PLACEHOLDER },
     { key: 'actualInboundTime', label: '实际入库时间', value: detail.actualInboundTime || EMPTY_PLACEHOLDER },
-    { key: 'pushTime', label: '推送时间', value: detail.pushTime || EMPTY_PLACEHOLDER },
+    { key: 'pushTime', label: '推送金蝶时间', value: detail.pushTime || EMPTY_PLACEHOLDER },
   ];
 
   if (row.pushFailReason) {

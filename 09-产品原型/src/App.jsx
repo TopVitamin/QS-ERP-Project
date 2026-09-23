@@ -4,6 +4,7 @@ import { Sidebar } from './components/layout/Sidebar.jsx';
 import { TopHeader } from './components/layout/TopHeader.jsx';
 import { PAGE_REGISTRY, resolveNavId, resolvePageId } from './config/pages.js';
 import { isPageImplemented } from './config/implementedPages.js';
+import { readPageIdFromHash, writePageIdToHash } from './lib/pageRouting.js';
 import { feedback } from './lib/feedback.js';
 import { readPreferences, writePreferences } from './lib/preferences.js';
 import { reconcileTransferTasks } from './lib/transferService.js';
@@ -13,10 +14,16 @@ import { WorkbenchPage } from './pages/WorkbenchPage.jsx';
 const DEFAULT_PAGE_ID = 'purchase-order';
 
 function resolveStartupView() {
-  const preferred = readPreferences().defaultHome;
+  const fromHash = readPageIdFromHash();
+  if (fromHash && isPageImplemented(fromHash)) return fromHash;
+  const preferred = normalizeStartupPageId(readPreferences().defaultHome);
   if (preferred === 'home') return 'home';
   if (preferred && isPageImplemented(preferred)) return preferred;
   return DEFAULT_PAGE_ID;
+}
+
+function normalizeStartupPageId(pageId) {
+  return resolvePageId(pageId) || pageId;
 }
 
 export function App() {
@@ -46,6 +53,22 @@ export function App() {
 
   useEffect(() => {
     reconcileTransferTasks();
+  }, []);
+
+  useEffect(() => {
+    writePageIdToHash(activeView);
+  }, [activeView]);
+
+  useEffect(() => {
+    function handleHashChange() {
+      const pageId = readPageIdFromHash();
+      if (!pageId || !isPageImplemented(pageId)) return;
+      setOpenTabs((current) => (current.includes(pageId) ? current : [...current, pageId]));
+      setActiveView(pageId);
+    }
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
   function openPage(target, context) {

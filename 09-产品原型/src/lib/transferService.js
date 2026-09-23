@@ -77,7 +77,7 @@ export function commitImport({ target, fileName, validation }) {
       id: `${target.id}-import-${Date.now()}-${index}`,
       ...target.importDefaults,
       ...item.values,
-      [target.auditField || 'auditStatus']: target.auditDraftValue || 'draft',
+      ...(target.auditField ? { [target.auditField]: target.auditDraftValue || 'draft' } : {}),
       updatedAt: now,
       creator: currentOperator,
     });

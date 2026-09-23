@@ -1,5 +1,7 @@
+import { Fragment } from 'react';
 import { formatFormDate, parseFormDate } from '../../lib/formDate.js';
 import { cn } from '../../lib/utils.js';
+import { CnAddressDetailInput, CnRegionPicker, CustomerAddressSelect } from './CnAddressFields.jsx';
 import { fieldInvalidClassName } from '../ui/field.jsx';
 import { DatePicker } from '../ui/date-picker.jsx';
 import { FormField } from '../ui/form-field.jsx';
@@ -20,6 +22,49 @@ export function FormControl({ field, value, form, onChange, invalid = false }) {
         ariaLabel={ariaLabel}
         invalid={invalid}
         className={invalidClassName}
+      />
+    );
+  }
+
+  if (field.type === 'cn-region') {
+    const savedAddressOptions = typeof field.savedAddressOptions === 'function'
+      ? field.savedAddressOptions(form)
+      : (field.savedAddressOptions || []);
+    return (
+      <CnRegionPicker
+        value={value}
+        onChange={onChange}
+        disabled={typeof field.disabled === 'function' ? field.disabled(form) : field.disabled}
+        invalid={invalid}
+        savedAddressOptions={savedAddressOptions}
+      />
+    );
+  }
+
+  if (field.type === 'cn-address-detail') {
+    return (
+      <CnAddressDetailInput
+        value={value}
+        onChange={onChange}
+        disabled={typeof field.disabled === 'function' ? field.disabled(form) : field.disabled}
+        invalid={invalid}
+        placeholder={field.detailPlaceholder || '请输入详细地址'}
+      />
+    );
+  }
+
+  if (field.type === 'customer-address') {
+    const options = typeof field.addressOptions === 'function'
+      ? field.addressOptions(form)
+      : (field.addressOptions || []);
+    return (
+      <CustomerAddressSelect
+        value={value}
+        onChange={onChange}
+        options={options}
+        disabled={typeof field.disabled === 'function' ? field.disabled(form) : field.disabled}
+        invalid={invalid}
+        placeholder={field.placeholder || '请选择发货地址'}
       />
     );
   }
@@ -109,6 +154,49 @@ export function FormFields({ fields, form, onFieldChange, fieldErrors = {} }) {
     }
 
     const error = fieldErrors[field.key];
+    const disabled = typeof field.disabled === 'function' ? field.disabled(form) : field.disabled;
+
+    if (field.type === 'cn-address') {
+      const savedAddressOptions = typeof field.savedAddressOptions === 'function'
+        ? field.savedAddressOptions(form)
+        : (field.savedAddressOptions || []);
+      const detailClassName = field.detailClassName || 'col-span-2';
+      const detailLabel = field.detailLabel || '详细地址';
+
+      return (
+        <Fragment key={field.key}>
+          <FormField
+            label={field.label}
+            required={field.required}
+            className={field.className}
+            fieldKey={field.key}
+            error={error}
+          >
+            <CnRegionPicker
+              value={form[field.key]}
+              onChange={handleChange}
+              disabled={disabled}
+              invalid={Boolean(error)}
+              savedAddressOptions={savedAddressOptions}
+            />
+          </FormField>
+          <FormField
+            label={detailLabel}
+            required={field.required}
+            className={detailClassName}
+            fieldKey={`${field.key}-detail`}
+          >
+            <CnAddressDetailInput
+              value={form[field.key]}
+              onChange={handleChange}
+              disabled={disabled}
+              invalid={Boolean(error)}
+              placeholder={field.detailPlaceholder || '请输入详细地址'}
+            />
+          </FormField>
+        </Fragment>
+      );
+    }
 
     return (
       <FormField key={field.key} label={field.label} required={field.required} className={field.className} fieldKey={field.key} error={error}>

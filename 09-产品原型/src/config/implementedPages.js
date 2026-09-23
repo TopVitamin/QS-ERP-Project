@@ -1,11 +1,28 @@
 /** 演示原型当前已接入的页面；其余菜单仍保留结构，但标记为「未完成」且不可进入。 */
 export const INCOMPLETE_MENU_TAG = '未完成';
 
-/**
- * 故意留空、仅保留页面代码的 pageId 可写在这里，方便对照：
- * - warehouse-list：仓库资料列表，含页内 Tab（审核状态）交互样板，PRD 未收口前不对访客开放。
- */
 export const IMPLEMENTED_PAGE_IDS = new Set([
+  'warehouse-physical',
+  'warehouse-logical',
+  'warehouse-create',
+  'warehouse-edit',
+  'warehouse-detail',
+  'base-supplier',
+  'base-supplier-create',
+  'base-supplier-edit',
+  'base-supplier-detail',
+  'base-customer',
+  'base-customer-create',
+  'base-customer-edit',
+  'base-customer-detail',
+  'base-product',
+  'base-product-create',
+  'base-product-edit',
+  'base-product-detail',
+  'base-logistics-carrier',
+  'base-logistics-carrier-detail',
+  'base-logistics-product',
+  'base-auxiliary',
   'purchase-order',
   'purchase-order-create',
   'purchase-order-edit',
@@ -16,6 +33,16 @@ export const IMPLEMENTED_PAGE_IDS = new Set([
   'purchase-receipt-notice-detail',
   'purchase-inbound',
   'purchase-inbound-detail',
+  'sales-order',
+  'sales-order-create',
+  'sales-order-edit',
+  'sales-order-detail',
+  'sales-delivery-notice',
+  'sales-delivery-notice-create',
+  'sales-delivery-notice-edit',
+  'sales-delivery-notice-detail',
+  'sales-outbound',
+  'sales-outbound-detail',
   'import-center',
   'export-center',
   'notification-center',

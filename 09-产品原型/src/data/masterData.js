@@ -1,5 +1,83 @@
 import { buildMasterOption } from '../lib/codeName.js';
 
+export const customerOptions = [
+  buildMasterOption({ code: 'CUS000001', name: '示例客户有限公司', defaultCurrency: '人民币' }),
+  buildMasterOption({ code: 'CUS000002', name: '华东连锁商贸', defaultCurrency: '人民币' }),
+  buildMasterOption({ code: 'CUS000003', name: '深圳科技经销', defaultCurrency: '人民币' }),
+  buildMasterOption({ code: 'CUS000004', name: '海外经销客户A', defaultCurrency: '美元' }),
+  buildMasterOption({ code: 'CUS000005', name: '零售散客渠道', defaultCurrency: '人民币' }),
+];
+
+export const logicalWarehouseOptions = [
+  buildMasterOption({ code: 'LWH000001', name: '深圳仓' }),
+  buildMasterOption({ code: 'LWH000002', name: '上海仓' }),
+  buildMasterOption({ code: 'LWH000003', name: '北京仓' }),
+];
+
+export const customerAddressOptions = [
+  {
+    value: 'addr-cus1-default',
+    customer: 'CUS000001',
+    isDefault: true,
+    provinceCode: '44',
+    cityCode: '4403',
+    districtCode: '440305',
+    detailAddress: '科技园南路 88 号',
+  },
+  {
+    value: 'addr-cus1-branch',
+    customer: 'CUS000001',
+    isDefault: false,
+    provinceCode: '44',
+    cityCode: '4401',
+    districtCode: '440106',
+    detailAddress: '体育西路 66 号',
+  },
+  {
+    value: 'addr-cus2-default',
+    customer: 'CUS000002',
+    isDefault: true,
+    provinceCode: '31',
+    cityCode: '3101',
+    districtCode: '310115',
+    detailAddress: '张江路 100 号',
+  },
+  {
+    value: 'addr-cus3-default',
+    customer: 'CUS000003',
+    isDefault: true,
+    provinceCode: '11',
+    cityCode: '1101',
+    districtCode: '110105',
+    detailAddress: '望京街 18 号',
+  },
+  {
+    value: 'addr-cus4-default',
+    customer: 'CUS000004',
+    isDefault: true,
+    provinceCode: '44',
+    cityCode: '4403',
+    districtCode: '440306',
+    detailAddress: '福永街道物流园 4 号库',
+  },
+  {
+    value: 'addr-cus5-default',
+    customer: 'CUS000005',
+    isDefault: true,
+    provinceCode: '35',
+    cityCode: '3502',
+    districtCode: '350206',
+    detailAddress: '软件园二期',
+  },
+];
+
+export const logisticsProductOptions = [
+  { value: 'LSP000001', label: 'LSP000001 顺丰标快' },
+  { value: 'LSP000002', label: 'LSP000002 德邦大件' },
+  { value: 'LSP000003', label: 'LSP000003 中通经济' },
+  { value: 'warehouse-assign', label: '由仓库指定' },
+];
+
 export const supplierOptions = [
   buildMasterOption({ code: 'SUP000001', name: '测试' }),
   buildMasterOption({ code: 'SUP000002', name: '土豆供应商' }),
