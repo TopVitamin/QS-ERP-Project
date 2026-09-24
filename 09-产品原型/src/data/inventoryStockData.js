@@ -47,6 +47,7 @@ export const stockReservationSeeds = [
   // 已执行完毕的预占：只为流水核对保留，不计入当前预占数量
   { id: 'res-101', logicalWarehouse: 'LWH000001', product: 'SP0101010001', sourceType: '分步式调拨单', sourceNo: 'FBDB-20260922-0003', sourceLineNo: 1, reservedQty: 100, consumedQty: 90, releasedQty: 10, status: 'closed', createdAt: '2026-09-22 08:40:00' },
   { id: 'res-103', logicalWarehouse: 'LWH000005', product: 'SP0102010001', sourceType: '销售订单', sourceNo: 'XSDD-20260918-0005', sourceLineNo: 1, reservedQty: 8, consumedQty: 8, releasedQty: 0, status: 'closed', createdAt: '2026-09-18 09:00:00' },
+  { id: 'res-sales-cancelled-demo', logicalWarehouse: 'LWH000001', product: 'SP0101020001', sourceType: '销售订单', sourceNo: 'XSDD-20260924-0013', sourceLineNo: 'sales-line-13', reservedQty: 5, consumedQty: 0, releasedQty: 5, status: 'closed', createdAt: '2026-09-24 10:50:00' },
   { id: 'res-102', logicalWarehouse: 'LWH000001', product: 'SP0101030001', sourceType: '其他出库申请单', sourceNo: 'QTCKSQ-20260922-0001', sourceLineNo: 1, reservedQty: 20, consumedQty: 12, releasedQty: 8, status: 'closed', createdAt: '2026-09-22 09:20:00' },
 ];
 
@@ -58,10 +59,36 @@ const flowSeedBase = {
 };
 
 /**
- * 库存流水种子：一行一次变动，含结果单记账与人工冻结、解冻。
+ * 库存流水种子：一行一次变动，含结果单记账、B2B销售订单预占／释放与人工冻结、解冻。
  * 四组变动明细按「前 → 后（变动）」表达；预占组反映该次事件对预占的影响（消耗记负、释放记正）。
  */
 export const stockFlowSeeds = [
+  {
+    ...flowSeedBase,
+    id: 'flow-sales-order-reserve-demo',
+    time: '2026-09-24 10:55:00',
+    eventType: 'reserve',
+    logicalWarehouse: 'LWH000001',
+    product: 'SP0101020001',
+    instantBefore: 240, instantChange: 0, instantAfter: 240,
+    availableBefore: 240, availableChange: -5, availableAfter: 235,
+    reservedBefore: 0, reservedChange: 5, reservedAfter: 5,
+    frozenBefore: 0, frozenChange: 0, frozenAfter: 0,
+    sourceType: '销售订单', sourceNo: 'XSDD-20260924-0013',
+  },
+  {
+    ...flowSeedBase,
+    id: 'flow-sales-order-release-demo',
+    time: '2026-09-24 11:01:00',
+    eventType: 'release',
+    logicalWarehouse: 'LWH000001',
+    product: 'SP0101020001',
+    instantBefore: 240, instantChange: 0, instantAfter: 240,
+    availableBefore: 235, availableChange: 5, availableAfter: 240,
+    reservedBefore: 5, reservedChange: -5, reservedAfter: 0,
+    frozenBefore: 0, frozenChange: 0, frozenAfter: 0,
+    sourceType: '销售订单', sourceNo: 'XSDD-20260924-0013',
+  },
   {
     ...flowSeedBase,
     id: 'flow-019',
@@ -318,7 +345,7 @@ export const stockFlowSeeds = [
 
 /**
  * 库存比对种子：一行＝实体仓＋商品＋库存状态。每天自动比对一次（演示两个批次）。
- * 仓库数量来自仓库库存快照；单边缺失口径待确认（库存比对主PRD Q03），本期不构造缺失行。
+ * 仓库数量来自成功取得的仓库库存快照；按双方数据并集成行，缺失侧数量留空，载入时按0参与差异计算（库存比对主PRD R02、R04）。
  */
 export const stockCompareSeeds = [
   {
@@ -355,11 +382,11 @@ export const stockCompareSeeds = [
   },
   {
     id: 'compare-0923-09', compareTime: '2026-09-23 02:00:00', physicalWarehouse: 'WH000002', product: 'SP0103020001', stockStatus: 'defective',
-    erpQty: 18, warehouseQty: 0, snapshotTime: '2026-09-23 01:30:00',
+    erpQty: 18, snapshotTime: '2026-09-23 01:30:00',
   },
   {
     id: 'compare-0923-10', compareTime: '2026-09-23 02:00:00', physicalWarehouse: 'WH000002', product: 'SP0101010001', stockStatus: 'normal',
-    erpQty: 0, warehouseQty: 2, snapshotTime: '2026-09-23 01:30:00',
+    warehouseQty: 2, snapshotTime: '2026-09-23 01:30:00',
   },
   {
     id: 'compare-0923-11', compareTime: '2026-09-23 02:00:00', physicalWarehouse: 'WH000005', product: 'SP0102010001', stockStatus: 'normal',
@@ -390,6 +417,8 @@ export const stockCompareSeeds = [
 // —— 枚举（与字段清单一致，页面只引用这里，不另立第二套取值）——
 
 export const stockEventTypeLabels = {
+  reserve: '订单预占',
+  release: '订单释放',
   result_in: '结果单入库',
   result_out: '结果单出库',
   freeze: '冻结',
@@ -401,8 +430,9 @@ export const stockDirectionLabels = {
   decrease: '减少',
 };
 
-/** 七类已审核结果单（库存流水主PRD R04） */
+/** 七类已审核结果单及销售订单预占流水来源（库存流水主PRD R04） */
 export const stockSourceTypeLabels = {
+  sales_order: '销售订单',
   purchase_inbound: '采购入库单',
   purchase_return_outbound: '采退出库单',
   sales_outbound: '销售出库单',

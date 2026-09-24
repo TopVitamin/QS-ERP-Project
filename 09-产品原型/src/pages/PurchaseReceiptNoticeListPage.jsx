@@ -4,7 +4,9 @@ import { ImportExportActions } from '../components/erp/ImportExportActions.jsx';
 import { PurchaseReceiptNoticeActionDialogs } from '../components/erp/PurchaseReceiptNoticeActionDialogs.jsx';
 import { getTransferTarget } from '../lib/transferTargets.js';
 import { matchesMultiSelect, statusMultiSelectField } from '../lib/listFilters.js';
-import { supplierOptions, warehouseOptions } from '../data/masterData.js';
+import { supplierOptions } from '../data/masterData.js';
+import { getInventoryLogicalWarehouseOptions } from '../data/warehouseData.js';
+import { normalizePurchaseRows } from '../lib/documentNameSnapshots.js';
 import { orders } from '../data/orderData.js';
 import {
   buildSourceOrderFilterOptions,
@@ -48,7 +50,7 @@ function createFilterFields(rows) {
     { key: 'noticeNo', label: '单号', type: 'search', placeholder: '请输入采购收货通知单号' },
     { key: 'sourceOrderNo', label: '来源采购订单', type: 'select', options: buildSourceOrderFilterOptions(rows) },
     { key: 'supplier', label: '供应商', type: 'select', options: [{ value: '', label: '全部供应商' }, ...supplierOptions] },
-    { key: 'warehouse', label: '收货仓库', type: 'select', options: [{ value: '', label: '全部仓库' }, ...warehouseOptions] },
+    { key: 'warehouse', label: '收货仓库', type: 'select', options: [{ value: '', label: '全部仓库' }, ...getInventoryLogicalWarehouseOptions()] },
     statusMultiSelectField('receiptMode', '收货处理方式', receiptModeLabels),
     statusMultiSelectField('status', '单据状态', noticeStatusLabels),
     { key: 'productCode', label: '商品编码', type: 'search', placeholder: '请输入商品编码' },
@@ -120,6 +122,8 @@ export function PurchaseReceiptNoticeListPage(props) {
     title: '采购收货通知单',
     rows: receiptNotices,
     storageKey: NOTICE_STORAGE_KEY,
+    normalizeRows: normalizePurchaseRows,
+    mergeSeedRows: true,
     initialFilters,
     filterRows,
     initialVisibility,

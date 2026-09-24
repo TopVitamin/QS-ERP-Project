@@ -329,7 +329,7 @@ export function TransferOrderActionDialogs({ dialog, onClose, onComplete, onNoti
     );
   }
 
-  // 主单不推送仓库与金蝶（R16），推送失败的重试入口在调出通知单侧，主单不提供该弹窗。
+  // 主单不推送仓库与财务ERP（R16），推送失败的重试入口在调出通知单侧，主单不提供该弹窗。
   return null;
 }
 

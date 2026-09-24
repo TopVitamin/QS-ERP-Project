@@ -43,8 +43,8 @@ function getRequestForm(mode, context) {
   return row ? buildOutboundRequestFormFromRow(row) : createEmptyOutboundRequestForm();
 }
 
-/** 在途仓提示行：选中虚拟在途仓时展示，审核后不推送仓库（主PRD R20）。 */
-const transitHint = '出库仓选择虚拟在途仓时，审核后不推送仓库，由系统按申请数量直接记账。';
+const transitDirectPostingHint = '在途仓盘亏申请审核后不推送仓库，由系统按申请数量直接记账。';
+const transitRegularFlowHint = '虚拟在途仓按普通逻辑仓办理本类型出库，审核后预占并推送仓库。';
 
 function buildRequestFields() {
   return [
@@ -162,7 +162,8 @@ export function OtherOutboundRequestFormPage({ mode = 'create', context, onFeedb
 
   const lines = refreshOutboundRequestLines(form.lines || []);
   const actualTotal = sumOutboundRequestActualQty(lines);
-  const showTransitHint = isTransitLogicalWarehouse(form.logicalWarehouse);
+  const isTransitWarehouse = isTransitLogicalWarehouse(form.logicalWarehouse);
+  const isTransitDirectPosting = isTransitWarehouse && isTransitWriteOffBusinessType(form.businessType);
   const summary = isEdit
     ? {
       quantity: { label: '申请出库数量', value: totalQuantity },
@@ -186,8 +187,10 @@ export function OtherOutboundRequestFormPage({ mode = 'create', context, onFeedb
           <div className={erpFieldGridClassName}>
             <FormFields fields={buildRequestFields()} form={form} onFieldChange={updateField} fieldErrors={fieldErrors} />
           </div>
-          {showTransitHint ? (
-            <div className="px-4 pb-3 text-[12px] text-erp-text">{transitHint}</div>
+          {isTransitWarehouse ? (
+            <div className="px-4 pb-3 text-[12px] text-erp-text">
+              {isTransitDirectPosting ? transitDirectPostingHint : transitRegularFlowHint}
+            </div>
           ) : null}
         </EditorCard>
 

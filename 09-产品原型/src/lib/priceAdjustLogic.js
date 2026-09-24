@@ -1,8 +1,9 @@
-import { skuOptions, taxRateOptions } from '../data/masterData.js';
+import { skuOptions } from '../data/masterData.js';
 import { emptyFieldMessage } from './formValidation.js';
 import { matchesDateRange, matchesMultiSelect } from './listFilters.js';
 import { readMockRows, writeMockRows } from './mockStorage.js';
 import { applyApprovedAdjustmentToPriceList, getProductBarcodes, nowStamp } from './priceLogic.js';
+import { isValidTaxRate } from './validation.js';
 
 /**
  * 价格调整单逻辑（采购／销售共用）。
@@ -195,7 +196,7 @@ export function syncDuplicateLineErrors(lines, setLineErrors) {
     for (const [lineId, rowErrors] of Object.entries(current)) {
       if (rowErrors.productCode === DUPLICATE_PRODUCT_MESSAGE && !duplicatedIds.has(lineId)) {
         const nextRowErrors = { ...rowErrors };
-        delete nextRowErrors.product;
+        delete nextRowErrors.productCode;
         if (Object.keys(nextRowErrors).length) next[lineId] = nextRowErrors;
         else delete next[lineId];
         changed = true;
@@ -203,7 +204,7 @@ export function syncDuplicateLineErrors(lines, setLineErrors) {
     }
 
     for (const lineId of duplicatedIds) {
-      if (!current[lineId]?.product) {
+      if (current[lineId]?.productCode !== DUPLICATE_PRODUCT_MESSAGE) {
         next[lineId] = { ...(next[lineId] || {}), productCode: DUPLICATE_PRODUCT_MESSAGE };
         changed = true;
       }
@@ -226,8 +227,8 @@ function collectLineErrors(form, { forSubmit }) {
       rowErrors.price = forSubmit ? '请填写大于0的含税单价' : '含税单价必须大于0';
     }
     if (line.taxRate === '' || line.taxRate == null) {
-      if (forSubmit) rowErrors.taxRate = '请选择税率';
-    } else if (!taxRateOptions.some((option) => option.value === String(line.taxRate))) {
+      if (forSubmit) rowErrors.taxRate = '请输入税率';
+    } else if (!isValidTaxRate(line.taxRate)) {
       rowErrors.taxRate = '税率最多2位小数，允许0%';
     }
     if (Object.keys(rowErrors).length) {

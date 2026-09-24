@@ -1,5 +1,5 @@
 import { EMPTY_PLACEHOLDER } from './format.js';
-import { kingdeePushStatusLabels } from './inboundLogic.js';
+import { financeErpPushStatusLabels } from './inboundLogic.js';
 
 function hasValue(value) {
   return value != null && value !== '' && value !== EMPTY_PLACEHOLDER;
@@ -156,12 +156,12 @@ export function buildInboundOperationLogs(row) {
   }
 
   if (row.pushTime) {
-    const pushLabel = kingdeePushStatusLabels[row.kingdeePushStatus] || row.kingdeePushStatus;
+    const pushLabel = financeErpPushStatusLabels[row.financeErpPushStatus] || row.financeErpPushStatus;
     pushEntry(entries, {
       time: row.pushTime,
       operator: '系统',
-      action: '推送金蝶',
-      remark: row.pushFailReason ? `推送失败：${row.pushFailReason}` : pushLabel || '推送金蝶',
+      action: '推送财务ERP',
+      remark: row.pushFailReason ? `推送失败：${row.pushFailReason}` : pushLabel || '推送财务ERP',
     });
   }
 
@@ -295,12 +295,12 @@ export function buildSalesOutboundOperationLogs(row) {
   }
 
   if (row.pushTime) {
-    const pushLabel = kingdeePushStatusLabels[row.kingdeePushStatus] || row.kingdeePushStatus;
+    const pushLabel = financeErpPushStatusLabels[row.financeErpPushStatus] || row.financeErpPushStatus;
     pushEntry(entries, {
       time: row.pushTime,
       operator: '系统',
-      action: '推送金蝶',
-      remark: row.pushFailReason ? `推送失败：${row.pushFailReason}` : pushLabel || '推送金蝶',
+      action: '推送财务ERP',
+      remark: row.pushFailReason ? `推送失败：${row.pushFailReason}` : pushLabel || '推送财务ERP',
     });
   }
 

@@ -3,7 +3,7 @@ import { formatAmount } from '../lib/format.js';
 import {
   auditStatusLabels,
   buildSeedReturnOutboundFromNotice,
-  kingdeePushStatusLabels,
+  financeErpPushStatusLabels,
   registerReturnOutboundSeedRows,
 } from '../lib/purchaseReturnOutboundLogic.js';
 import { currencyOptions, logicalWarehouseOptions, supplierOptions } from './masterData.js';
@@ -30,58 +30,58 @@ const seedOutbounds = [
   buildSeed('return-notice-2', {
     id: 'return-outbound-1',
     outboundNo: 'CTCK-20260919-0001',
-    kingdeePushStatus: 'push_success',
+    financeErpPushStatus: 'push_success',
     pushTime: '2026-09-19 10:21:00',
     updatedAt: '2026-09-19 10:21:00',
   }),
   buildSeed('return-notice-3', {
     id: 'return-outbound-2',
     outboundNo: 'CTCK-20260919-0002',
-    kingdeePushStatus: 'push_failed',
+    financeErpPushStatus: 'push_failed',
     pushTime: '2026-09-19 16:41:00',
-    pushFailReason: '接口超时，金蝶未确认接收',
+    pushFailReason: '接口超时，财务ERP未确认接收',
     updatedAt: '2026-09-19 16:41:00',
   }),
   buildSeed('return-notice-4', {
     id: 'return-outbound-3',
     outboundNo: 'CTCK-20260918-0003',
-    kingdeePushStatus: 'push_success',
+    financeErpPushStatus: 'push_success',
     pushTime: '2026-09-18 10:16:00',
     updatedAt: '2026-09-18 10:16:00',
   }),
   buildSeed('return-notice-11', {
     id: 'return-outbound-4',
     outboundNo: 'CTCK-20260921-0001',
-    kingdeePushStatus: 'push_success',
+    financeErpPushStatus: 'push_success',
     pushTime: '2026-09-21 14:31:00',
     updatedAt: '2026-09-21 14:31:00',
   }),
   buildSeed('return-notice-12', {
     id: 'return-outbound-5',
     outboundNo: 'CTCK-20260922-0001',
-    kingdeePushStatus: 'push_failed',
+    financeErpPushStatus: 'push_failed',
     pushTime: '2026-09-22 09:51:00',
-    pushFailReason: '接口超时，金蝶未确认接收',
+    pushFailReason: '接口超时，财务ERP未确认接收',
     updatedAt: '2026-09-22 09:51:00',
   }),
   buildSeed('return-notice-13', {
     id: 'return-outbound-6',
     outboundNo: 'CTCK-20260922-0002',
-    kingdeePushStatus: 'un_pushed',
+    financeErpPushStatus: 'un_pushed',
     pushTime: '',
     updatedAt: '2026-09-22 11:05:00',
   }),
   buildSeed('return-notice-14', {
     id: 'return-outbound-7',
     outboundNo: 'CTCK-20260922-0003',
-    kingdeePushStatus: 'pushing',
+    financeErpPushStatus: 'pushing',
     pushTime: '2026-09-22 15:31:00',
     updatedAt: '2026-09-22 15:31:00',
   }),
   buildSeed('return-notice-15', {
     id: 'return-outbound-8',
     outboundNo: 'CTCK-20260923-0001',
-    kingdeePushStatus: 'push_success',
+    financeErpPushStatus: 'push_success',
     pushTime: '2026-09-23 09:16:00',
     updatedAt: '2026-09-23 09:16:00',
   }),
@@ -107,7 +107,7 @@ export function getReturnOutboundStatusBadges(row) {
   };
   return [
     { label: auditStatusLabels[row.auditStatus] || row.auditStatus, tone: 'success' },
-    { label: kingdeePushStatusLabels[row.kingdeePushStatus] || row.kingdeePushStatus, tone: toneMap[row.kingdeePushStatus] || 'default' },
+    { label: financeErpPushStatusLabels[row.financeErpPushStatus] || row.financeErpPushStatus, tone: toneMap[row.financeErpPushStatus] || 'default' },
   ];
 }
 
@@ -120,7 +120,7 @@ export const purchaseReturnOutboundColumns = [
   { key: 'supplier', label: '供应商', defaultWidth: 200, minWidth: 140, maxWidth: 280, ellipsis: true, render: (value) => resolveOptionLabel(value, supplierOptions) },
   { key: 'warehouse', label: '出库仓库', defaultWidth: 180, minWidth: 140, maxWidth: 240, ellipsis: true, render: (value) => resolveOptionLabel(value, logicalWarehouseOptions) },
   { key: 'auditStatus', label: '审核状态', defaultWidth: 96, minWidth: 88, maxWidth: 140, ellipsis: true, render: (value) => auditStatusLabels[value] || value, tone: () => 'text-erp-success' },
-  { key: 'kingdeePushStatus', label: '金蝶推送状态', defaultWidth: 112, minWidth: 96, maxWidth: 160, ellipsis: true, render: (value) => kingdeePushStatusLabels[value] || value, tone: (value) => (value === 'push_success' ? 'text-erp-success' : value === 'push_failed' ? 'text-erp-danger' : value === 'pushing' ? 'text-erp-info' : 'text-erp-warning') },
+  { key: 'financeErpPushStatus', label: '推送财务ERP状态', defaultWidth: 112, minWidth: 96, maxWidth: 160, ellipsis: true, render: (value) => financeErpPushStatusLabels[value] || value, tone: (value) => (value === 'push_success' ? 'text-erp-success' : value === 'push_failed' ? 'text-erp-danger' : value === 'pushing' ? 'text-erp-info' : 'text-erp-warning') },
   { key: 'totalOutboundQty', label: '实际出库数量', defaultWidth: 120, minWidth: 100, maxWidth: 150, ellipsis: true, align: 'right', sortable: true, render: qtyCell },
   { key: 'currency', label: '币别', defaultWidth: 112, minWidth: 96, maxWidth: 140, ellipsis: true, render: (value) => resolveOptionLabel(value, currencyOptions) },
   { key: 'amount', label: '价税合计', defaultWidth: 132, minWidth: 112, maxWidth: 180, ellipsis: true, align: 'right', sortable: true, render: (value) => formatAmount(value) },

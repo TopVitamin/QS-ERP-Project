@@ -5,7 +5,7 @@ import {
   auditStatusLabels,
   buildSeedSalesReturnInboundFromNotice,
   enrichSalesReturnInboundLine,
-  kingdeePushStatusLabels,
+  financeErpPushStatusLabels,
   loadAllSalesReturnInbounds,
   normalizeSalesReturnInboundRow,
   RETURN_INBOUND_STORAGE_KEY,
@@ -48,7 +48,7 @@ function buildSeedExternalTocInbound({
   customer,
   warehouse,
   actualReceiveTime,
-  kingdeePushStatus,
+  financeErpPushStatus,
   pushTime = '',
   pushFailReason = '',
   updatedAt = '',
@@ -64,7 +64,7 @@ function buildSeedExternalTocInbound({
     warehouse,
     currency: '人民币',
     auditStatus: 'approved',
-    kingdeePushStatus,
+    financeErpPushStatus,
     businessDate: actualReceiveTime.slice(0, 10),
     actualReceiveTime,
     pushTime,
@@ -89,23 +89,23 @@ const seedInbounds = [
   buildSeedInbound({
     noticeId: 'sales-return-notice-2',
     inboundNo: 'XTRK-20260917-0001',
-    kingdeePushStatus: 'push_success',
+    financeErpPushStatus: 'push_success',
     pushTime: '2026-09-17 15:31:00',
     updatedAt: '2026-09-17 15:31:00',
   }),
   buildSeedInbound({
     noticeId: 'sales-return-notice-3',
     inboundNo: 'XTRK-20260918-0001',
-    kingdeePushStatus: 'push_success',
+    financeErpPushStatus: 'push_success',
     pushTime: '2026-09-18 10:31:00',
     updatedAt: '2026-09-18 10:31:00',
   }),
   buildSeedInbound({
     noticeId: 'sales-return-notice-9',
     inboundNo: 'XTRK-20260919-0001',
-    kingdeePushStatus: 'push_failed',
+    financeErpPushStatus: 'push_failed',
     pushTime: '2026-09-19 15:22:00',
-    pushFailReason: '接口超时，金蝶未确认接收',
+    pushFailReason: '接口超时，财务ERP未确认接收',
     updatedAt: '2026-09-19 15:22:00',
   }),
   buildSeedExternalTocInbound({
@@ -115,7 +115,7 @@ const seedInbounds = [
     customer: 'CUS000005',
     warehouse: 'LWH000002',
     actualReceiveTime: '2026-09-21 10:12:00',
-    kingdeePushStatus: 'push_success',
+    financeErpPushStatus: 'push_success',
     pushTime: '2026-09-21 10:13:00',
     lines: [tocLine({ id: 'sales-return-inbound-toc-1-line-1', product: 'SP0101020001', quantity: 2, price: 169 })],
   }),
@@ -126,9 +126,9 @@ const seedInbounds = [
     customer: 'CUS000005',
     warehouse: 'LWH000002',
     actualReceiveTime: '2026-09-21 10:18:00',
-    kingdeePushStatus: 'push_failed',
+    financeErpPushStatus: 'push_failed',
     pushTime: '2026-09-21 10:20:00',
-    pushFailReason: '接口超时，金蝶未确认接收',
+    pushFailReason: '接口超时，财务ERP未确认接收',
     lines: [tocLine({ id: 'sales-return-inbound-toc-2-line-1', product: 'SP0103010001', quantity: 1, price: 189 })],
   }),
   buildSeedExternalTocInbound({
@@ -138,7 +138,7 @@ const seedInbounds = [
     customer: 'CUS000005',
     warehouse: 'LWH000002',
     actualReceiveTime: '2026-09-21 10:25:00',
-    kingdeePushStatus: 'un_pushed',
+    financeErpPushStatus: 'un_pushed',
     lines: [tocLine({ id: 'sales-return-inbound-toc-3-line-1', product: 'SP0103030001', quantity: 3, price: 99 })],
   }),
   buildSeedExternalTocInbound({
@@ -148,7 +148,7 @@ const seedInbounds = [
     customer: 'CUS000005',
     warehouse: 'LWH000002',
     actualReceiveTime: '2026-09-20 21:05:00',
-    kingdeePushStatus: 'pushing',
+    financeErpPushStatus: 'pushing',
     pushTime: '2026-09-20 21:06:00',
     lines: [tocLine({ id: 'sales-return-inbound-toc-4-line-1', product: 'SP0102010001', quantity: 1, price: 1299 })],
   }),
@@ -159,7 +159,7 @@ const seedInbounds = [
     customer: 'CUS000005',
     warehouse: 'LWH000002',
     actualReceiveTime: '2026-09-20 21:20:00',
-    kingdeePushStatus: 'push_success',
+    financeErpPushStatus: 'push_success',
     pushTime: '2026-09-20 21:21:00',
     lines: [tocLine({ id: 'sales-return-inbound-toc-5-line-1', product: 'SP0103020001', quantity: 4, price: 18 })],
   }),
@@ -170,7 +170,7 @@ const seedInbounds = [
     customer: 'CUS000005',
     warehouse: 'LWH000003',
     actualReceiveTime: '2026-09-19 14:40:00',
-    kingdeePushStatus: 'push_success',
+    financeErpPushStatus: 'push_success',
     pushTime: '2026-09-19 14:41:00',
     lines: [tocLine({ id: 'sales-return-inbound-toc-6-line-1', product: 'SP0101010001', quantity: 2, price: 120 })],
   }),
@@ -181,7 +181,7 @@ const seedInbounds = [
     customer: 'CUS000005',
     warehouse: 'LWH000003',
     actualReceiveTime: '2026-09-19 15:10:00',
-    kingdeePushStatus: 'push_success',
+    financeErpPushStatus: 'push_success',
     pushTime: '2026-09-19 15:11:00',
     lines: [tocLine({ id: 'sales-return-inbound-toc-7-line-1', product: 'SP0101020002', quantity: 1, price: 165 })],
   }),
@@ -210,7 +210,7 @@ export function getSalesReturnInboundStatusBadges(row) {
       tone: auditToneMap[row?.auditStatus] || 'default',
     },
   ];
-  if (row?.kingdeePushStatus) {
+  if (row?.financeErpPushStatus) {
     const toneMap = {
       un_pushed: 'warning',
       pushing: 'info',
@@ -218,8 +218,8 @@ export function getSalesReturnInboundStatusBadges(row) {
       push_failed: 'danger',
     };
     badges.push({
-      label: kingdeePushStatusLabels[row.kingdeePushStatus] || row.kingdeePushStatus,
-      tone: toneMap[row.kingdeePushStatus] || 'default',
+      label: financeErpPushStatusLabels[row.financeErpPushStatus] || row.financeErpPushStatus,
+      tone: toneMap[row.financeErpPushStatus] || 'default',
     });
   }
   return badges;
@@ -227,7 +227,7 @@ export function getSalesReturnInboundStatusBadges(row) {
 
 const qtyCell = (value) => value ?? 0;
 const auditTone = (value) => (value === 'approved' ? 'text-erp-success' : 'text-erp-warning');
-const kingdeeTone = (value) => {
+const financeErpTone = (value) => {
   if (value === 'push_success') return 'text-erp-success';
   if (value === 'push_failed') return 'text-erp-danger';
   if (value === 'pushing') return 'text-erp-info';
@@ -245,7 +245,7 @@ export const salesReturnInboundColumns = [
   { key: 'currency', label: '币别', defaultWidth: 112, minWidth: 96, maxWidth: 140, ellipsis: true, render: (value) => resolveOptionLabel(value, currencyOptions) },
   { key: 'warehouse', label: '收货仓库', defaultWidth: 170, minWidth: 130, maxWidth: 230, ellipsis: true, render: (value) => resolveOptionLabel(value, logicalWarehouseOptions) },
   { key: 'auditStatus', label: '审核状态', defaultWidth: 96, minWidth: 88, maxWidth: 140, ellipsis: true, render: (value) => auditStatusLabels[value] || value, tone: auditTone },
-  { key: 'kingdeePushStatus', label: '金蝶推送状态', defaultWidth: 112, minWidth: 96, maxWidth: 160, ellipsis: true, render: (value) => kingdeePushStatusLabels[value] || value, tone: kingdeeTone },
+  { key: 'financeErpPushStatus', label: '推送财务ERP状态', defaultWidth: 112, minWidth: 96, maxWidth: 160, ellipsis: true, render: (value) => financeErpPushStatusLabels[value] || value, tone: financeErpTone },
   { key: 'totalReceiveQty', label: '实际收货数量', defaultWidth: 112, minWidth: 96, maxWidth: 150, ellipsis: true, align: 'right', sortable: true, render: qtyCell },
   { key: 'amount', label: '价税合计', defaultWidth: 124, minWidth: 104, maxWidth: 170, ellipsis: true, align: 'right', sortable: true, render: (value) => formatAmount(value) },
   { key: 'taxAmount', label: '税额', defaultWidth: 104, minWidth: 88, maxWidth: 140, ellipsis: true, align: 'right', render: (value) => formatAmount(value) },

@@ -9,8 +9,9 @@ import { erpFieldGridClassName } from '../styles/typography.js';
 import { useDocumentForm } from '../hooks/useDocumentForm.js';
 import { computeLinesTotals, formatAmount } from '../lib/format.js';
 import { currencySymbol } from '../lib/money.js';
+import { findCurrentPurchasePrice } from '../lib/priceLogic.js';
 import { nextDocumentNo } from '../lib/documentNo.js';
-import { currencyOptions, skuOptions } from '../data/masterData.js';
+import { currencyOptions } from '../data/masterData.js';
 import { getSelectableSupplierOptions } from '../data/supplierData.js';
 import { getSelectableLogicalWarehouseOptions } from '../data/warehouseData.js';
 import {
@@ -59,7 +60,7 @@ function createReturnLine() {
     sourceInboundLine: '',
     quantity: 1,
     price: '',
-    taxRate: '13',
+    taxRate: '',
     receivedQty: 0,
     inTransitQty: 0,
   };
@@ -77,7 +78,7 @@ function createReturnLineFromSku(sku, template) {
     unit: sku?.unit && sku.unit !== '-' ? sku.unit : (template?.unit || '个'),
     quantity: sameSku ? template.quantity : 1,
     price: '',
-    taxRate: sameSku ? template.taxRate : '13',
+    taxRate: sameSku ? template.taxRate : '',
   };
 }
 
@@ -149,13 +150,13 @@ export function PurchaseReturnFormPage({ mode = 'create', context, onFeedback, o
       onFeedback?.('请先选择商品', 'warning');
       return;
     }
-    const sku = skuOptions.find((item) => item.value === line.product);
-    if (sku?.referencePrice == null || sku.referencePrice === '') {
+    const currentPrice = findCurrentPurchasePrice({ supplier: form.supplier, product: line.product, currency: form.currency });
+    if (!currentPrice) {
       onFeedback?.('当前采购价目中无该商品价格，请手工填写', 'warning');
       return;
     }
-    updateLine(line.id, 'price', sku.referencePrice);
-    updateLine(line.id, 'taxRate', '13');
+    updateLine(line.id, 'price', currentPrice.price);
+    updateLine(line.id, 'taxRate', currentPrice.taxRate ?? '');
   }
 
   /** 来源联动：带出供应商、币别与明细（新增编辑页 PRD §5）；更换来源按新来源整组重带 */

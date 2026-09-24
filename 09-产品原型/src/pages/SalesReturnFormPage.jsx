@@ -4,10 +4,11 @@ import { SalesReturnActionDialogs } from '../components/erp/SalesReturnActionDia
 import { SimpleDialog } from '../components/ui/dialog.jsx';
 import { Button } from '../components/ui/button.jsx';
 import { currencyOptions, logicalWarehouseOptions } from '../data/masterData.js';
-import { getSelectableCustomerOptions } from '../data/customerData.js';
+import { getCustomerLevel, getSelectableCustomerOptions } from '../data/customerData.js';
 import { computeLinesTotals, EMPTY_PLACEHOLDER, formatAmount } from '../lib/format.js';
 import { currencySymbol } from '../lib/money.js';
 import { nextDocumentNo } from '../lib/documentNo.js';
+import { findCurrentSalesPrice, getProductDefaultTaxRate } from '../lib/priceLogic.js';
 import { readMockRows } from '../lib/mockStorage.js';
 import {
   buildSourceOutboundCandidates,
@@ -47,14 +48,20 @@ function createReturnLine() {
     unit: '个',
     quantity: 1,
     price: '',
-    taxRate: '13',
+    taxRate: '',
     returnedQty: 0,
     inTransitQty: 0,
   };
 }
 
-function createLineFromSku(sku, template) {
+function createLineFromSku(sku, template, form = {}) {
   const sameSku = template?.product === sku?.value;
+  const currentPrice = findCurrentSalesPrice({
+    customer: form.customer,
+    customerLevel: getCustomerLevel(form.customer),
+    product: sku?.value,
+    currency: form.currency,
+  });
   return {
     ...createReturnLine(),
     product: sku?.value || '',
@@ -63,8 +70,10 @@ function createLineFromSku(sku, template) {
     barcode: sku?.barcode || '',
     unit: sku?.unit === '-' ? template?.unit || '个' : sku?.unit || template?.unit || '个',
     quantity: sameSku ? template.quantity : 1,
-    price: sameSku ? template.price : sku?.referencePrice ?? 0,
-    taxRate: sameSku ? template.taxRate : '13',
+    price: sameSku && template.price !== '' ? template.price : currentPrice?.price ?? (sameSku ? template.price : ''),
+    taxRate: sameSku && template.taxRate !== ''
+      ? template.taxRate
+      : currentPrice?.taxRate || getProductDefaultTaxRate(sku?.value) || (sameSku ? template.taxRate : ''),
   };
 }
 
@@ -81,7 +90,7 @@ function createLineFromOutbound(outbound, line, index) {
     unit: line.unit || '个',
     quantity: line.remainingQuota,
     price: line.price,
-    taxRate: line.taxRate ?? '13',
+    taxRate: line.taxRate ?? '',
     returnedQty: 0,
     inTransitQty: 0,
   };

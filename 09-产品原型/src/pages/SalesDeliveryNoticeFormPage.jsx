@@ -6,7 +6,8 @@ import { resolveOptionLabel } from '../lib/codeName.js';
 import { createEmptyCnAddress, getCustomerAddressOptions } from '../lib/cnAddress.js';
 import { toSelectOptions } from '../lib/options.js';
 import { erpFieldGridClassName } from '../styles/typography.js';
-import { customerOptions, logicalWarehouseOptions } from '../data/masterData.js';
+import { customerOptions } from '../data/masterData.js';
+import { getInventoryLogicalWarehouseOptions } from '../data/warehouseData.js';
 import { getSelectableLogisticsProductOptions } from '../data/logisticsData.js';
 import { getDeliveryNoticeStatusBadges } from '../data/salesDeliveryNoticeData.js';
 import {
@@ -48,7 +49,7 @@ function buildCreateFields(orderRow, form) {
     { key: 'noticeNo', label: '单号', type: 'disabled', getValue: (f) => f.noticeNo },
     { key: 'sourceOrderNo', label: '来源销售订单', type: 'disabled', getValue: () => orderRow?.orderNo || '' },
     { key: 'customer', label: '客户', type: 'disabled', getValue: (f) => resolveOptionLabel(f.customer, customerOptions) },
-    { key: 'warehouse', label: '发货仓库', type: 'disabled', getValue: (f) => resolveOptionLabel(f.warehouse, logicalWarehouseOptions) },
+    { key: 'warehouse', label: '发货仓库', type: 'disabled', getValue: (f) => resolveOptionLabel(f.warehouse, getInventoryLogicalWarehouseOptions()) },
     deliveryModeField({ required: true }),
     {
       key: 'shipMethod',
@@ -88,7 +89,7 @@ function buildEditFields() {
     { key: 'noticeNo', label: '单号', type: 'disabled', getValue: (form) => form.noticeNo },
     { key: 'sourceOrderNo', label: '来源销售订单', type: 'disabled', getValue: (form) => form.sourceOrderNo },
     { key: 'customer', label: '客户', type: 'disabled', getValue: (form) => resolveOptionLabel(form.customer, customerOptions) },
-    { key: 'warehouse', label: '发货仓库', type: 'disabled', getValue: (form) => resolveOptionLabel(form.warehouse, logicalWarehouseOptions) },
+    { key: 'warehouse', label: '发货仓库', type: 'disabled', getValue: (form) => resolveOptionLabel(form.warehouse, getInventoryLogicalWarehouseOptions()) },
     deliveryModeField({ disabled: true }),
     { key: 'remark', label: '备注', type: 'textarea', className: 'col-span-3', placeholder: '请输入备注' },
   ];

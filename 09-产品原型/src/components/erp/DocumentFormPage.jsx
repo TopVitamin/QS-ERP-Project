@@ -129,7 +129,11 @@ export function DocumentFormPage({ mode = 'create', context, onFeedback, onOpenP
           lines={form.lines}
           onLineChange={updateLine}
           onLineRemove={removeLine}
-          onLineSkusSelect={(lineId, selectedSkus) => replaceLineWithItems(lineId, selectedSkus, config.createLineFromSku || config.createLine)}
+          onLineSkusSelect={(lineId, selectedSkus) => replaceLineWithItems(
+            lineId,
+            selectedSkus,
+            (sku, template, currentForm) => (config.createLineFromSku || config.createLine)(sku, template, currentForm),
+          )}
           enableSkuPicker={config.enableSkuPicker}
           editorOptions={config.lineEditorOptions}
           hiddenColumns={typeof config.hiddenColumns === 'function' ? config.hiddenColumns({ mode, form }) : (config.hiddenColumns || [])}

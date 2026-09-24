@@ -16,7 +16,7 @@ import { transferOrders } from '../data/transferOrderData.js';
 import {
   directTransferAuditLabels,
   directTransferBadgeTones,
-  kingdeePushStatusLabels,
+  financeErpPushStatusLabels,
   loadDirectTransfersByNoticeId,
   registerDirectTransferSeedRows,
 } from '../lib/directTransferLogic.js';
@@ -87,11 +87,11 @@ function buildNoticeRelatedSections(row) {
           badgeTone: (item) => directTransferBadgeTones.auditStatus[item.auditStatus] || 'default',
         },
         {
-          key: 'kingdeePushStatus',
-          label: '金蝶推送状态',
+          key: 'financeErpPushStatus',
+          label: '推送财务ERP状态',
           badge: true,
-          render: (item) => kingdeePushStatusLabels[item.kingdeePushStatus] || item.kingdeePushStatus,
-          badgeTone: (item) => directTransferBadgeTones.kingdeePushStatus[item.kingdeePushStatus] || 'default',
+          render: (item) => financeErpPushStatusLabels[item.financeErpPushStatus] || item.financeErpPushStatus,
+          badgeTone: (item) => directTransferBadgeTones.financeErpPushStatus[item.financeErpPushStatus] || 'default',
         },
         { key: 'totalQuantity', label: '实际调拨数量', align: 'right', render: (item) => item.totalQuantity ?? 0 },
         { key: 'createdAt', label: '创建时间', muted: true, render: (item) => item.createdAt },

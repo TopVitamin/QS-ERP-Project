@@ -13,7 +13,7 @@ import { purchaseReturnNotices } from '../data/purchaseReturnNoticeData.js';
 import { purchaseReturns } from '../data/purchaseReturnData.js';
 import {
   auditStatusLabels,
-  kingdeePushStatusLabels,
+  financeErpPushStatusLabels,
   RETURN_OUTBOUND_STORAGE_KEY,
 } from '../lib/purchaseReturnOutboundLogic.js';
 import { loadReturnNoticeById } from '../lib/purchaseReturnNoticeLogic.js';
@@ -30,7 +30,7 @@ const initialFilters = {
   sourceReturnNo: '',
   supplier: '',
   auditStatus: [],
-  kingdeePushStatus: [],
+  financeErpPushStatus: [],
   warehouse: '',
   product: '',
 };
@@ -49,7 +49,7 @@ function createFilterFields(rows) {
     { key: 'sourceReturnNo', label: '来源采购退货单', type: 'select', options: [{ value: '', label: '全部' }, ...returnOptions.values()] },
     { key: 'supplier', label: '供应商', type: 'select', options: [{ value: '', label: '全部供应商' }, ...getSelectableSupplierOptions()] },
     statusMultiSelectField('auditStatus', '审核状态', auditStatusLabels),
-    statusMultiSelectField('kingdeePushStatus', '金蝶推送状态', kingdeePushStatusLabels),
+    statusMultiSelectField('financeErpPushStatus', '推送财务ERP状态', financeErpPushStatusLabels),
     { key: 'warehouse', label: '出库仓库', type: 'select', options: [{ value: '', label: '全部仓库' }, ...getSelectableLogicalWarehouseOptions()] },
     { key: 'product', label: '商品', type: 'search', placeholder: '请输入商品编码' },
   ];
@@ -68,7 +68,7 @@ function filterRows(row, filters) {
     && (!filters.supplier || row.supplier === filters.supplier)
     && (!filters.warehouse || row.warehouse === filters.warehouse)
     && matchesMultiSelect(row.auditStatus, filters.auditStatus)
-    && matchesMultiSelect(row.kingdeePushStatus, filters.kingdeePushStatus)
+    && matchesMultiSelect(row.financeErpPushStatus, filters.financeErpPushStatus)
     && (!product || row.lines?.some((line) => String(line.productCode || '').toLowerCase().includes(product)));
 }
 

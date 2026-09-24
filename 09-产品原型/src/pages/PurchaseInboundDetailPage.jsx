@@ -3,9 +3,11 @@ import { buildCreateMetaFields } from '../components/erp/DocumentMetaTabsCard.js
 import { buildInboundOperationLogs } from '../lib/operationLog.js';
 import { usePurchaseInboundRow } from '../hooks/usePurchaseInboundRow.js';
 import { resolveOptionLabel } from '../lib/codeName.js';
+import { formatSnapshotCodeName } from '../lib/documentNameSnapshots.js';
 import { EMPTY_PLACEHOLDER, formatAmount } from '../lib/format.js';
 import { currencySymbol } from '../lib/money.js';
-import { currencyOptions, supplierOptions, warehouseOptions } from '../data/masterData.js';
+import { currencyOptions, supplierOptions } from '../data/masterData.js';
+import { getInventoryLogicalWarehouseOptions } from '../data/warehouseData.js';
 import { getInboundStatusBadges } from '../data/inboundData.js';
 import { orders } from '../data/orderData.js';
 import { receiptNotices } from '../data/receiptNoticeData.js';
@@ -52,15 +54,15 @@ function buildInboundInfoFields({ detail, row, onOpenPage }) {
         row: relatedOrder || { orderNo: detail.sourceOrderNo, id: detail.sourceOrderId },
       })),
     },
-    { key: 'supplier', label: '供应商', value: resolveOptionLabel(detail.supplier, supplierOptions) },
-    { key: 'warehouse', label: '入库仓库', value: resolveOptionLabel(detail.warehouse, warehouseOptions) },
+    { key: 'supplier', label: '供应商', value: formatSnapshotCodeName(detail.supplier, detail.supplierNameSnapshot) },
+    { key: 'warehouse', label: '入库仓库', value: formatSnapshotCodeName(detail.warehouse, detail.warehouseNameSnapshot) },
     { key: 'currency', label: '币别', value: resolveOptionLabel(detail.currency, currencyOptions) },
     { key: 'amount', label: '价税合计', value: `${currencySymbol(row.currency)} ${formatAmount(row.amount ?? 0)}` },
     { key: 'taxAmount', label: '税额', value: `${currencySymbol(row.currency)} ${formatAmount(row.taxAmount ?? 0)}` },
     { key: 'netAmount', label: '金额', value: `${currencySymbol(row.currency)} ${formatAmount(row.netAmount ?? 0)}` },
     { key: 'businessDate', label: '业务日期', value: detail.businessDate || EMPTY_PLACEHOLDER },
     { key: 'actualInboundTime', label: '实际入库时间', value: detail.actualInboundTime || EMPTY_PLACEHOLDER },
-    { key: 'pushTime', label: '推送金蝶时间', value: detail.pushTime || EMPTY_PLACEHOLDER },
+    { key: 'pushTime', label: '推送财务ERP时间', value: detail.pushTime || EMPTY_PLACEHOLDER },
   ];
 
   if (row.pushFailReason) {

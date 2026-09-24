@@ -121,8 +121,8 @@ export function useDocumentForm({
       const targetLine = current.lines[targetIndex];
       // 未选商品（items 为空）时保留一行空行：把原行作为模板传入，避免 createLineFromSku 读 undefined 模板。
       const nextLines = items.length
-        ? items.map((item) => createLine(item, targetLine))
-        : [createLine(undefined, targetLine)];
+        ? items.map((item) => createLine(item, targetLine, current))
+        : [createLine(undefined, targetLine, current)];
 
       return {
         ...current,

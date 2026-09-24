@@ -138,7 +138,7 @@ const seedTransferOrders = [
         pushTime: '2026-09-22 08:25:10',
         finalShipTime: '2026-09-22 16:30:00',
       },
-      outTransfer: { transferNo: 'ZJDB-20260922-0005', time: '2026-09-22 16:30:00', kingdeePushStatus: 'push_success' },
+      outTransfer: { transferNo: 'ZJDB-20260922-0005', time: '2026-09-22 16:30:00', financeErpPushStatus: 'push_success' },
       inNotice: {
         noticeNo: 'DRTZ-20260922-0002',
         status: 'received',
@@ -146,7 +146,7 @@ const seedTransferOrders = [
         pushTime: '2026-09-22 16:30:10',
         finalReceiveTime: '2026-09-22 17:35:00',
       },
-      inTransfer: { transferNo: 'ZJDB-20260922-0008', time: '2026-09-22 17:35:00', kingdeePushStatus: 'push_success' },
+      inTransfer: { transferNo: 'ZJDB-20260922-0008', time: '2026-09-22 17:35:00', financeErpPushStatus: 'push_success' },
     },
   },
   {
@@ -173,7 +173,7 @@ const seedTransferOrders = [
         pushTime: '2026-09-22 15:20:10',
         finalShipTime: '2026-09-22 15:45:00',
       },
-      outTransfer: { transferNo: 'ZJDB-20260922-0003', time: '2026-09-22 15:45:00', kingdeePushStatus: 'push_success' },
+      outTransfer: { transferNo: 'ZJDB-20260922-0003', time: '2026-09-22 15:45:00', financeErpPushStatus: 'push_success' },
       inNotice: {
         noticeNo: 'DRTZ-20260922-0001',
         status: 'received',
@@ -181,7 +181,7 @@ const seedTransferOrders = [
         pushTime: '2026-09-22 15:45:10',
         finalReceiveTime: '2026-09-22 16:35:00',
       },
-      inTransfer: { transferNo: 'ZJDB-20260922-0006', time: '2026-09-22 16:35:00', kingdeePushStatus: 'push_success' },
+      inTransfer: { transferNo: 'ZJDB-20260922-0006', time: '2026-09-22 16:35:00', financeErpPushStatus: 'push_success' },
     },
   },
   {
@@ -206,7 +206,7 @@ const seedTransferOrders = [
         pushTime: '2026-09-22 08:40:10',
         finalShipTime: '2026-09-23 10:20:00',
       },
-      outTransfer: { transferNo: 'ZJDB-20260923-0001', time: '2026-09-23 10:20:00', kingdeePushStatus: 'push_success' },
+      outTransfer: { transferNo: 'ZJDB-20260923-0001', time: '2026-09-23 10:20:00', financeErpPushStatus: 'push_success' },
       inNotice: {
         noticeNo: 'DRTZ-20260923-0001',
         status: 'pending_receive',
@@ -407,7 +407,7 @@ const seedTransferOrders = [
         pushTime: '2026-09-23 11:30:10',
         finalShipTime: '2026-09-23 11:30:00',
       },
-      outTransfer: { transferNo: 'ZJDB-20260923-0002', time: '2026-09-23 11:30:00', kingdeePushStatus: 'push_success' },
+      outTransfer: { transferNo: 'ZJDB-20260923-0002', time: '2026-09-23 11:30:00', financeErpPushStatus: 'push_success' },
       inNotice: {
         noticeNo: 'DRTZ-20260923-0002',
         status: 'pending_push',
@@ -437,7 +437,7 @@ const seedTransferOrders = [
         pushTime: '2026-09-23 12:10:10',
         finalShipTime: '2026-09-23 12:10:00',
       },
-      outTransfer: { transferNo: 'ZJDB-20260923-0003', time: '2026-09-23 12:10:00', kingdeePushStatus: 'push_success' },
+      outTransfer: { transferNo: 'ZJDB-20260923-0003', time: '2026-09-23 12:10:00', financeErpPushStatus: 'push_success' },
       inNotice: {
         noticeNo: 'DRTZ-20260923-0003',
         status: 'pushing',
@@ -467,7 +467,7 @@ const seedTransferOrders = [
         pushTime: '2026-09-23 13:05:10',
         finalShipTime: '2026-09-23 13:05:00',
       },
-      outTransfer: { transferNo: 'ZJDB-20260923-0004', time: '2026-09-23 13:05:00', kingdeePushStatus: 'push_success' },
+      outTransfer: { transferNo: 'ZJDB-20260923-0004', time: '2026-09-23 13:05:00', financeErpPushStatus: 'push_success' },
       inNotice: {
         noticeNo: 'DRTZ-20260923-0004',
         status: 'push_failed',
@@ -501,8 +501,8 @@ const seedTransferOrders = [
       outTransfer: {
         transferNo: 'ZJDB-20260923-0005',
         time: '2026-09-23 13:40:00',
-        kingdeePushStatus: 'push_failed',
-        pushFailReason: '接口超时，金蝶未确认接收',
+        financeErpPushStatus: 'push_failed',
+        pushFailReason: '接口超时，财务ERP未确认接收',
       },
       inNotice: {
         noticeNo: 'DRTZ-20260923-0005',
@@ -534,7 +534,7 @@ const seedTransferOrders = [
         pushTime: '2026-09-23 14:20:10',
         finalShipTime: '2026-09-23 14:20:00',
       },
-      outTransfer: { transferNo: 'ZJDB-20260923-0006', time: '2026-09-23 14:20:00', kingdeePushStatus: 'pushing' },
+      outTransfer: { transferNo: 'ZJDB-20260923-0006', time: '2026-09-23 14:20:00', financeErpPushStatus: 'pushing' },
       inNotice: {
         noticeNo: 'DRTZ-20260923-0006',
         status: 'pending_receive',

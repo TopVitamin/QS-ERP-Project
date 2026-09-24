@@ -1,8 +1,8 @@
 import { formatAmount } from './format.js';
-import { auditStatusLabels, kingdeePushStatusLabels, loadOutboundById, loadOutboundByNoticeId } from './salesOutboundLogic.js';
+import { auditStatusLabels, financeErpPushStatusLabels, loadOutboundById, loadOutboundByNoticeId } from './salesOutboundLogic.js';
 import { currencySymbol } from './money.js';
 
-const kingdeeStatusToneMap = {
+const financeErpStatusToneMap = {
   push_success: 'success',
   push_failed: 'danger',
   pushing: 'info',
@@ -43,11 +43,11 @@ export function buildDeliveryNoticeRelatedDocumentSections(row) {
           badgeTone: () => 'success',
         },
         {
-          key: 'kingdeePushStatus',
-          label: '金蝶推送状态',
+          key: 'financeErpPushStatus',
+          label: '推送财务ERP状态',
           badge: true,
-          render: (item) => kingdeePushStatusLabels[item.kingdeePushStatus] || item.kingdeePushStatus,
-          badgeTone: (item) => kingdeeStatusToneMap[item.kingdeePushStatus] || 'default',
+          render: (item) => financeErpPushStatusLabels[item.financeErpPushStatus] || item.financeErpPushStatus,
+          badgeTone: (item) => financeErpStatusToneMap[item.financeErpPushStatus] || 'default',
         },
         {
           key: 'totalOutboundQty',

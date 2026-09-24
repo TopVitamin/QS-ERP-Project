@@ -19,7 +19,7 @@ import {
 } from '../lib/purchaseReturnOutboundLogic.js';
 
 /**
- * 采退出库单详情（F04）：整单只读，页头仅返回列表；金蝶推送失败原因展示，重推在系统集成中心。
+ * 采退出库单详情（F04）：整单只读，页头仅返回列表；推送财务ERP失败原因展示，重推在系统集成中心。
  */
 
 function useReturnOutboundRow(context) {
@@ -90,7 +90,7 @@ function buildOutboundInfoFields({ detail, row, onOpenPage }) {
     { key: 'netAmount', label: '金额', value: `${currencySymbol(row.currency)} ${formatAmount(row.netAmount ?? 0)}` },
     { key: 'businessDate', label: '业务日期', value: detail.businessDate || EMPTY_PLACEHOLDER },
     { key: 'actualOutboundTime', label: '实际出库时间', value: detail.actualOutboundTime || EMPTY_PLACEHOLDER },
-    { key: 'pushTime', label: '推送金蝶时间', value: detail.pushTime || EMPTY_PLACEHOLDER },
+    { key: 'pushTime', label: '推送财务ERP时间', value: detail.pushTime || EMPTY_PLACEHOLDER },
   ];
 
   if (row.pushFailReason) {

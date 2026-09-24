@@ -77,7 +77,7 @@ export function DirectTransferActionDialogs({ dialog, onClose, onComplete, onNot
         open
         onOpenChange={(open) => { if (!open) onClose?.(); }}
         title="确认提交直接调拨单？"
-        description="提交后进入待审核状态，来源逻辑仓、目标逻辑仓与数量不可再修改；审核通过后来源仓减少、目标仓增加并推送金蝶，不推送仓库、不涉及预占。"
+        description="提交后进入待审核状态，来源逻辑仓、目标逻辑仓与数量不可再修改；审核通过后来源仓减少、目标仓增加并推送财务ERP，不推送仓库、不涉及预占。"
         confirmLabel="确认提交"
         onConfirm={() => {
           // 新增/编辑页先保存再提交：由页面传入 onConfirm
@@ -151,12 +151,12 @@ export function DirectTransferActionDialogs({ dialog, onClose, onComplete, onNot
         open
         onOpenChange={(open) => { if (!open) onClose?.(); }}
         title="确认审核直接调拨单？"
-        description="审核通过后来源逻辑仓即时库存减少、目标逻辑仓增加，并生成库存流水、推送金蝶。可用库存不足时不能审核，不允许负库存。"
+        description="审核通过后来源逻辑仓即时库存减少、目标逻辑仓增加，并生成库存流水、推送财务ERP。可用库存不足时不能审核，不允许负库存。"
         confirmLabel="确认审核"
         onConfirm={() => {
           try {
             const next = applyApproveDirectTransfer(row);
-            finish('审核通过，库存已生效并推送金蝶', 'success', next);
+            finish('审核通过，库存已生效并推送财务ERP', 'success', next);
           } catch (error) {
             onNotify?.(error.message || '审核失败，请稍后重试', 'warning');
           }
@@ -330,7 +330,7 @@ export function DirectTransferActionDialogs({ dialog, onClose, onComplete, onNot
 /**
  * 直接调拨单详情页头操作：返回列表之后按状态互斥展示（主PRD §6.4）。
  * 自动生成的结果单（分步式两端、仓库主动回传）不展示提交、删除、审核、撤回；
- * 金蝶重推入口在系统集成中心，本页不提供。
+ * 财务ERP重推入口在系统集成中心，本页不提供。
  */
 export function DirectTransferDetailHeaderActions({ row, onAction }) {
   if (!row) return null;

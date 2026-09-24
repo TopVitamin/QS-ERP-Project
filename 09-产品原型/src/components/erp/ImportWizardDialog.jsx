@@ -115,6 +115,9 @@ export function ImportWizardDialog({ open, onOpenChange, target, onCompleted, on
     const task = commitImport({ target, fileName: parsed.fileName, validation });
     setResult(task);
     setStep(4);
+    if (task.status === 'failed') {
+      feedback.error(`导入失败：本次批次已取消，未写入任何记录（${task.failureRows.length} 行错误）`);
+    }
     onCompleted?.(task);
   }
 
@@ -130,6 +133,10 @@ export function ImportWizardDialog({ open, onOpenChange, target, onCompleted, on
                 {documentImport ? (
                   <p className="mt-0.5 text-[11px] leading-5 text-erp-text-muted">
                     模板内含字段说明与可选值，列名请保持不变。同一「单据序号」的行归并为一张{target.label}，同组单头字段必须一致；任一行校验失败则整批不导入，导入生成的单据为草稿，仍须逐单提交审核。
+                  </p>
+                ) : target.allowExistingImportUpdates === false ? (
+                  <p className="mt-0.5 text-[11px] leading-5 text-erp-text-muted">
+                    模板内含字段说明与可选值，列名请保持不变。本次仅新增，不更新已存在的「{target.keyLabel}」；任一行校验失败时整批取消，不写入数据。导入成功后进入草稿，仍须提交审核。
                   </p>
                 ) : (
                   <p className="mt-0.5 text-[11px] leading-5 text-erp-text-muted">
@@ -188,7 +195,7 @@ export function ImportWizardDialog({ open, onOpenChange, target, onCompleted, on
             <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[11px] text-erp-text-muted">
               <span>没有现成文件？</span>
               <Button variant="text" size="compact" onClick={() => handleFile(buildImportSampleFile(target))}>载入示例数据</Button>
-              <span>示例包含新增、更新和异常行，可直接体验校验流程</span>
+              <span>{target.rejectImportBatchOnError ? '示例包含有效行和错误行，可体验整批校验阻止' : '示例包含新增、更新和异常行，可直接体验校验流程'}</span>
             </div>
           )}
           {file && (
@@ -219,6 +226,12 @@ export function ImportWizardDialog({ open, onOpenChange, target, onCompleted, on
                 <span className="text-erp-success">校验通过 {validation.summary.create} 行</span>
                 <span className={validation.summary.error ? 'text-erp-danger' : 'text-erp-text-muted'}>校验不通过 {validation.summary.error} 行</span>
               </>
+            ) : target.allowExistingImportUpdates === false ? (
+              <>
+                <span>共读取 <span className="font-medium">{validation.summary.total}</span> 行</span>
+                <span className="text-erp-success">新增 {validation.summary.create}</span>
+                <span className="text-erp-danger">校验不通过 {validation.summary.error}</span>
+              </>
             ) : (
               <>
                 <span>共读取 <span className="font-medium">{validation.summary.total}</span> 行</span>
@@ -233,6 +246,12 @@ export function ImportWizardDialog({ open, onOpenChange, target, onCompleted, on
               </span>
             )}
           </div>
+
+          {target.rejectImportBatchOnError && (
+            <div className={cn('rounded-erp-section border px-3 py-2 text-[12px]', validation.summary.error ? 'border-erp-danger/40 bg-erp-danger-bg text-erp-danger' : 'border-erp-border-light bg-erp-surface-muted text-erp-text-muted')}>
+              本次{target.label}导入只新增、不更新；全部行校验通过后才会写入。存在错误时整批取消，请下载错误明细并修正后重新导入。
+            </div>
+          )}
 
           <div className="overflow-hidden rounded-erp-section border border-erp-border-light">
             <div className="max-h-[380px] overflow-auto">
@@ -273,7 +292,7 @@ export function ImportWizardDialog({ open, onOpenChange, target, onCompleted, on
             </div>
             <div className="flex h-10 items-center justify-between border-t border-erp-border-light px-3 text-[11px] text-erp-text-muted">
               <div className="flex min-w-0 items-center gap-2">
-                <span>{documentImport ? '任一行校验不通过则整批不导入' : '校验不通过的行会跳过，可在导入结果中下载失败明细'}</span>
+                <span>{documentImport || target.rejectImportBatchOnError ? '任一行校验不通过则整批不导入' : '校验不通过的行会跳过，可在导入结果中下载失败明细'}</span>
                 {documentImport && validation.summary.error > 0 && (
                   <Button
                     variant="text"
@@ -325,11 +344,16 @@ export function ImportWizardDialog({ open, onOpenChange, target, onCompleted, on
                 <SummaryField label="新增" value={`${validation.summary.create} 条`} tone="text-erp-success" />
                 <SummaryField label="更新" value={`${validation.summary.update} 条`} tone="text-erp-primary" />
                 <SummaryField label="跳过（校验不通过）" value={`${validation.summary.error} 条`} tone={validation.summary.error ? 'text-erp-danger' : undefined} />
-                <SummaryField label="匹配方式" value={`按「${target.keyLabel}」匹配，已存在则更新非空字段`} />
+                <SummaryField
+                  label={target.rejectImportBatchOnError ? '处理方式' : '匹配方式'}
+                  value={target.rejectImportBatchOnError ? '仅新增；编码已存在时阻止整批导入' : `按「${target.keyLabel}」匹配，已存在则更新非空字段`}
+                />
               </section>
               <div className="flex items-start gap-2 rounded-erp-section border border-erp-warning/40 bg-erp-warning-bg px-3 py-2.5 text-[12px] text-erp-warning">
                 <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={1.9} />
-                <span>导入的数据统一回到「草稿」状态，需人工审核确认后才会生效。</span>
+                <span>{target.rejectImportBatchOnError
+                  ? '全部行校验通过后才会统一新增；新仓库默认启用并进入「草稿」状态，仍须审核通过后才能被引用。'
+                  : '导入的数据统一回到「草稿」状态，需人工审核确认后才会生效。'}</span>
               </div>
             </>
           )}
@@ -373,18 +397,27 @@ export function ImportWizardDialog({ open, onOpenChange, target, onCompleted, on
         );
       }
 
+      const failed = result.status === 'failed';
       return (
         <div className="flex h-full flex-col items-center justify-center gap-4 py-8 text-center">
-          <CheckCircle2 className="h-10 w-10 text-erp-success" strokeWidth={1.6} />
+          {failed
+            ? <AlertCircle className="h-10 w-10 text-erp-danger" strokeWidth={1.6} />
+            : <CheckCircle2 className="h-10 w-10 text-erp-success" strokeWidth={1.6} />}
           <div>
-            <p className="text-[14px] font-medium text-erp-text-title">导入完成</p>
-            <p className="mt-1.5 text-[12px] text-erp-text">
-              新增 <span className="text-erp-success">{result.createdCount}</span> 条，更新 <span className="text-erp-primary">{result.updatedCount}</span> 条，跳过 <span className={result.skippedCount ? 'text-erp-danger' : ''}>{result.skippedCount}</span> 条
-            </p>
-            <p className="mt-1 text-[11px] text-erp-text-muted">数据已回到草稿状态，等待审核；任务号 {result.id}</p>
+            <p className="text-[14px] font-medium text-erp-text-title">{failed ? '导入失败，本次批次已取消' : '导入完成'}</p>
+            {failed ? (
+              <p className="mt-1.5 text-[12px] text-erp-danger">未写入任何记录，共 {result.rowCount} 行；其中 {result.failureRows.length} 行校验不通过。</p>
+            ) : (
+              <>
+                <p className="mt-1.5 text-[12px] text-erp-text">
+                  新增 <span className="text-erp-success">{result.createdCount}</span> 条，更新 <span className="text-erp-primary">{result.updatedCount}</span> 条，跳过 <span className={result.skippedCount ? 'text-erp-danger' : ''}>{result.skippedCount}</span> 条
+                </p>
+                <p className="mt-1 text-[11px] text-erp-text-muted">数据已回到草稿状态，等待审核；任务号 {result.id}</p>
+              </>
+            )}
           </div>
           <div className="flex items-center gap-2">
-            {result.skippedCount > 0 && (
+            {result.failureRows.length > 0 && (
               <Button variant="outline" onClick={() => downloadImportFailures(result)}>
                 <Download className="h-3.5 w-3.5" strokeWidth={1.9} />下载失败明细
               </Button>
@@ -409,8 +442,8 @@ export function ImportWizardDialog({ open, onOpenChange, target, onCompleted, on
     }
     : {
       1: '模板列名需与系统字段一致',
-      2: '仅导入校验通过的数据',
-      3: '导入后需人工审核',
+      2: target.rejectImportBatchOnError ? `${target.label}任一行校验失败时整批取消` : '仅导入校验通过的数据',
+      3: target.rejectImportBatchOnError ? '只新增，不更新既有记录；导入后需提交审核' : '导入后需人工审核',
       4: '可前往导入中心查看任务记录',
     };
 
@@ -445,7 +478,11 @@ export function ImportWizardDialog({ open, onOpenChange, target, onCompleted, on
                 <Button variant="outline" onClick={() => setStep(1)}>上一步</Button>
                 <Button
                   variant="primary"
-                  disabled={documentImport ? validation.summary.error > 0 : validation.summary.create + validation.summary.update === 0}
+                  disabled={documentImport
+                    ? validation.summary.error > 0
+                    : target.rejectImportBatchOnError
+                      ? validation.summary.error > 0 || validation.summary.create === 0
+                      : validation.summary.create + validation.summary.update === 0}
                   onClick={() => setStep(3)}
                 >
                   下一步

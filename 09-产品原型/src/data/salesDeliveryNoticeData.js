@@ -1,7 +1,9 @@
 import { resolveOptionLabel } from '../lib/codeName.js';
 import { EMPTY_PLACEHOLDER } from '../lib/format.js';
 import { formatDeliveryMode, normalizeNoticeRow, noticeStatusLabels } from '../lib/salesDeliveryNoticeLogic.js';
-import { customerOptions, logicalWarehouseOptions } from './masterData.js';
+import { customerOptions } from './masterData.js';
+import { getInventoryLogicalWarehouseOptions } from './warehouseData.js';
+import { formatSnapshotCodeName } from '../lib/documentNameSnapshots.js';
 
 const seedNotices = [
   {
@@ -216,7 +218,60 @@ const seedNotices = [
   },
 ];
 
-export const salesDeliveryNotices = seedNotices.map(normalizeNoticeRow);
+const additionalNoticeSeeds = [
+  {
+    id: 'sales-notice-seed-pushing', noticeNo: 'XSFHTZ-20260921-0001',
+    sourceOrderId: 'sales-order-9', sourceOrderNo: 'XSDD-20260921-0009',
+    customer: 'CUS000003', warehouse: 'LWH000001', deliveryMode: 'warehouse', shipMethod: 'pickup',
+    status: 'pushing', pushTime: '2026-09-21 10:30:00', finalShipTime: '', pushFailReason: '',
+    creator: '张三', createdAt: '2026-09-21 10:25:00', updater: '张三', updatedAt: '2026-09-21 10:30:00',
+    lines: [{ id: 'sales-line-9-pushing', sourceOrderLineId: 'sales-line-9', product: 'SP0101030001', productCode: 'SP0101030001', barcode: '6901001003', productName: 'USB-C 多功能扩展坞', unit: '件', pushableQty: 20, notifyQty: 4, shippedQty: 0, shortQty: 0 }],
+  },
+  {
+    id: 'sales-notice-seed-cancelling', noticeNo: 'XSFHTZ-20260921-0002',
+    sourceOrderId: 'sales-order-10', sourceOrderNo: 'XSDD-20260921-0010',
+    customer: 'CUS000005', warehouse: 'LWH000001', deliveryMode: 'warehouse', shipMethod: 'logistics',
+    logisticsProduct: 'LSP000001', status: 'cancelling', pushTime: '2026-09-21 10:45:00', finalShipTime: '', pushFailReason: '',
+    creator: '张三', createdAt: '2026-09-21 10:40:00', updater: '张三', updatedAt: '2026-09-21 10:45:00',
+    lines: [{ id: 'sales-line-10-cancelling', sourceOrderLineId: 'sales-line-10', product: 'SP0103010001', productCode: 'SP0103010001', barcode: '6901001005', productName: '双肩电脑背包 15.6"', unit: '个', pushableQty: 20, notifyQty: 4, shippedQty: 0, shortQty: 0 }],
+  },
+  ...[
+    { suffix: '7a', orderId: 'sales-order-7', orderNo: 'XSDD-20260921-0007', customer: 'CUS000001', product: 'SP0101010001', barcode: '6901001001', productName: '无线键盘 K380', unit: '个', mode: 'virtual', method: 'pickup' },
+    { suffix: '7b', orderId: 'sales-order-7', orderNo: 'XSDD-20260921-0007', customer: 'CUS000001', product: 'SP0101010001', barcode: '6901001001', productName: '无线键盘 K380', unit: '个', mode: 'virtual', method: 'logistics' },
+    { suffix: '8a', orderId: 'sales-order-8', orderNo: 'XSDD-20260921-0008', customer: 'CUS000002', product: 'SP0101020001', barcode: '6901001002', productName: '人体工学鼠标 M720', unit: '个', mode: 'warehouse', method: 'logistics' },
+    { suffix: '8b', orderId: 'sales-order-8', orderNo: 'XSDD-20260921-0008', customer: 'CUS000002', product: 'SP0101020001', barcode: '6901001002', productName: '人体工学鼠标 M720', unit: '个', mode: 'warehouse', method: 'pickup' },
+    { suffix: '9', orderId: 'sales-order-9', orderNo: 'XSDD-20260921-0009', customer: 'CUS000003', product: 'SP0101030001', barcode: '6901001003', productName: 'USB-C 多功能扩展坞', unit: '件', mode: 'warehouse', method: 'logistics' },
+    { suffix: '10', orderId: 'sales-order-10', orderNo: 'XSDD-20260921-0010', customer: 'CUS000005', product: 'SP0103010001', barcode: '6901001005', productName: '双肩电脑背包 15.6"', unit: '个', mode: 'warehouse', method: 'pickup' },
+  ].map((spec, index) => ({
+    id: `sales-notice-seed-shipped-${spec.suffix}`,
+    noticeNo: `XSFHTZ-20260922-00${String(index + 1).padStart(2, '0')}`,
+    sourceOrderId: spec.orderId,
+    sourceOrderNo: spec.orderNo,
+    customer: spec.customer,
+    warehouse: 'LWH000001',
+    deliveryMode: spec.mode,
+    shipMethod: spec.method,
+    deliveryAddress: spec.method === 'logistics' ? `addr-${spec.customer.toLowerCase()}-default` : '',
+    logisticsProduct: spec.method === 'logistics' ? 'LSP000001' : '',
+    status: 'shipped',
+    remark: 'Demo状态覆盖样例',
+    outboundId: `sales-outbound-seed-${spec.suffix}`,
+    outboundNo: `XSCK-20260922-00${String(index + 1).padStart(2, '0')}`,
+    pushTime: '2026-09-22 09:00:00',
+    finalShipTime: `2026-09-22 09:${String(10 + index).padStart(2, '0')}:00`,
+    trackingNo: spec.method === 'logistics' ? `SF2026092200${String(index + 1).padStart(4, '0')}` : '',
+    pushFailReason: '',
+    creator: '张三', createdAt: '2026-09-22 08:50:00', updater: '张三', updatedAt: `2026-09-22 09:${String(10 + index).padStart(2, '0')}:00`,
+    lines: [{
+      id: `sales-line-${spec.suffix}-shipped`,
+      sourceOrderLineId: `sales-line-${spec.suffix.replace(/[ab]$/, '')}`,
+      product: spec.product, productCode: spec.product, barcode: spec.barcode, productName: spec.productName, unit: spec.unit,
+      pushableQty: 20, notifyQty: 3, shippedQty: 3, shortQty: 0,
+    }],
+  })),
+];
+
+export const salesDeliveryNotices = [...seedNotices, ...additionalNoticeSeeds].map(normalizeNoticeRow);
 
 export function getDeliveryNoticeStatusBadges(row) {
   const toneMap = {
@@ -236,8 +291,8 @@ const qtyCell = (value) => value ?? 0;
 export const salesDeliveryNoticeColumns = [
   { key: 'noticeNo', label: '单号', defaultWidth: 190, minWidth: 170, maxWidth: 240, ellipsis: true, link: true },
   { key: 'sourceOrderNo', label: '来源销售订单', defaultWidth: 180, minWidth: 160, maxWidth: 240, ellipsis: true, link: true },
-  { key: 'customer', label: '客户', defaultWidth: 200, minWidth: 140, maxWidth: 280, ellipsis: true, render: (value) => resolveOptionLabel(value, customerOptions) },
-  { key: 'warehouse', label: '发货仓库', defaultWidth: 160, minWidth: 120, maxWidth: 220, ellipsis: true, render: (value) => resolveOptionLabel(value, logicalWarehouseOptions) },
+  { key: 'customer', label: '客户', defaultWidth: 200, minWidth: 140, maxWidth: 280, ellipsis: true, render: (value, row) => formatSnapshotCodeName(value, row?.customerNameSnapshot) },
+  { key: 'warehouse', label: '发货仓库', defaultWidth: 160, minWidth: 120, maxWidth: 220, ellipsis: true, render: (value, row) => formatSnapshotCodeName(value, row?.warehouseNameSnapshot) },
   { key: 'deliveryMode', label: '发货处理方式', defaultWidth: 120, minWidth: 110, maxWidth: 160, ellipsis: true, render: (value) => formatDeliveryMode(value) },
   { key: 'status', label: '单据状态', defaultWidth: 96, minWidth: 88, maxWidth: 140, ellipsis: true, render: (value) => noticeStatusLabels[value] || value, tone: (value) => (value === 'shipped' ? 'text-erp-success' : value === 'pending_ship' ? 'text-erp-info' : value === 'push_failed' || value === 'cancelled' ? 'text-erp-danger' : 'text-erp-warning') },
   { key: 'totalNotifyQty', label: '通知数量', defaultWidth: 96, minWidth: 80, maxWidth: 120, ellipsis: true, align: 'right', sortable: true, render: qtyCell },

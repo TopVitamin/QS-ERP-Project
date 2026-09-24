@@ -5,7 +5,9 @@ import { ImportExportActions } from '../components/erp/ImportExportActions.jsx';
 import { SalesOrderActionDialogs } from '../components/erp/SalesOrderActionDialogs.jsx';
 import { getTransferTarget } from '../lib/transferTargets.js';
 import { matchesMultiSelect, statusMultiSelectField } from '../lib/listFilters.js';
-import { customerOptions, logicalWarehouseOptions } from '../data/masterData.js';
+import { customerOptions } from '../data/masterData.js';
+import { getInventoryLogicalWarehouseOptions } from '../data/warehouseData.js';
+import { normalizeSalesRows } from '../lib/documentNameSnapshots.js';
 import { salesOrders, salesOrderColumns, salesOrderStatusLabels } from '../data/salesOrderData.js';
 import {
   canCancelApprovedOrder,
@@ -19,7 +21,6 @@ import {
 } from '../lib/salesOrderLogic.js';
 
 const initialFilters = {
-  dateRange: { from: '', to: '' },
   orderNo: '',
   customer: '',
   warehouse: '',
@@ -34,11 +35,11 @@ const initialFilters = {
 const filterFields = [
   { key: 'orderNo', label: '单号', type: 'search', placeholder: '请输入销售订单号' },
   { key: 'customer', label: '客户', type: 'select', options: [{ value: '', label: '全部客户' }, ...customerOptions] },
-  { key: 'warehouse', label: '发货仓库', type: 'select', options: [{ value: '', label: '全部仓库' }, ...logicalWarehouseOptions] },
+  { key: 'warehouse', label: '发货仓库', type: 'select', options: [{ value: '', label: '全部仓库' }, ...getInventoryLogicalWarehouseOptions()] },
   statusMultiSelectField('auditStatus', '审核状态', salesOrderStatusLabels.auditStatus),
   statusMultiSelectField('businessStatus', '业务状态', salesOrderStatusLabels.businessStatus),
   statusMultiSelectField('shipStatus', '发货状态', salesOrderStatusLabels.shipStatus),
-  { key: 'dateRange', label: '交期', type: 'date-range', placeholder: '不限' },
+  { key: 'deliveryDateRange', label: '交期', type: 'date-range', placeholder: '不限' },
   { key: 'productCode', label: '商品编码', type: 'search', placeholder: '请输入商品编码' },
   { key: 'barcode', label: '商品条码', type: 'search', placeholder: '请输入商品条码' },
   { key: 'createdAtRange', label: '创建时间', type: 'date-range', placeholder: '不限' },
@@ -66,7 +67,7 @@ function filterRows(row, filters) {
     && matchesMultiSelect(row.auditStatus, filters.auditStatus)
     && matchesMultiSelect(row.businessStatus, filters.businessStatus)
     && matchesMultiSelect(row.shipStatus, filters.shipStatus)
-    && matchDateRange(row.deliveryDate, filters.dateRange)
+    && matchDateRange(row.deliveryDate, filters.deliveryDateRange)
     && matchDateRange(row.createdAt, filters.createdAtRange)
     && (!productCode || row.lines?.some((line) => String(line.productCode || '').toLowerCase().includes(productCode)))
     && (!barcode || row.lines?.some((line) => String(line.barcode || '').toLowerCase().includes(barcode)));
@@ -137,6 +138,8 @@ const orderListConfig = {
   title: '销售订单',
   rows: salesOrders,
   storageKey: SALES_ORDER_STORAGE_KEY,
+  normalizeRows: normalizeSalesRows,
+  mergeSeedRows: true,
   initialFilters,
   filterRows,
   initialVisibility,

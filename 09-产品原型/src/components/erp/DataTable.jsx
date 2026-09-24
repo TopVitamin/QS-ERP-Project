@@ -494,12 +494,14 @@ function RowActionsCell({ actions, row, onAction, maxVisible }) {
 
 function RowAction({ action, row, onAction }) {
   const disabled = action.disabledWhen?.(row) || false;
+  const disabledTitle = disabled ? action.disabledTitle?.(row) : undefined;
   // 有 confirm 的行内操作由 ConfirmDialog 接管确认，触发按钮不再直接执行，避免“确认框 + 模块弹窗”同时弹出。
   const trigger = (
     <Button
       variant={action.variant || 'text'}
       size="compact"
       disabled={disabled}
+      title={disabledTitle}
       className={cn(
         'h-7 gap-1 rounded-erp-control px-1 text-[12px] font-normal',
         action.variant === 'danger'
@@ -511,18 +513,19 @@ function RowAction({ action, row, onAction }) {
       {action.label}
     </Button>
   );
-  if (!action.confirm) return trigger;
+  if (!action.confirm) return disabledTitle ? <span className="inline-flex" title={disabledTitle}>{trigger}</span> : trigger;
   return <ConfirmDialog trigger={trigger} title={action.confirm.title} description={action.confirm.description} confirmLabel={action.confirm.confirmLabel || '确认'} confirmVariant={action.confirm.confirmVariant || 'primary'} onConfirm={() => onAction?.(action.id, row)} />;
 }
 
 function OverflowRowAction({ action, row, onAction }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const disabled = action.disabledWhen?.(row) || false;
+  const disabledTitle = disabled ? action.disabledTitle?.(row) : undefined;
   const danger = action.variant === 'danger' || action.confirm?.confirmVariant === 'danger';
 
   if (!action.confirm) {
     return (
-      <DropdownMenuItem disabled={disabled} onSelect={() => onAction?.(action.id, row)}>
+      <DropdownMenuItem disabled={disabled} title={disabledTitle} onSelect={() => onAction?.(action.id, row)}>
         {action.label}
       </DropdownMenuItem>
     );
@@ -532,6 +535,7 @@ function OverflowRowAction({ action, row, onAction }) {
     <>
       <DropdownMenuItem
         disabled={disabled}
+        title={disabledTitle}
         className={danger ? 'text-erp-danger data-[highlighted]:text-erp-danger' : undefined}
         onSelect={() => setConfirmOpen(true)}
       >

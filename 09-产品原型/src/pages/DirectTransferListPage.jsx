@@ -16,7 +16,7 @@ import {
   canWithdrawDirectTransfer,
   directTransferAuditLabels,
   directTransferSourceTypeLabels,
-  kingdeePushStatusLabels,
+  financeErpPushStatusLabels,
   loadDirectTransferById,
   DIRECT_TRANSFER_STORAGE_KEY,
 } from '../lib/directTransferLogic.js';
@@ -38,7 +38,7 @@ const initialFilters = {
   fromWarehouse: '',
   toWarehouse: '',
   auditStatus: [],
-  kingdeePushStatus: [],
+  financeErpPushStatus: [],
   product: '',
   createdAtRange: { from: '', to: '' },
 };
@@ -54,7 +54,7 @@ const filterFields = [
   { key: 'fromWarehouse', label: '来源逻辑仓', type: 'searchable-select', placeholder: '全部', options: allWarehouseOptions },
   { key: 'toWarehouse', label: '目标逻辑仓', type: 'searchable-select', placeholder: '全部', options: allWarehouseOptions },
   statusMultiSelectField('auditStatus', '审核状态', directTransferAuditLabels),
-  statusMultiSelectField('kingdeePushStatus', '金蝶推送状态', kingdeePushStatusLabels),
+  statusMultiSelectField('financeErpPushStatus', '推送财务ERP状态', financeErpPushStatusLabels),
   { key: 'product', label: '商品', type: 'search', placeholder: '请输入商品编码' },
   { key: 'createdAtRange', label: '创建时间', type: 'date-range', placeholder: '不限' },
 ];
@@ -75,7 +75,7 @@ function filterRows(row, filters) {
     && (!filters.fromWarehouse || row.fromWarehouse === filters.fromWarehouse)
     && (!filters.toWarehouse || row.toWarehouse === filters.toWarehouse)
     && matchesMultiSelect(row.auditStatus, filters.auditStatus)
-    && matchesMultiSelect(row.kingdeePushStatus, filters.kingdeePushStatus)
+    && matchesMultiSelect(row.financeErpPushStatus, filters.financeErpPushStatus)
     && matchesDateRange(row.createdAt, filters.createdAtRange)
     && (!product || row.lines?.some((line) => String(line.productCode || '').toLowerCase().includes(product)));
 }

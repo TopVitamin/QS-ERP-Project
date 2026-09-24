@@ -63,7 +63,7 @@ function buildOutboundInfoFields({ detail, row, onOpenPage, onFeedback }) {
     { key: 'businessType', label: '业务类型', value: detail.businessType || EMPTY_PLACEHOLDER },
     { key: 'actualOutboundTime', label: '实际出库时间', value: row.actualOutboundTime || EMPTY_PLACEHOLDER },
     { key: 'businessDate', label: '业务日期', value: row.businessDate || EMPTY_PLACEHOLDER },
-    { key: 'pushTime', label: '推送金蝶时间', value: row.pushTime || EMPTY_PLACEHOLDER },
+    { key: 'pushTime', label: '推送财务ERP时间', value: row.pushTime || EMPTY_PLACEHOLDER },
     { key: 'pushFailReason', label: '推送失败原因', value: row.pushFailReason || EMPTY_PLACEHOLDER, className: 'col-span-3' },
     { key: 'remark', label: '备注', value: detail.remark || EMPTY_PLACEHOLDER, className: 'col-span-3' },
   ];

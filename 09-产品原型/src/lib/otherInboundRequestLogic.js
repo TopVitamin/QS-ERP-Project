@@ -214,12 +214,9 @@ export function deleteOtherInboundRequest(id) {
 
 // —— 表单 ——
 
-/**
- * 入库仓选项（R02、Q02）：审核通过且启用的逻辑仓，不含虚拟在途仓。
- * 共享选项已过滤「启用」与「在途」，这里再按审核状态收口。
- */
+/** 入库仓选项（R02）：审核通过且启用的逻辑仓，包含虚拟在途逻辑仓。 */
 export function getRequestWarehouseOptions() {
-  return getInventoryLogicalWarehouseOptions({ includeDisabled: false, includeTransit: false })
+  return getInventoryLogicalWarehouseOptions({ includeDisabled: false, includeTransit: true })
     .filter((option) => resolveLogicalWarehouseRow(option.value)?.auditStatus === 'approved');
 }
 
@@ -353,8 +350,7 @@ export function validateRequestForSubmit(form) {
   const warehouse = resolveLogicalWarehouseRow(form.warehouse);
   const usable = warehouse
     && warehouse.auditStatus === 'approved'
-    && warehouse.useStatus === 'enabled'
-    && warehouse.warehouseKind !== 'transit';
+    && warehouse.useStatus === 'enabled';
   if (!usable) return { message: '所选入库仓不可用' };
   if (!otherInboundRequestBusinessTypes.includes(form.businessType)) {
     return { message: '所选业务类型不可用' };

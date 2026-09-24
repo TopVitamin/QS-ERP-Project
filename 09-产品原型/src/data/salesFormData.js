@@ -4,19 +4,19 @@ import {
   getDefaultCustomerAddress,
   normalizeAddressValue,
 } from '../lib/cnAddress.js';
-import { productOptions, skuOptions, unitOptions, taxRateOptions } from './masterData.js';
+import { productOptions, skuOptions, unitOptions } from './masterData.js';
 import { salesOrderStatusLabels } from './salesOrderData.js';
 
 export const salesLineEditorOptions = {
   productOptions,
   skuOptions,
   unitOptions,
-  taxRateOptions,
+  taxRateControl: 'number',
+  showReferencePrice: false,
 };
 
 export const defaultSalesOrderForm = {
   orderNo: '保存后自动生成',
-  date: '2026-09-19',
   customer: '',
   currency: '人民币',
   warehouse: '',
@@ -26,7 +26,7 @@ export const defaultSalesOrderForm = {
   logisticsProduct: '',
   remark: '',
   lines: [
-    { id: 'sales-line-1', product: '', productCode: '', productName: '', barcode: '', unit: '个', quantity: 1, shipped: 0, notifyQty: 0, pushableQty: 0, price: 0, taxRate: '13' },
+    { id: 'sales-line-1', product: '', productCode: '', productName: '', barcode: '', unit: '个', quantity: 1, shipped: 0, notifyQty: 0, pushableQty: 0, price: '', taxRate: '' },
   ],
 };
 
@@ -34,7 +34,6 @@ export function getEditableSalesOrder(row) {
   return {
     ...defaultSalesOrderForm,
     orderNo: row?.orderNo || defaultSalesOrderForm.orderNo,
-    date: row?.date || defaultSalesOrderForm.date,
     customer: row?.customer || defaultSalesOrderForm.customer,
     currency: row?.currency || defaultSalesOrderForm.currency,
     warehouse: row?.warehouse || defaultSalesOrderForm.warehouse,

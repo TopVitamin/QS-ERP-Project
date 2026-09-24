@@ -150,9 +150,14 @@ export function FormControl({ field, value, form, onChange, invalid = false }) {
 
   return (
     <Input
-      value={value || ''}
+      type={field.type === 'number' ? 'number' : 'text'}
+      value={field.type === 'number' ? value ?? '' : value || ''}
       onChange={(event) => onChange(event.target.value)}
       placeholder={field.placeholder}
+      min={field.min}
+      max={field.max}
+      step={field.step}
+      inputMode={field.inputMode}
       disabled={typeof field.disabled === 'function' ? field.disabled(form) : field.disabled}
       aria-label={ariaLabel}
       aria-invalid={invalid || undefined}

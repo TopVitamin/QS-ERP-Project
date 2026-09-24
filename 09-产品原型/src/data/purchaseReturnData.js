@@ -6,7 +6,7 @@ import {
   normalizeReturnRow,
   registerReturnSeedRows,
 } from '../lib/purchaseReturnLogic.js';
-import { currencyOptions, productOptions, skuOptions, supplierOptions, taxRateOptions, unitOptions, logicalWarehouseOptions } from './masterData.js';
+import { currencyOptions, productOptions, skuOptions, supplierOptions, unitOptions, logicalWarehouseOptions } from './masterData.js';
 import { inboundOrders } from './inboundData.js';
 import { purchaseReturnNotices } from './purchaseReturnNoticeData.js';
 
@@ -24,7 +24,8 @@ export const purchaseReturnLineEditorOptions = {
   productOptions,
   skuOptions,
   unitOptions,
-  taxRateOptions,
+  taxRateControl: 'number',
+  showReferencePrice: false,
 };
 
 function seedLine({
@@ -32,7 +33,7 @@ function seedLine({
   product,
   quantity,
   price,
-  taxRate = '13',
+  taxRate = '',
   sourceInboundLineId = '',
   sourceInboundLine = '',
 }) {
@@ -408,7 +409,7 @@ export const defaultReturnForm = {
       sourceInboundLine: '',
       quantity: 1,
       price: '',
-      taxRate: '13',
+      taxRate: '',
       receivedQty: 0,
       inTransitQty: 0,
     },

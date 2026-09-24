@@ -1,5 +1,5 @@
 import { inboundOrders } from '../data/inboundData.js';
-import { auditStatusLabels, INBOUND_STORAGE_KEY, kingdeePushStatusLabels } from '../lib/inboundLogic.js';
+import { auditStatusLabels, INBOUND_STORAGE_KEY, financeErpPushStatusLabels } from '../lib/inboundLogic.js';
 import { orderStatusLabels, orders } from '../data/orderData.js';
 import { receiptNotices } from '../data/receiptNoticeData.js';
 import { salesOrders, salesOrderStatusLabels } from '../data/salesOrderData.js';
@@ -49,7 +49,7 @@ import {
 } from './otherInboundRequestLogic.js';
 import {
   OTHER_INBOUND_STORAGE_KEY,
-  kingdeePushStatusLabels as otherInboundKingdeeLabels,
+  financeErpPushStatusLabels as otherInboundFinanceErpLabels,
   otherInboundAuditLabels,
   otherInboundSourceTypeLabels,
 } from './otherInboundLogic.js';
@@ -59,7 +59,7 @@ import {
 } from './otherOutboundRequestLogic.js';
 import {
   OTHER_OUTBOUND_STORAGE_KEY,
-  kingdeePushStatusLabels as otherOutboundKingdeeLabels,
+  financeErpPushStatusLabels as otherOutboundFinanceErpLabels,
   otherOutboundAuditLabels,
   otherOutboundSourceTypeLabels,
 } from './otherOutboundLogic.js';
@@ -80,7 +80,7 @@ import {
   DIRECT_TRANSFER_STORAGE_KEY,
   directTransferAuditLabels,
   directTransferSourceTypeLabels,
-  kingdeePushStatusLabels as directTransferKingdeeLabels,
+  financeErpPushStatusLabels as directTransferFinanceErpLabels,
 } from './directTransferLogic.js';
 import {
   getInventoryLogicalWarehouseOptions,
@@ -104,7 +104,7 @@ import { returnNoticeStatusLabels as purchaseReturnNoticeStatusLabels, returnShi
 import { returnNoticeStatusLabels as salesReturnNoticeStatusLabels, returnReceiveModeLabels } from './salesReturnNoticeLogic.js';
 import {
   auditStatusLabels as returnAuditStatusLabels,
-  kingdeePushStatusLabels as returnKingdeePushStatusLabels,
+  financeErpPushStatusLabels as returnFinanceErpPushStatusLabels,
   RETURN_OUTBOUND_STORAGE_KEY,
 } from './purchaseReturnOutboundLogic.js';
 import { sourceTypeLabels as salesReturnInboundSourceTypeLabels } from './salesReturnInboundLogic.js';
@@ -113,6 +113,17 @@ import { purchasePriceAdjustments, salesPriceAdjustments } from '../data/priceAd
 import { currencyOptions, customerOptions, supplierOptions } from '../data/masterData.js';
 import { PURCHASE_PRICE_STORAGE_KEY, SALES_PRICE_STORAGE_KEY, priceCustomerLevelLabels, priceRangeLabels } from './priceLogic.js';
 import { priceAdjustStatusLabels, PURCHASE_ADJUST_STORAGE_KEY, SALES_ADJUST_STORAGE_KEY } from './priceAdjustLogic.js';
+import {
+  FINANCE_RESULT_STORAGE_KEY,
+  financeResultDocTypeLabels,
+  financeResultSeeds,
+  financeErpPushStatusLabels as financeResultFinanceErpLabels,
+} from './financeResultLogic.js';
+import {
+  PUSH_EXCEPTION_STORAGE_KEY,
+  pushExceptionSeeds,
+  pushExceptionStatusLabels,
+} from './pushExceptionLogic.js';
 import {
   PURCHASE_RETURN_IMPORT_FIELDS,
   commitPurchaseReturnImport,
@@ -131,16 +142,73 @@ function toOptions(labels) {
 const warehouseFields = [
   { key: 'code', label: '实体仓编码', required: true, example: 'WH000008' },
   { key: 'name', label: '实体仓名称', required: true, example: '深圳仓二分部' },
-  { key: 'operationType', label: '运营类型', options: [{ value: '自营', label: '自营' }, { value: '第三方', label: '第三方' }] },
-  { key: 'dockingType', label: '对接方式', options: [{ value: '直连', label: '直连' }, { value: 'SaaS中转', label: 'SaaS中转' }] },
-  { key: 'dockingSystem', label: '对接系统', options: [{ value: '仓库作业系统', label: '仓库作业系统' }, { value: '聚水潭', label: '聚水潭' }, { value: '领星', label: '领星' }] },
-  { key: 'address', label: '仓库地址', example: '广东省深圳市宝安区福永街道物流园 4 号库' },
+  { key: 'operationType', label: '运营类型', required: true, options: [{ value: '自营', label: '自营' }, { value: '第三方', label: '第三方' }] },
   { key: 'contact', label: '联系人', example: '阿盛' },
   { key: 'phone', label: '联系电话', example: '0755-8888 3202' },
-  { key: 'useStatus', label: '使用状态', options: toOptions({ enabled: '启用', disabled: '禁用' }), example: '启用' },
-  { key: 'auditStatus', label: '审核状态', importable: false, options: toOptions(warehouseStatusLabels) },
-  { key: 'updatedAt', label: '最后更新时间', importable: false },
+  { key: 'remark', label: '备注', example: '仓库用途说明' },
 ];
+
+const warehouseExportFields = [
+  { key: 'code', label: '实体仓编码' },
+  { key: 'name', label: '实体仓名称' },
+  { key: 'operationType', label: '运营类型' },
+  { key: 'dockingType', label: '对接方式' },
+  { key: 'dockingSystem', label: '对接系统' },
+  { key: 'address', label: '仓库地址' },
+  { key: 'contact', label: '联系人' },
+  { key: 'phone', label: '联系电话' },
+  { key: 'useStatus', label: '使用状态', options: toOptions({ enabled: '启用', disabled: '禁用' }) },
+  { key: 'auditStatus', label: '审核状态', options: toOptions(warehouseStatusLabels) },
+  { key: 'updatedAt', label: '最后更新时间' },
+];
+
+const logicalWarehouseFields = [
+  { key: 'code', label: '逻辑仓编码', required: true, example: 'LWH000020' },
+  { key: 'name', label: '逻辑仓名称', required: true, example: '深圳正常品仓' },
+  { key: 'physicalWarehouseCode', label: '所属实体仓编码', required: true, example: 'WH000001' },
+  { key: 'stockStatus', label: '库存状态', required: true, options: toOptions(stockStatusLabels), example: '正常品' },
+  { key: 'remark', label: '备注', example: '正常品库存' },
+];
+
+const logicalWarehouseExportFields = [
+  { key: 'code', label: '逻辑仓编码' },
+  { key: 'name', label: '逻辑仓名称' },
+  { key: 'physicalWarehouseId', label: '所属实体仓' },
+  { key: 'stockStatus', label: '库存状态', options: toOptions(stockStatusLabels) },
+  { key: 'useStatus', label: '使用状态', options: toOptions({ enabled: '启用', disabled: '禁用' }) },
+  { key: 'auditStatus', label: '审核状态', options: toOptions(warehouseStatusLabels) },
+  { key: 'updatedAt', label: '最后更新时间' },
+];
+
+function validateWarehouseImportRow(target, values, { existingRows, priorRows }) {
+  const isPhysical = target.id === 'warehouse';
+  const errors = [];
+  let physicalWarehouseId = '';
+
+  if (!isPhysical) {
+    const physicalRows = readMockRows(PHYSICAL_STORAGE_KEY, warehouses);
+    const parent = physicalRows.find((row) => row.code === values.physicalWarehouseCode);
+    if (!parent || parent.auditStatus !== 'approved' || parent.useStatus !== 'enabled') {
+      errors.push('「所属实体仓编码」须对应已审核通过且启用的实体仓');
+    } else {
+      physicalWarehouseId = parent.id;
+      values.physicalWarehouseId = parent.id;
+    }
+  }
+
+  const sameName = (row) => String(row.name || '').trim() === String(values.name || '').trim()
+    && (isPhysical || row.physicalWarehouseId === physicalWarehouseId);
+  if (existingRows.some(sameName) || priorRows.some(sameName)) {
+    errors.push(isPhysical ? '实体仓名称已存在' : '同一实体仓下逻辑仓名称已存在');
+  }
+  return errors;
+}
+
+function mapLogicalWarehouseImportValues(values) {
+  const mappedValues = { ...values };
+  delete mappedValues.physicalWarehouseCode;
+  return mappedValues;
+}
 
 const purchaseOrderFields = [
   { key: 'orderNo', label: '单号' },
@@ -183,12 +251,12 @@ const purchaseInboundFields = [
   { key: 'currency', label: '币别' },
   { key: 'warehouse', label: '入库仓库' },
   { key: 'auditStatus', label: '审核状态', options: toOptions(auditStatusLabels) },
-  { key: 'kingdeePushStatus', label: '金蝶推送状态', options: toOptions(kingdeePushStatusLabels) },
+  { key: 'financeErpPushStatus', label: '推送财务ERP状态', options: toOptions(financeErpPushStatusLabels) },
   { key: 'businessDate', label: '业务日期' },
   { key: 'actualInboundTime', label: '实际入库时间' },
   { key: 'totalInboundQty', label: '实际入库数量' },
   { key: 'totalAmount', label: '金额' },
-  { key: 'pushTime', label: '推送金蝶时间' },
+  { key: 'pushTime', label: '推送财务ERP时间' },
   { key: 'pushFailReason', label: '推送失败原因' },
 ];
 
@@ -233,7 +301,7 @@ const purchaseReturnOutboundFields = [
   { key: 'supplier', label: '供应商' },
   { key: 'warehouse', label: '出库仓库' },
   { key: 'auditStatus', label: '审核状态', options: toOptions(returnAuditStatusLabels) },
-  { key: 'kingdeePushStatus', label: '金蝶推送状态', options: toOptions(returnKingdeePushStatusLabels) },
+  { key: 'financeErpPushStatus', label: '推送财务ERP状态', options: toOptions(returnFinanceErpPushStatusLabels) },
   { key: 'totalOutboundQty', label: '实际出库数量' },
   { key: 'currency', label: '币别' },
   { key: 'amount', label: '价税合计' },
@@ -288,7 +356,7 @@ const salesReturnInboundFields = [
   { key: 'currency', label: '币别' },
   { key: 'warehouse', label: '收货仓库' },
   { key: 'auditStatus', label: '审核状态', options: toOptions(returnAuditStatusLabels) },
-  { key: 'kingdeePushStatus', label: '金蝶推送状态', options: toOptions(returnKingdeePushStatusLabels) },
+  { key: 'financeErpPushStatus', label: '推送财务ERP状态', options: toOptions(returnFinanceErpPushStatusLabels) },
   { key: 'totalReceiveQty', label: '实际收货数量' },
   { key: 'amount', label: '价税合计' },
   { key: 'taxAmount', label: '税额' },
@@ -436,7 +504,7 @@ const otherInboundFields = [
   { key: 'warehouse', label: '入库仓库', options: inventoryLogicalWarehouseOptions },
   { key: 'businessType', label: '业务类型' },
   { key: 'auditStatus', label: '审核状态', options: toOptions(otherInboundAuditLabels) },
-  { key: 'kingdeePushStatus', label: '金蝶推送状态', options: toOptions(otherInboundKingdeeLabels) },
+  { key: 'financeErpPushStatus', label: '推送财务ERP状态', options: toOptions(otherInboundFinanceErpLabels) },
   { key: 'totalInboundQty', label: '实际入库数量' },
   { key: 'createdAt', label: '创建时间' },
   { key: 'updatedAt', label: '最后更新时间' },
@@ -463,7 +531,7 @@ const otherOutboundFields = [
   { key: 'logicalWarehouse', label: '出库仓库', options: inventoryLogicalWarehouseOptions },
   { key: 'businessType', label: '业务类型' },
   { key: 'auditStatus', label: '审核状态', options: toOptions(otherOutboundAuditLabels) },
-  { key: 'kingdeePushStatus', label: '金蝶推送状态', options: toOptions(otherOutboundKingdeeLabels) },
+  { key: 'financeErpPushStatus', label: '推送财务ERP状态', options: toOptions(otherOutboundFinanceErpLabels) },
   { key: 'totalOutboundQty', label: '实际出库数量' },
   { key: 'createdAt', label: '创建时间' },
   { key: 'updatedAt', label: '最后更新时间' },
@@ -519,10 +587,30 @@ const directTransferFields = [
   { key: 'fromWarehouse', label: '来源逻辑仓', options: inventoryLogicalWarehouseOptions },
   { key: 'toWarehouse', label: '目标逻辑仓', options: inventoryLogicalWarehouseOptions },
   { key: 'auditStatus', label: '审核状态', options: toOptions(directTransferAuditLabels) },
-  { key: 'kingdeePushStatus', label: '金蝶推送状态', options: toOptions(directTransferKingdeeLabels) },
+  { key: 'financeErpPushStatus', label: '推送财务ERP状态', options: toOptions(directTransferFinanceErpLabels) },
   { key: 'totalQuantity', label: '实际调拨数量' },
   { key: 'createdAt', label: '创建时间' },
   { key: 'updatedAt', label: '最后更新时间' },
+];
+
+/** 业财结果单据：列按《业财结果单据前端Demo版PRD_列表页》§4.2；只读推送情况，导入一期不做。 */
+const financeResultFields = [
+  { key: 'docType', label: '结果单类型', options: toOptions(financeResultDocTypeLabels) },
+  { key: 'docNo', label: '结果单号' },
+  { key: 'businessDate', label: '业务日期' },
+  { key: 'warehouseLabel', label: '仓库' },
+  { key: 'financeErpPushStatus', label: '推送财务ERP状态', options: toOptions(financeResultFinanceErpLabels) },
+  { key: 'lastPushTime', label: '最近推送时间' },
+  { key: 'failReason', label: '失败原因' },
+];
+
+/** 推送异常的默认导出字段（推送财务ERP页签）；其他页签由 `PushExceptionListPage` 按页签覆写。 */
+const pushExceptionFields = [
+  { key: 'docType', label: '结果单类型', options: toOptions(financeResultDocTypeLabels) },
+  { key: 'docNo', label: '结果单号' },
+  { key: 'failTime', label: '失败时间' },
+  { key: 'failReason', label: '失败原因' },
+  { key: 'status', label: '处理状态', options: toOptions(pushExceptionStatusLabels) },
 ];
 
 export const transferTargets = [
@@ -537,14 +625,19 @@ export const transferTargets = [
     auditField: 'auditStatus',
     auditDraftValue: 'draft',
     importDefaults: { useStatus: 'enabled' },
+    allowExistingImportUpdates: false,
+    rejectImportBatchOnError: true,
+    rejectUnknownImportColumns: true,
+    validateImportRow: validateWarehouseImportRow,
     importable: true,
     sampleRows: [
-      ['WH000008', '厦门仓', '自营', '直连', '仓库作业系统', '福建省厦门市湖里区物流园 2 号库', '陈仓管', '0592-6666 1000', '启用'],
-      ['WH000009', '厦门海沧仓', '第三方', 'SaaS中转', '领星', '福建省厦门市海沧区保税物流中心', '周磊', '', '禁用'],
-      ['WH000010', '', '第三方', '直连', '宇宙仓系统', '福建省厦门市集美区某仓', '测试', '', '启用'],
-      ['WH000008', '重复编码行', '自营', '直连', '聚水潭', '重复编码测试地址', '测试', '', '禁用'],
+      ['WH000008', '厦门仓', '自营', '陈仓管', '0592-6666 1000', '厦门演示仓'],
+      ['WH000009', '厦门海沧仓', '第三方', '周磊', '', ''],
+      ['WH000010', '', '第三方', '测试', '', ''],
+      ['WH000008', '重复编码行', '自营', '测试', '', ''],
     ],
     fields: warehouseFields,
+    exportFields: warehouseExportFields,
   },
   {
     id: 'warehouse-logical',
@@ -557,16 +650,17 @@ export const transferTargets = [
     auditField: 'auditStatus',
     auditDraftValue: 'draft',
     importDefaults: { useStatus: 'enabled' },
+    allowExistingImportUpdates: false,
+    rejectImportBatchOnError: true,
+    rejectUnknownImportColumns: true,
+    validateImportRow: validateWarehouseImportRow,
+    mapImportValues: mapLogicalWarehouseImportValues,
     importable: true,
-    fields: [
-      { key: 'code', label: '逻辑仓编码', required: true, example: 'LWH000010' },
-      { key: 'name', label: '逻辑仓名称', required: true, example: '深圳正常品仓' },
-      { key: 'physicalWarehouseId', label: '所属实体仓', example: 'physical-warehouse-1' },
-      { key: 'stockStatus', label: '库存状态', options: toOptions(stockStatusLabels), example: '正常品' },
-      { key: 'useStatus', label: '使用状态', options: toOptions({ enabled: '启用', disabled: '禁用' }), example: '启用' },
-      { key: 'auditStatus', label: '审核状态', importable: false, options: toOptions(warehouseStatusLabels) },
-      { key: 'updatedAt', label: '最后更新时间', importable: false },
+    sampleRows: [
+      ['LWH000020', '深圳演示正常品仓', 'WH000001', '正常品', '导入示例'],
     ],
+    fields: logicalWarehouseFields,
+    exportFields: logicalWarehouseExportFields,
   },
   {
     id: 'supplier',
@@ -803,13 +897,13 @@ export const transferTargets = [
       { key: 'currency', label: '币别' },
       { key: 'warehouse', label: '出库仓库' },
       { key: 'auditStatus', label: '审核状态', options: toOptions(auditStatusLabels) },
-      { key: 'kingdeePushStatus', label: '金蝶推送状态', options: toOptions(kingdeePushStatusLabels) },
+      { key: 'financeErpPushStatus', label: '推送财务ERP状态', options: toOptions(financeErpPushStatusLabels) },
       { key: 'businessDate', label: '业务日期' },
       { key: 'actualOutboundTime', label: '实际出库时间' },
       { key: 'totalOutboundQty', label: '实际出库数量' },
       { key: 'amount', label: '价税合计' },
       { key: 'taxAmount', label: '税额' },
-      { key: 'pushTime', label: '推送金蝶时间' },
+      { key: 'pushTime', label: '推送财务ERP时间' },
       { key: 'pushFailReason', label: '推送失败原因' },
       { key: 'createdAt', label: '创建时间' },
       { key: 'updatedAt', label: '最后更新时间' },
@@ -1055,6 +1149,30 @@ export const transferTargets = [
     importable: false,
     fields: salesPriceAdjustFields,
   },
+  // —— 系统集成：业财结果单据（只读推送情况 + 重推，导出纳入导出中心，导入一期不做）——
+  {
+    id: 'integration-finance-results',
+    label: '业财结果单据',
+    storageKey: FINANCE_RESULT_STORAGE_KEY,
+    seedRows: financeResultSeeds,
+    fileName: '业财结果单据',
+    keyField: 'id',
+    keyLabel: '结果单',
+    importable: false,
+    fields: financeResultFields,
+  },
+  // —— 系统集成：推送异常（只读查看 + 处理记录；导出字段由页面按当前页签覆写，导入一期不做）——
+  {
+    id: 'integration-push-exceptions',
+    label: '推送异常',
+    storageKey: PUSH_EXCEPTION_STORAGE_KEY,
+    seedRows: pushExceptionSeeds,
+    fileName: '推送异常',
+    keyField: 'id',
+    keyLabel: '异常记录',
+    importable: false,
+    fields: pushExceptionFields,
+  },
 ];
 
 export function getTransferTarget(id) {
@@ -1066,7 +1184,7 @@ export function getImportFields(target) {
 }
 
 export function getExportFields(target) {
-  return target.fields.filter((field) => field.exportable !== false);
+  return (target.exportFields || target.fields).filter((field) => field.exportable !== false);
 }
 
 export function readTargetRows(target) {
@@ -1091,8 +1209,10 @@ export function validateImportRows(target, headers, rows) {
   const requiredFields = fields.filter((field) => field.required);
   const missingColumns = requiredFields.filter((field) => !headers.includes(field.label)).map((field) => field.label);
   const unknownColumns = headers.filter((header) => header && !fieldByLabel.has(header));
-  const existingKeys = new Set(readTargetRows(target).map((row) => String(row[target.keyField] ?? '')));
+  const existingRows = readTargetRows(target);
+  const existingKeys = new Set(existingRows.map((row) => String(row[target.keyField] ?? '')));
   const seenKeys = new Set();
+  const priorRows = [];
 
   const items = rows.map((cells, index) => {
     const values = {};
@@ -1119,8 +1239,17 @@ export function validateImportRows(target, headers, rows) {
     if (keyValue) {
       if (seenKeys.has(keyValue)) errors.push(`「${target.keyLabel}」在文件内重复`);
       seenKeys.add(keyValue);
-      if (existingKeys.has(keyValue)) action = 'update';
+      if (existingKeys.has(keyValue)) {
+        if (target.allowExistingImportUpdates === false) errors.push(`「${target.keyLabel}」已存在，本次只支持新增，不支持更新`);
+        else action = 'update';
+      }
     }
+
+    if (target.validateImportRow) {
+      errors.push(...target.validateImportRow(target, values, { existingRows, priorRows }));
+    }
+
+    priorRows.push(values);
 
     return { rowNumber: index + 2, values, action: errors.length ? 'error' : action, errors };
   });
@@ -1136,6 +1265,9 @@ export function validateImportRows(target, headers, rows) {
     items,
     summary,
     unknownColumns,
-    headerErrors: missingColumns.map((label) => `缺少必填列「${label}」`),
+    headerErrors: [
+      ...missingColumns.map((label) => `缺少必填列「${label}」`),
+      ...(target.rejectUnknownImportColumns ? unknownColumns.map((label) => `「${label}」不是本次导入支持的字段`) : []),
+    ],
   };
 }

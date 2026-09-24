@@ -10,6 +10,8 @@ import {
 import { nextDocumentNo } from './documentNo.js';
 import { upsertMockRow, readMockRows, writeMockRows } from './mockStorage.js';
 import { generateOutboundFromNotice } from './salesOutboundLogic.js';
+import { getReservationRemaining, postStockEntries } from './inventoryStockLogic.js';
+import { captureSalesDocumentNames, loadRowsWithNameSnapshots } from './documentNameSnapshots.js';
 import {
   enrichOrderLine,
   loadOrderById,
@@ -122,17 +124,18 @@ export function normalizeNoticeRow(row) {
 }
 
 export function persistNotice(row) {
-  const next = normalizeNoticeRow(row);
+  const previous = readMockRows(DELIVERY_NOTICE_STORAGE_KEY, []).find((item) => item.id === row.id) || null;
+  const next = normalizeNoticeRow(captureSalesDocumentNames(row, { previous }));
   upsertMockRow(DELIVERY_NOTICE_STORAGE_KEY, next);
   return next;
 }
 
 export function loadNoticeById(id) {
-  return readMockRows(DELIVERY_NOTICE_STORAGE_KEY, []).find((item) => item.id === id) || null;
+  return loadAllNotices([]).find((item) => item.id === id) || null;
 }
 
 export function loadAllNotices(seed = []) {
-  return readMockRows(DELIVERY_NOTICE_STORAGE_KEY, seed);
+  return loadRowsWithNameSnapshots(DELIVERY_NOTICE_STORAGE_KEY, seed, captureSalesDocumentNames);
 }
 
 export function loadNoticesByOrderId(orderId, orderNo) {
@@ -186,11 +189,17 @@ export function buildNoticeFormFromOrder(orderRow) {
     sourceOrderId: orderRow.id,
     sourceOrderNo: orderRow.orderNo,
     customer: orderRow.customer,
+    customerNameSnapshot: orderRow.customerNameSnapshot,
+    customerSnapshotCode: orderRow.customerSnapshotCode,
     warehouse: orderRow.warehouse,
+    warehouseNameSnapshot: orderRow.warehouseNameSnapshot,
+    warehouseSnapshotCode: orderRow.warehouseSnapshotCode,
     deliveryMode: 'warehouse',
     shipMethod,
     deliveryAddress: inheritedAddress,
     logisticsProduct: shipMethod === 'pickup' ? '' : (orderRow.logisticsProduct || 'LSP000001'),
+    logisticsProductNameSnapshot: shipMethod === 'pickup' ? '' : orderRow.logisticsProductNameSnapshot,
+    logisticsProductSnapshotCode: shipMethod === 'pickup' ? '' : orderRow.logisticsProductSnapshotCode,
     status: 'pending_push',
     remark: '',
     lines,
@@ -262,6 +271,38 @@ function releaseOrderOccupancy(orderRow, noticeLines) {
     };
   });
 
+  if (orderRow.businessStatus === 'closed' || orderRow.businessStatus === 'cancelled') {
+    const releaseEntries = noticeLines.map((line) => {
+      const sourceOrderLineId = line.sourceOrderLineId || line.id;
+      const releaseQty = Math.min(
+        Number(line.notifyQty || 0),
+        getReservationRemaining({
+          logicalWarehouse: orderRow.warehouse,
+          product: line.product,
+          sourceNo: orderRow.orderNo,
+          sourceLineNo: sourceOrderLineId,
+        }),
+      );
+      return {
+        logicalWarehouse: orderRow.warehouse,
+        product: line.product,
+        releaseReserved: releaseQty,
+        reservationSourceNo: orderRow.orderNo,
+        reservationSourceLineNo: sourceOrderLineId,
+      };
+    }).filter((entry) => entry.releaseReserved > 0);
+    if (releaseEntries.length) {
+      postStockEntries(releaseEntries, {
+        eventType: 'release',
+        sourceType: '销售订单',
+        sourceNo: orderRow.orderNo,
+        businessType: '关闭订单取消发货通知释放',
+        reservationSourceNo: orderRow.orderNo,
+        operator: '当前用户',
+      });
+    }
+  }
+
   return persistOrder({ ...orderRow, lines: nextLines });
 }
 
@@ -314,11 +355,17 @@ export function createDeliveryNotice(orderRow, form) {
     sourceOrderId: orderRow.id,
     sourceOrderNo: orderRow.orderNo,
     customer: orderRow.customer,
+    customerNameSnapshot: orderRow.customerNameSnapshot,
+    customerSnapshotCode: orderRow.customerSnapshotCode,
     warehouse: orderRow.warehouse,
+    warehouseNameSnapshot: orderRow.warehouseNameSnapshot,
+    warehouseSnapshotCode: orderRow.warehouseSnapshotCode,
     deliveryMode,
     shipMethod: form.shipMethod || 'logistics',
     deliveryAddress: normalizeAddressValue(form.deliveryAddress),
     logisticsProduct: form.logisticsProduct || '',
+    logisticsProductNameSnapshot: form.logisticsProductNameSnapshot || orderRow.logisticsProductNameSnapshot || '',
+    logisticsProductSnapshotCode: form.logisticsProduct ? (form.logisticsProductSnapshotCode || orderRow.logisticsProductSnapshotCode || '') : '',
     status: 'pending_push',
     remark: form.remark || '',
     pushTime: '',
@@ -354,11 +401,17 @@ function createVirtualDeliveryNotice(orderRow, form, activeLines, noticeNo) {
     sourceOrderId: orderRow.id,
     sourceOrderNo: orderRow.orderNo,
     customer: orderRow.customer,
+    customerNameSnapshot: orderRow.customerNameSnapshot,
+    customerSnapshotCode: orderRow.customerSnapshotCode,
     warehouse: orderRow.warehouse,
+    warehouseNameSnapshot: orderRow.warehouseNameSnapshot,
+    warehouseSnapshotCode: orderRow.warehouseSnapshotCode,
     deliveryMode: 'virtual',
     shipMethod: form.shipMethod || 'logistics',
     deliveryAddress: normalizeAddressValue(form.deliveryAddress),
     logisticsProduct: form.logisticsProduct || '',
+    logisticsProductNameSnapshot: form.logisticsProductNameSnapshot || orderRow.logisticsProductNameSnapshot || '',
+    logisticsProductSnapshotCode: form.logisticsProduct ? (form.logisticsProductSnapshotCode || orderRow.logisticsProductSnapshotCode || '') : '',
     status: 'shipped',
     remark: form.remark || '',
     pushTime: '',
@@ -369,15 +422,15 @@ function createVirtualDeliveryNotice(orderRow, form, activeLines, noticeNo) {
     lines: shippedLines,
   });
 
-  occupyOrderLines(orderRow, shippedLines);
-  substituteOrderOccupancy(loadOrderById(orderRow.id) || orderRow, shippedLines);
   const outbound = generateOutboundFromNotice(loadNoticeById(notice.id) || notice);
 
   if (!outbound) {
     removeNoticeById(notice.id);
-    persistOrder(orderRow);
     throw new Error('虚拟出库生成出库单失败，未创建通知单');
   }
+
+  occupyOrderLines(orderRow, shippedLines);
+  substituteOrderOccupancy(loadOrderById(orderRow.id) || orderRow, shippedLines);
 
   return {
     notice: loadNoticeById(notice.id) || notice,
@@ -498,16 +551,16 @@ export function applyMockShip(row, payload) {
   }
 
   const trackingNo = `MOCK${Date.now().toString().slice(-8)}`;
-  const notice = persistNotice({
+  const notice = {
     ...row,
     status: 'shipped',
     lines: nextLines,
     finalShipTime: nowStamp(),
     trackingNo,
-  });
+  };
 
-  substituteOrderOccupancy(orderRow, nextLines);
   generateOutboundFromNotice(notice);
+  substituteOrderOccupancy(orderRow, nextLines);
   return loadNoticeById(row.id);
 }
 

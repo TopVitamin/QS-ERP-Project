@@ -106,7 +106,7 @@ function handleCellClick(column, row, { onFeedback, onOpenPage }) {
   if (column.key !== 'sourceNo' || !row.sourceNo) return;
   const target = resolveResultDocument(row.sourceType, row.sourceNo);
   if (!target) {
-    onFeedback?.('结果单不存在或不可访问', 'warning');
+    onFeedback?.('来源单据不存在或不可访问', 'warning');
     return;
   }
   onOpenPage?.(target.pageId, { row: target.row, docNo: row.sourceNo });

@@ -1,7 +1,7 @@
 import { otherInbounds } from '../data/otherInboundData.js';
 import {
-  kingdeePushStatusLabels,
-  kingdeePushStatusTones,
+  financeErpPushStatusLabels,
+  financeErpPushStatusTones,
   loadOtherInboundByRequestId,
   otherInboundAuditLabels,
   otherInboundAuditTones,
@@ -43,11 +43,11 @@ export function buildOtherInboundRequestRelatedDocumentSections(row) {
           badgeTone: (item) => otherInboundAuditTones[item.auditStatus] || 'success',
         },
         {
-          key: 'kingdeePushStatus',
-          label: '金蝶推送状态',
+          key: 'financeErpPushStatus',
+          label: '推送财务ERP状态',
           badge: true,
-          render: (item) => kingdeePushStatusLabels[item.kingdeePushStatus] || item.kingdeePushStatus,
-          badgeTone: (item) => kingdeePushStatusTones[item.kingdeePushStatus] || 'warning',
+          render: (item) => financeErpPushStatusLabels[item.financeErpPushStatus] || item.financeErpPushStatus,
+          badgeTone: (item) => financeErpPushStatusTones[item.financeErpPushStatus] || 'warning',
         },
         {
           key: 'totalInboundQty',

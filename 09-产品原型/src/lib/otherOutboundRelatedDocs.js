@@ -1,10 +1,10 @@
 /**
  * 其他出库申请单详情「关联单据」：下游其他出库单（1:0..1，仅已发货展示）。
- * 简表列按《其他出库申请单前端Demo版PRD_详情页》§3.3：单号、审核状态、金蝶推送状态、实际出库数量、创建时间。
+ * 简表列按《其他出库申请单前端Demo版PRD_详情页》§3.3：单号、审核状态、推送财务ERP状态、实际出库数量、创建时间。
  */
 import {
-  kingdeePushStatusLabels,
-  kingdeePushStatusTones,
+  financeErpPushStatusLabels,
+  financeErpPushStatusTones,
   loadOtherOutboundsByRequestNo,
   otherOutboundAuditLabels,
   otherOutboundAuditTones,
@@ -34,11 +34,11 @@ export function buildOtherOutboundRequestRelatedDocumentSections(row) {
           badgeTone: (item) => otherOutboundAuditTones[item.auditStatus] || 'success',
         },
         {
-          key: 'kingdeePushStatus',
-          label: '金蝶推送状态',
+          key: 'financeErpPushStatus',
+          label: '推送财务ERP状态',
           badge: true,
-          render: (item) => kingdeePushStatusLabels[item.kingdeePushStatus] || item.kingdeePushStatus,
-          badgeTone: (item) => kingdeePushStatusTones[item.kingdeePushStatus] || 'warning',
+          render: (item) => financeErpPushStatusLabels[item.financeErpPushStatus] || item.financeErpPushStatus,
+          badgeTone: (item) => financeErpPushStatusTones[item.financeErpPushStatus] || 'warning',
         },
         {
           key: 'totalOutboundQty',

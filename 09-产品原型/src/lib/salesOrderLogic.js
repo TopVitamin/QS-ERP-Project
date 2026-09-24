@@ -1,9 +1,11 @@
 import { skuOptions } from '../data/masterData.js';
 import { computeLinesTotals } from './format.js';
 import { emptyFieldMessage } from './formValidation.js';
-import { hasNegativePrice } from './validation.js';
+import { hasInvalidTaxRate, hasNegativePrice } from './validation.js';
 import { isCnAddressComplete } from './cnAddress.js';
 import { readMockRows, upsertMockRow, writeMockRows } from './mockStorage.js';
+import { getAvailableStock, getReservationRemaining, postStockEntries, reserveStockEntries } from './inventoryStockLogic.js';
+import { captureSalesDocumentNames, loadRowsWithNameSnapshots } from './documentNameSnapshots.js';
 
 export const SALES_ORDER_STORAGE_KEY = 'qs-erp:sales-orders:v1';
 export const DELIVERY_NOTICE_STORAGE_KEY = 'qs-erp:sales-delivery-notices:v1';
@@ -133,19 +135,50 @@ export function getCancelBlockReason(row) {
 }
 
 export function checkInventoryForApprove(row) {
+  if (!row.warehouse) return false;
+  const requested = new Map();
   for (const line of row.lines || []) {
-    const sku = skuOptions.find((item) => item.value === line.product);
-    const available = Number(sku?.availableStock ?? 0);
-    const qty = Number(line.quantity || 0);
-    if (qty > available) return false;
+    const key = line.product;
+    requested.set(key, (requested.get(key) || 0) + Number(line.quantity || 0));
+  }
+  for (const [product, quantity] of requested) {
+    if (quantity > getAvailableStock(row.warehouse, product)) return false;
   }
   return true;
+}
+
+function releaseOrderReservations(row, { keepNotified = false } = {}) {
+  const entries = (row.lines || []).map((line) => {
+    const unreleased = Math.max(0, Number(line.quantity || 0) - Number(line.shipped || 0));
+    const keepForNotice = keepNotified ? Math.min(unreleased, Number(line.notifyQty || 0)) : 0;
+    const releaseReserved = Math.max(0, unreleased - keepForNotice);
+    return {
+      logicalWarehouse: row.warehouse,
+      product: line.product,
+      releaseReserved: Math.min(releaseReserved, getReservationRemaining({
+        logicalWarehouse: row.warehouse,
+        product: line.product,
+        sourceNo: row.orderNo,
+        sourceLineNo: line.id,
+      })),
+      reservationSourceNo: row.orderNo,
+      reservationSourceLineNo: line.id,
+    };
+  }).filter((entry) => entry.releaseReserved > 0);
+  if (!entries.length) return [];
+  return postStockEntries(entries, {
+    eventType: 'release',
+    sourceType: '销售订单',
+    sourceNo: row.orderNo,
+    businessType: '销售订单关闭释放',
+    reservationSourceNo: row.orderNo,
+    operator: '当前用户',
+  });
 }
 
 export function validateOrderRequiredFields(form) {
   const fieldErrors = {};
   if (!form.customer) fieldErrors.customer = emptyFieldMessage('客户');
-  if (!form.date) fieldErrors.date = emptyFieldMessage('单据日期');
   if (!form.warehouse) fieldErrors.warehouse = emptyFieldMessage('发货仓库');
   if (!form.deliveryDate) fieldErrors.deliveryDate = emptyFieldMessage('交期');
   if (!form.shipMethod) fieldErrors.shipMethod = emptyFieldMessage('发货方式');
@@ -169,6 +202,7 @@ export function validateOrderForSave(form) {
   if (hasNegativePrice(form.lines)) {
     return { message: '含税单价不能为负数' };
   }
+  if (hasInvalidTaxRate(form.lines)) return { message: '税率最多2位小数，允许0%' };
   return null;
 }
 
@@ -182,6 +216,7 @@ export function validateOrderForSubmit(form) {
     if (Number(line.quantity) <= 0) return { message: `第${index + 1}行销售数量必须大于0` };
     if (line.price === '' || line.price == null) return { message: `第${index + 1}行含税单价不能为空` };
     if (Number(line.price) < 0) return { message: `第${index + 1}行含税单价不能为负` };
+    if (line.taxRate === '' || line.taxRate == null) return { message: `第${index + 1}行税率不能为空` };
   }
   return null;
 }
@@ -199,10 +234,10 @@ export function maybeAutoCloseOrder(row) {
   return persistOrder({
     ...row,
     businessStatus: 'closed',
-    closeType: 'auto',
-    closeReason: '全部发货自动关单',
+    closeType: 'full_fulfillment',
+    closeReason: '',
     closeTime: stamp,
-    closeOperator: '系统',
+    closeOperator: '',
   });
 }
 
@@ -227,13 +262,18 @@ export function normalizeOrderRow(row) {
 }
 
 export function persistOrder(row) {
-  const next = normalizeOrderRow(row);
+  const previous = readMockRows(SALES_ORDER_STORAGE_KEY, []).find((item) => item.id === row.id) || null;
+  const next = normalizeOrderRow(captureSalesDocumentNames(row, { previous }));
   upsertMockRow(SALES_ORDER_STORAGE_KEY, next);
   return next;
 }
 
+export function loadAllSalesOrders(seed = []) {
+  return loadRowsWithNameSnapshots(SALES_ORDER_STORAGE_KEY, seed, captureSalesDocumentNames);
+}
+
 export function loadOrderById(id) {
-  const rows = readMockRows(SALES_ORDER_STORAGE_KEY, []);
+  const rows = loadAllSalesOrders([]);
   return rows.find((item) => item.id === id) || null;
 }
 
@@ -256,8 +296,16 @@ export function applySubmit(row) {
 }
 
 export function applyApprove(row) {
-  if (!checkInventoryForApprove(row)) {
-    return { error: '发货仓库可用库存不足，审核失败' };
+  try {
+    if (!checkInventoryForApprove(row)) return { error: '发货逻辑仓可用库存不足，审核失败' };
+    reserveStockEntries((row.lines || []).map((line) => ({
+      logicalWarehouse: row.warehouse,
+      product: line.product,
+      quantity: Number(line.quantity || 0),
+      sourceLineNo: line.id,
+    })), { sourceType: '销售订单', sourceNo: row.orderNo, operator: '当前用户' });
+  } catch (error) {
+    return { error: error.message || '预占发货仓库库存失败，审核未完成' };
   }
   return { row: persistOrder({
     ...row,
@@ -281,6 +329,11 @@ export function applyReject(row, returnComment) {
 }
 
 export function applyCancel(row, cancelReason) {
+  try {
+    releaseOrderReservations(row);
+  } catch (error) {
+    return { error: error.message || '释放订单预占库存失败，取消未完成' };
+  }
   return persistOrder({
     ...row,
     businessStatus: 'cancelled',
@@ -291,6 +344,11 @@ export function applyCancel(row, cancelReason) {
 }
 
 export function applyClose(row, closeReason) {
+  try {
+    releaseOrderReservations(row, { keepNotified: true });
+  } catch (error) {
+    return { error: error.message || '释放订单未通知库存失败，关闭未完成' };
+  }
   return persistOrder({
     ...row,
     businessStatus: 'closed',

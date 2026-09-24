@@ -74,7 +74,7 @@ export function SalesOrderActionDialogs({ dialog, onClose, onComplete }) {
         open
         onOpenChange={(open) => { if (!open) onClose?.(); }}
         title="确认审核？"
-        description="审核后将占用发货仓库库存，数量和价格不可再修改。"
+        description="审核后将占用发货逻辑仓库存，数量和价格不可再修改。请关注客户欠款与信用情况；此提示不限制审核或发货。"
         confirmLabel="确认审核"
         onConfirm={() => {
           const result = applyApprove(row);
@@ -194,7 +194,11 @@ export function SalesOrderActionDialogs({ dialog, onClose, onComplete }) {
               variant="primary"
               size="compact"
               disabled={!closeReason.trim()}
-              onClick={() => finish('销售订单已关闭', 'success', applyClose(row, closeReason.trim()))}
+              onClick={() => {
+                const result = applyClose(row, closeReason.trim());
+                if (result?.error) return finish(result.error, 'warning');
+                finish('销售订单已关闭', 'success', result);
+              }}
             >
               确认关闭
             </Button>
@@ -236,7 +240,9 @@ export function SalesOrderActionDialogs({ dialog, onClose, onComplete }) {
               onClick={() => {
                 const reason = cancelReason.trim();
                 cancelNoticesWithOrder(row.id, reason);
-                finish('销售订单已取消', 'success', applyCancel(row, reason));
+                const result = applyCancel(row, reason);
+                if (result?.error) return finish(result.error, 'warning');
+                finish('销售订单已取消', 'success', result);
               }}
             >
               确认取消

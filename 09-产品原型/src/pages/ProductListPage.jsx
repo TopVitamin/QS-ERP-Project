@@ -74,9 +74,14 @@ function buildRowActions() {
     { id: 'edit', label: '编辑' },
     { id: 'disable', label: '禁用', variant: 'danger', visibleWhen: canDisableProduct, confirm: { title: '确认禁用商品？', description: '禁用后新业务不能再选择该商品，已有单据和价目表不受影响', confirmLabel: '确认禁用', confirmVariant: 'danger' } },
     { id: 'enable', label: '启用', visibleWhen: canEnableProduct },
-    { id: 'delete', label: '删除', variant: 'danger' },
+    { id: 'delete', label: '删除', variant: 'danger', disabledWhen: (row) => Boolean(getDeleteBlockReason(row)), disabledTitle: getDeleteBlockReason },
   ];
 }
+
+const batchToolbarActions = [
+  { id: 'batch-enable', label: '批量启用', requiresSelection: true },
+  { id: 'batch-disable', label: '批量禁用', requiresSelection: true, variant: 'danger' },
+];
 
 export function ProductListPage({ onFeedback, onOpenPage }) {
   const [rows, setRows] = useState(() => readMockRows(PRODUCT_STORAGE_KEY, products));
@@ -110,6 +115,14 @@ export function ProductListPage({ onFeedback, onOpenPage }) {
 
   function handleDialogComplete(result) {
     if (!result) return;
+    if (result.action === 'batch-enable' || result.action === 'batch-disable') {
+      const nextById = new Map((result.nextRows || []).map((item) => [item.id, item]));
+      const nextRows = readMockRows(PRODUCT_STORAGE_KEY, products).map((item) => nextById.get(item.id) || item);
+      writeMockRows(PRODUCT_STORAGE_KEY, nextRows);
+      setRows(nextRows);
+      onFeedback?.(result.message, result.type || 'success');
+      return;
+    }
     if (result.action === 'delete' && result.row) {
       removeRow(result.row.id);
       onFeedback?.(result.message, result.type || 'success');
@@ -145,7 +158,7 @@ export function ProductListPage({ onFeedback, onOpenPage }) {
         ),
       },
     ],
-    toolbarActions: [],
+    toolbarActions: batchToolbarActions,
     rowActions: buildRowActions(),
     rowActionsMaxVisible: 3,
     resetMessage: '筛选条件已重置',
@@ -154,6 +167,20 @@ export function ProductListPage({ onFeedback, onOpenPage }) {
     emptyTextFiltered: '没有符合条件的商品，请调整筛选条件',
     onHeaderAction: (id) => {
       if (id === 'create') onOpenPage?.('base-product-create');
+    },
+    onToolbarAction: (id, context) => {
+      const selectedRows = context.getSelectedRows();
+      if (!selectedRows.length) {
+        onFeedback?.('请先选择商品', 'warning');
+        return;
+      }
+      const canApply = id === 'batch-enable' ? canEnableProduct : canDisableProduct;
+      if (!selectedRows.every(canApply)) {
+        const expectedStatus = id === 'batch-enable' ? '全部为禁用状态' : '全部为启用状态';
+        onFeedback?.(`批量操作未执行：所选商品须${expectedStatus}`, 'warning');
+        return;
+      }
+      setDialog({ type: id, rows: selectedRows });
     },
     onCellClick: (column, row) => {
       if (column.key === 'code') onOpenPage?.('base-product-detail', { row });

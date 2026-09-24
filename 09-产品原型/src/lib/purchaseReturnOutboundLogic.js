@@ -1,7 +1,7 @@
 import { skuOptions } from '../data/masterData.js';
 import { nextDocumentNo } from './documentNo.js';
 import { computeLineTaxMetrics, computeLinesTotals } from './format.js';
-import { auditStatusLabels, kingdeePushStatusLabels } from './inboundLogic.js';
+import { auditStatusLabels, financeErpPushStatusLabels } from './inboundLogic.js';
 import {
   loadAllReturnOutbounds,
   loadReturnById,
@@ -16,7 +16,7 @@ import {
 
 export {
   auditStatusLabels,
-  kingdeePushStatusLabels,
+  financeErpPushStatusLabels,
   RETURN_OUTBOUND_STORAGE_KEY,
   registerReturnOutboundSeedRows,
 };
@@ -24,11 +24,11 @@ export {
 /**
  * 采退出库单模块逻辑（只读结果单）。
  * 业务规则依据《采退出库单主PRD》§6.4 状态—功能矩阵、R01～R10：
- * 由通知回传或虚拟出库自动生成并自动审核，整单只读；金蝶推送失败在系统集成中心重推。
+ * 由通知回传或虚拟出库自动生成并自动审核，整单只读；推送财务ERP失败在系统集成中心重推。
  */
 
-const KINGDEE_AUTO_RETRY_MAX = 3;
-const kingdeeTimers = new Map();
+const FINANCE_ERP_AUTO_RETRY_MAX = 3;
+const financeErpTimers = new Map();
 
 export function enrichReturnOutboundLine(line) {
   const sku = skuOptions.find((item) => item.value === line.product);
@@ -117,68 +117,68 @@ function buildReturnOutboundLines(noticeRow, returnRow) {
   );
 }
 
-function clearKingdeeTimer(outboundId) {
-  const timer = kingdeeTimers.get(outboundId);
+function clearFinanceErpTimer(outboundId) {
+  const timer = financeErpTimers.get(outboundId);
   if (timer) {
     window.clearTimeout(timer);
-    kingdeeTimers.delete(outboundId);
+    financeErpTimers.delete(outboundId);
   }
 }
 
-function scheduleKingdeeAttempt(outboundId, attempt = 1, forceFail = false) {
-  clearKingdeeTimer(outboundId);
+function scheduleFinanceErpAttempt(outboundId, attempt = 1, forceFail = false) {
+  clearFinanceErpTimer(outboundId);
   const current = loadReturnOutboundById(outboundId);
-  if (!current || current.kingdeePushStatus === 'push_success') return current;
+  if (!current || current.financeErpPushStatus === 'push_success') return current;
 
   persistReturnOutbound({
     ...current,
-    kingdeePushStatus: 'pushing',
+    financeErpPushStatus: 'pushing',
     pushFailReason: attempt > 1 ? current.pushFailReason : '',
   });
 
   const timer = window.setTimeout(() => {
-    kingdeeTimers.delete(outboundId);
+    financeErpTimers.delete(outboundId);
     const latest = loadReturnOutboundById(outboundId);
-    if (!latest || latest.kingdeePushStatus !== 'pushing') return;
+    if (!latest || latest.financeErpPushStatus !== 'pushing') return;
 
-    const shouldFail = forceFail && attempt >= KINGDEE_AUTO_RETRY_MAX;
+    const shouldFail = forceFail && attempt >= FINANCE_ERP_AUTO_RETRY_MAX;
     if (shouldFail) {
       persistReturnOutbound({
         ...latest,
-        kingdeePushStatus: 'push_failed',
-        pushFailReason: latest.pushFailReason || '接口超时，金蝶未确认接收',
+        financeErpPushStatus: 'push_failed',
+        pushFailReason: latest.pushFailReason || '接口超时，财务ERP未确认接收',
       });
       return;
     }
 
-    if (forceFail && attempt < KINGDEE_AUTO_RETRY_MAX) {
+    if (forceFail && attempt < FINANCE_ERP_AUTO_RETRY_MAX) {
       persistReturnOutbound({
         ...latest,
-        kingdeePushStatus: 'push_failed',
+        financeErpPushStatus: 'push_failed',
         pushFailReason: `第${attempt}次推送失败，系统将自动重试`,
       });
-      scheduleKingdeeAttempt(outboundId, attempt + 1, true);
+      scheduleFinanceErpAttempt(outboundId, attempt + 1, true);
       return;
     }
 
     persistReturnOutbound({
       ...latest,
-      kingdeePushStatus: 'push_success',
+      financeErpPushStatus: 'push_success',
       pushTime: nowStamp(),
       pushFailReason: '',
     });
   }, attempt === 1 ? 800 : 600);
 
-  kingdeeTimers.set(outboundId, timer);
+  financeErpTimers.set(outboundId, timer);
   return loadReturnOutboundById(outboundId);
 }
 
-export function simulateReturnOutboundKingdeePush(outboundId, { forceFail = false } = {}) {
-  return scheduleKingdeeAttempt(outboundId, 1, forceFail);
+export function simulateReturnOutboundFinanceErpPush(outboundId, { forceFail = false } = {}) {
+  return scheduleFinanceErpAttempt(outboundId, 1, forceFail);
 }
 
 /**
- * 生成采退出库单：通知已发货且有实出时调用，创建即已审核并触发金蝶推送。
+ * 生成采退出库单：通知已发货且有实出时调用，创建即已审核并触发推送财务ERP。
  * 一张通知最多一张有效出库单；零出不生成（R02）。
  */
 export function createReturnOutboundFromNotice(noticeRow) {
@@ -213,7 +213,7 @@ export function createReturnOutboundFromNotice(noticeRow) {
     warehouse: noticeRow.warehouse,
     currency: returnRow?.currency || '人民币',
     auditStatus: 'approved',
-    kingdeePushStatus: 'un_pushed',
+    financeErpPushStatus: 'un_pushed',
     businessDate,
     actualOutboundTime,
     pushTime: '',
@@ -233,7 +233,7 @@ export function createReturnOutboundFromNotice(noticeRow) {
     outboundNo: outbound.outboundNo,
   });
 
-  simulateReturnOutboundKingdeePush(outbound.id);
+  simulateReturnOutboundFinanceErpPush(outbound.id);
   return outbound;
 }
 
@@ -253,7 +253,7 @@ export function buildSeedReturnOutboundFromNotice(noticeRow, returnRow, override
     warehouse: noticeRow.warehouse,
     currency: returnRow?.currency || '人民币',
     auditStatus: 'approved',
-    kingdeePushStatus: overrides.kingdeePushStatus || 'push_success',
+    financeErpPushStatus: overrides.financeErpPushStatus || 'push_success',
     businessDate,
     actualOutboundTime,
     pushTime: overrides.pushTime || actualOutboundTime,
@@ -293,8 +293,8 @@ export function buildReturnOutboundOperationLogs(row) {
     pushLogEntry(entries, {
       time: row.pushTime,
       operator: '系统',
-      action: '推送金蝶',
-      remark: row.pushFailReason ? `推送失败：${row.pushFailReason}` : (kingdeePushStatusLabels[row.kingdeePushStatus] || '推送金蝶'),
+      action: '推送财务ERP',
+      remark: row.pushFailReason ? `推送失败：${row.pushFailReason}` : (financeErpPushStatusLabels[row.financeErpPushStatus] || '推送财务ERP'),
     });
   }
 

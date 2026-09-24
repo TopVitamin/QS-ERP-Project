@@ -18,6 +18,8 @@ export function DocumentListPage({ onFeedback, onOpenPage, config }) {
     columns: config.columns,
     initialSort: config.defaultSort,
     initialPinnedKeys: config.initialPinnedKeys,
+    normalizeRows: config.normalizeRows,
+    mergeSeedRows: config.mergeSeedRows,
   });
   // 跨页跳转预填：调用方把要预填的筛选项交给 presetFilters，本页收到后立即生效（如库存查询跳转库存流水）。
   const presetFiltersKey = config.presetFilters ? JSON.stringify(config.presetFilters) : '';
@@ -49,14 +51,21 @@ export function DocumentListPage({ onFeedback, onOpenPage, config }) {
   const actionContext = { state, notify, getSelectedRows, getSelectedIds, onFeedback, onOpenPage };
   const tabs = useMemo(() => {
     if (!config.tabs) return undefined;
-    const { filterKey, items } = config.tabs;
+    const { filterKey, items, showCounts = true, resetOnChange = false } = config.tabs;
     return {
       items: items.map((item) => ({
         ...item,
-        count: state.rows.filter((row) => !item.value || row[filterKey] === item.value).length,
+        ...(showCounts
+          ? { count: state.rows.filter((row) => !item.value || row[filterKey] === item.value).length }
+          : {}),
       })),
       value: state.appliedFilters[filterKey] ?? '',
-      onChange: (value) => state.applyQuickFilter(filterKey, value),
+      onChange: (value) => {
+        // 页签切换：resetOnChange 先按初值重置查询（页签值随后覆盖），再应用页签值并通知模块。
+        if (resetOnChange) state.resetFilters();
+        state.applyQuickFilter(filterKey, value);
+        config.tabs.onChange?.(value);
+      },
     };
   }, [config.tabs, state.rows, state.appliedFilters, state.applyQuickFilter]);
 

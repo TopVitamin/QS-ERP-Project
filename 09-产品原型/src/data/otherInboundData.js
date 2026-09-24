@@ -2,8 +2,8 @@ import { EMPTY_PLACEHOLDER } from '../lib/format.js';
 import { resolveLogicalWarehouseLabel } from './warehouseData.js';
 import { ensureSeedRows } from '../lib/mockStorage.js';
 import {
-  kingdeePushStatusLabels,
-  kingdeePushStatusTones,
+  financeErpPushStatusLabels,
+  financeErpPushStatusTones,
   loadAllOtherInbounds,
   normalizeOtherInboundRow,
   otherInboundAuditLabels,
@@ -16,7 +16,7 @@ import {
  * 其他入库单演示数据。
  *
  * 覆盖《其他入库单前端Demo版PRD_列表页》§9.1 与《详情页》§5.1 要求：
- * 来源类型 申请执行4单、仓库主动回传2单；金蝶推送 推送成功2、推送失败2、未推送1、推送中1；
+ * 来源类型 申请执行4单、仓库主动回传2单；推送财务ERP 推送成功2、推送失败2、未推送1、推送中1；
  * 审核状态正常数据均为已审核；至少1单可跳转来源申请单、1单带来源系统与来源单号。
  * 单号、数量与时间为虚构；枚举取值以《其他入库单（详细稿）》为准。
  */
@@ -32,7 +32,7 @@ const seedInbounds = [
     warehouse: 'LWH000001',
     businessType: '样品回收',
     auditStatus: 'approved',
-    kingdeePushStatus: 'push_success',
+    financeErpPushStatus: 'push_success',
     actualInboundTime: '2026-09-17 15:30:00',
     pushTime: '2026-09-17 15:31:00',
     pushFailReason: '',
@@ -58,10 +58,10 @@ const seedInbounds = [
     warehouse: 'LWH000005',
     businessType: '借出归还',
     auditStatus: 'approved',
-    kingdeePushStatus: 'push_failed',
+    financeErpPushStatus: 'push_failed',
     actualInboundTime: '2026-09-18 11:20:00',
     pushTime: '2026-09-18 11:22:00',
-    pushFailReason: '接口超时，金蝶未确认接收',
+    pushFailReason: '接口超时，财务ERP未确认接收',
     remark: '',
     auditor: '',
     auditTime: '2026-09-18 11:20:00',
@@ -84,7 +84,7 @@ const seedInbounds = [
     warehouse: 'LWH000002',
     businessType: '退料',
     auditStatus: 'approved',
-    kingdeePushStatus: 'push_success',
+    financeErpPushStatus: 'push_success',
     actualInboundTime: '2026-09-19 14:05:00',
     pushTime: '2026-09-19 14:06:00',
     pushFailReason: '',
@@ -110,7 +110,7 @@ const seedInbounds = [
     warehouse: 'LWH000007',
     businessType: '赠品入库',
     auditStatus: 'approved',
-    kingdeePushStatus: 'un_pushed',
+    financeErpPushStatus: 'un_pushed',
     actualInboundTime: '2026-09-20 10:10:00',
     pushTime: '',
     pushFailReason: '',
@@ -136,10 +136,10 @@ const seedInbounds = [
     warehouse: 'LWH000001',
     businessType: '盘盈',
     auditStatus: 'approved',
-    kingdeePushStatus: 'push_failed',
+    financeErpPushStatus: 'push_failed',
     actualInboundTime: '2026-09-21 09:40:00',
     pushTime: '2026-09-21 09:42:00',
-    pushFailReason: '接口超时，金蝶未确认接收',
+    pushFailReason: '接口超时，财务ERP未确认接收',
     remark: '',
     auditor: '',
     auditTime: '2026-09-21 09:40:00',
@@ -162,7 +162,7 @@ const seedInbounds = [
     warehouse: 'LWH000006',
     businessType: '盘盈',
     auditStatus: 'approved',
-    kingdeePushStatus: 'pushing',
+    financeErpPushStatus: 'pushing',
     actualInboundTime: '2026-09-22 17:20:00',
     pushTime: '',
     pushFailReason: '',
@@ -192,8 +192,8 @@ export function getOtherInboundStatusBadges(row) {
       tone: otherInboundAuditTones[row.auditStatus] || 'success',
     },
     {
-      label: kingdeePushStatusLabels[row.kingdeePushStatus] || row.kingdeePushStatus || EMPTY_PLACEHOLDER,
-      tone: kingdeePushStatusTones[row.kingdeePushStatus] || 'warning',
+      label: financeErpPushStatusLabels[row.financeErpPushStatus] || row.financeErpPushStatus || EMPTY_PLACEHOLDER,
+      tone: financeErpPushStatusTones[row.financeErpPushStatus] || 'warning',
     },
   ];
 }
@@ -220,13 +220,13 @@ export const otherInboundColumns = [
     tone: (value) => (value === 'approved' ? 'text-erp-success' : value === 'pending' ? 'text-erp-info' : 'text-erp-warning'),
   },
   {
-    key: 'kingdeePushStatus',
-    label: '金蝶推送状态',
+    key: 'financeErpPushStatus',
+    label: '推送财务ERP状态',
     defaultWidth: 112,
     minWidth: 96,
     maxWidth: 160,
     ellipsis: true,
-    render: (value) => kingdeePushStatusLabels[value] || value,
+    render: (value) => financeErpPushStatusLabels[value] || value,
     tone: (value) => (value === 'push_success' ? 'text-erp-success' : value === 'push_failed' ? 'text-erp-danger' : value === 'pushing' ? 'text-erp-info' : 'text-erp-warning'),
   },
   { key: 'totalInboundQty', label: '实际入库数量', defaultWidth: 120, minWidth: 104, maxWidth: 160, ellipsis: true, align: 'right', sortable: true, render: qtyCell },

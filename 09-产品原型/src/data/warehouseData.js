@@ -36,8 +36,7 @@ export function isTransitLogicalWarehouse(rowOrCode) {
 
 /**
  * 库存模块逻辑仓选项（Code-Name）。
- * 默认含已禁用逻辑仓与虚拟在途仓；业务单据选仓用 `includeDisabled: false`，
- * 不允许选在途仓的单据再加 `includeTransit: false`（《库存与仓储业务设计》§4.2）。
+ * 默认含已禁用逻辑仓与虚拟在途仓；业务单据按各自PRD决定是否过滤在途仓。
  */
 export function getInventoryLogicalWarehouseOptions({ includeDisabled = true, includeTransit = true } = {}) {
   return getAllLogicalWarehouses()
@@ -426,14 +425,13 @@ const seedLogicalWarehouses = [
   },
   {
     // 虚拟在途仓：用于分步式调拨在途记账（《库存与仓储业务设计》§4.2）。
-    // 档案口径（编码、库存状态、可否人工选用）待主数据在途档案设计定稿，见库存查询主PRD Q04；
-    // 原型先按普通逻辑仓记录承载在途数量，并在待改项登记差异。
+    // 档案仍按库存查询主PRD Q04记录待确认项；该逻辑仓承载调拨在途数量，并可用于其他出入库申请。
     code: 'LWH000009',
     name: '深圳在途仓',
     physicalWarehouseId: 'physical-warehouse-1',
     stockStatus: 'normal',
     warehouseKind: 'transit',
-    remark: '虚拟在途仓，仅由分步式调拨在途记账使用',
+    remark: '虚拟逻辑仓，承载分步式调拨在途数量，可作为其他出入库申请的逻辑仓',
     useStatus: 'enabled',
     auditStatus: 'approved',
     auditor: '主数据管理员',

@@ -8,6 +8,7 @@
 import { inboundOrders } from '../data/inboundData.js';
 import { purchaseReturnOutbounds } from '../data/purchaseReturnOutboundData.js';
 import { salesOutbounds } from '../data/salesOutboundData.js';
+import { salesOrders } from '../data/salesOrderData.js';
 import { salesReturnInbounds } from '../data/salesReturnInboundData.js';
 import { loadDirectTransferByNo } from './directTransferLogic.js';
 import { INBOUND_STORAGE_KEY } from './inboundLogic.js';
@@ -17,8 +18,10 @@ import { loadOtherOutboundByNo } from './otherOutboundLogic.js';
 import { RETURN_OUTBOUND_STORAGE_KEY } from './purchaseReturnOutboundLogic.js';
 import { RETURN_INBOUND_STORAGE_KEY } from './salesReturnInboundLogic.js';
 import { SALES_OUTBOUND_STORAGE_KEY } from './salesOutboundLogic.js';
+import { SALES_ORDER_STORAGE_KEY } from './salesOrderLogic.js';
 
 const externalResultDocSources = [
+  { label: '销售订单', storageKey: SALES_ORDER_STORAGE_KEY, seedRows: salesOrders, noField: 'orderNo', pageId: 'sales-order-detail' },
   { label: '采购入库单', storageKey: INBOUND_STORAGE_KEY, seedRows: inboundOrders, noField: 'inboundNo', pageId: 'purchase-inbound-detail' },
   { label: '采退出库单', storageKey: RETURN_OUTBOUND_STORAGE_KEY, seedRows: purchaseReturnOutbounds, noField: 'outboundNo', pageId: 'purchase-return-outbound-detail' },
   { label: '销售出库单', storageKey: SALES_OUTBOUND_STORAGE_KEY, seedRows: salesOutbounds, noField: 'outboundNo', pageId: 'sales-outbound-detail' },

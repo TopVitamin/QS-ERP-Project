@@ -23,7 +23,7 @@ import {
   canSubmitRequest,
   canWithdrawRequest,
   deleteOtherOutboundRequest,
-  isTransitRequest,
+  isTransitDirectPostingRequest,
   refreshOutboundRequestLines,
 } from '../../lib/otherOutboundRequestLogic.js';
 
@@ -100,13 +100,13 @@ export function OtherOutboundRequestActionDialogs({ dialog, onClose, onComplete,
   }
 
   if (type === 'approve') {
-    if (isTransitRequest(row)) {
+    if (isTransitDirectPostingRequest(row)) {
       return (
         <ConfirmDialog
           open
           onOpenChange={(open) => { if (!open) onClose?.(); }}
           title="确认按在途仓直接记账？"
-          description="出库仓为虚拟在途仓，本单不推送仓库，审核通过后由系统按申请数量直接生成其他出库单并记账。"
+          description="本单用于处理分步式调拨少收差异，不推送仓库，审核通过后由系统按申请数量直接生成其他出库单并记账。"
           confirmLabel="确认"
           onConfirm={() => {
             try {

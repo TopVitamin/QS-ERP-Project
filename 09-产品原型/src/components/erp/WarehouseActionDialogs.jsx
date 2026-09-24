@@ -94,7 +94,7 @@ function LogicalWarehouseFormDialog({ dialog, onClose, onComplete }) {
     onClose?.();
   }
 
-  const badges = buildLogicalStatusBadges(row);
+  const badges = row ? buildLogicalStatusBadges(row) : [];
   const fields = [
     { key: 'code', label: '逻辑仓编码', type: 'text', placeholder: '请输入逻辑仓编码', disabled: isEdit },
     { key: 'name', label: '逻辑仓名称', type: 'text', placeholder: '请输入逻辑仓名称' },
@@ -103,7 +103,7 @@ function LogicalWarehouseFormDialog({ dialog, onClose, onComplete }) {
     { key: 'remark', label: '备注', type: 'textarea', placeholder: '请输入逻辑仓说明', className: masterDataDialogFullSpanClassName },
   ];
 
-  const viewSections = [
+  const viewSections = row ? [
     {
       title: '基础信息',
       fields: [
@@ -121,7 +121,7 @@ function LogicalWarehouseFormDialog({ dialog, onClose, onComplete }) {
         { label: '审核时间', value: row.auditedAt },
       ]),
     },
-  ];
+  ] : [];
 
   return (
     <MasterDataFormDialog

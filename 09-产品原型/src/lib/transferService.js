@@ -63,8 +63,10 @@ export function commitImport({ target, fileName, validation }) {
   const createdRows = [];
   const now = formatDateTime();
   let updatedCount = 0;
+  const failureItems = validation.items.filter((item) => item.action === 'error');
+  const batchRejected = Boolean(target.rejectImportBatchOnError && failureItems.length > 0);
 
-  validation.items.forEach((item, index) => {
+  if (!batchRejected) validation.items.forEach((item, index) => {
     if (item.action === 'error') return;
     if (item.action === 'update') {
       const position = existingIndexByKey.get(String(item.values[target.keyField]));
@@ -78,19 +80,19 @@ export function commitImport({ target, fileName, validation }) {
       updatedCount += 1;
       return;
     }
+    const importValues = target.mapImportValues ? target.mapImportValues(item.values) : item.values;
     createdRows.push({
       id: `${target.id}-import-${Date.now()}-${index}`,
       ...target.importDefaults,
-      ...item.values,
+      ...importValues,
       ...(target.auditField ? { [target.auditField]: target.auditDraftValue || 'draft' } : {}),
       updatedAt: now,
       creator: currentOperator,
     });
   });
 
-  writeMockRows(target.storageKey, [...createdRows, ...nextRows]);
+  if (!batchRejected) writeMockRows(target.storageKey, [...createdRows, ...nextRows]);
 
-  const failureItems = validation.items.filter((item) => item.action === 'error');
   const task = {
     id: nextTaskNo('IM'),
     type: 'import',
@@ -100,8 +102,8 @@ export function commitImport({ target, fileName, validation }) {
     rowCount: validation.summary.total,
     createdCount: createdRows.length,
     updatedCount,
-    skippedCount: failureItems.length,
-    status: 'done',
+    skippedCount: batchRejected ? validation.summary.total : failureItems.length,
+    status: batchRejected ? 'failed' : 'done',
     operator: currentOperator,
     createdAt: now,
     createdAtTs: Date.now(),
@@ -111,7 +113,9 @@ export function commitImport({ target, fileName, validation }) {
   };
   createTransferTask(task);
   pushNotification({
-    title: `导入完成：${fileName}，新增 ${task.createdCount} 条、更新 ${task.updatedCount} 条、跳过 ${task.skippedCount} 条`,
+    title: batchRejected
+      ? `导入失败：${fileName}，本次批次已取消，未写入任何记录（${failureItems.length} 行错误）`
+      : `导入完成：${fileName}，新增 ${task.createdCount} 条、更新 ${task.updatedCount} 条、跳过 ${task.skippedCount} 条`,
     tag: '导入',
     category: 'transfer',
     link: { pageId: 'import-center' },

@@ -46,11 +46,44 @@ export function registerSalesPriceSeedRows(rows = []) {
 }
 
 export function loadAllPurchasePrices() {
-  return readMockRows(PURCHASE_PRICE_STORAGE_KEY, purchasePriceSeedRows);
+  const rows = readMockRows(PURCHASE_PRICE_STORAGE_KEY, purchasePriceSeedRows);
+  let normalized = false;
+  const nextRows = rows.map((row) => {
+    // 商品建档生成的采购初始价没有税率；兼容旧版演示数据曾误从默认销售税率带值。
+    if (!String(row.id || '').startsWith('price-generated-') || row.lastAdjustNo || !row.taxRate) return row;
+    normalized = true;
+    return enrichPriceRow({ ...row, taxRate: '' });
+  });
+  if (normalized) writeMockRows(PURCHASE_PRICE_STORAGE_KEY, nextRows);
+  return nextRows;
+}
+
+/** 按采购业务三元组查询当前价；税率为空表示采购人员须按供应商纳税人类型手动补填。 */
+export function findCurrentPurchasePrice({ supplier, product, currency }) {
+  if (!supplier || !product || !currency) return null;
+  return loadAllPurchasePrices().find((row) => (
+    row.supplier === supplier && row.product === product && row.currency === currency
+  )) || null;
 }
 
 export function loadAllSalesPrices() {
   return readMockRows(SALES_PRICE_STORAGE_KEY, salesPriceSeedRows);
+}
+
+/** 按具体客户价、客户等级价、所有客户基准价依次查询当前销售价。 */
+export function findCurrentSalesPrice({ customer, customerLevel, product, currency }) {
+  if (!product || !currency) return null;
+  const rows = loadAllSalesPrices();
+  const candidates = [
+    (row) => customer && row.range === 'customer' && row.customer === customer,
+    (row) => customerLevel && row.range === 'level' && row.customerLevel === customerLevel,
+    (row) => row.range === 'all',
+  ];
+  return candidates
+    .map((matchesScope) => rows.find((row) => (
+      row.product === product && row.currency === currency && matchesScope(row)
+    )))
+    .find(Boolean) || null;
 }
 
 export function nowStamp() {

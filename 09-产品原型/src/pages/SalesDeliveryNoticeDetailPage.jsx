@@ -11,8 +11,10 @@ import {
 import { useSalesDeliveryNoticeRow } from '../hooks/useSalesDeliveryNoticeRow.js';
 import { resolveAddressLabel } from '../lib/cnAddress.js';
 import { resolveOptionLabel } from '../lib/codeName.js';
+import { formatSnapshotCodeName } from '../lib/documentNameSnapshots.js';
 import { EMPTY_PLACEHOLDER } from '../lib/format.js';
-import { customerOptions, logicalWarehouseOptions, logisticsProductOptions } from '../data/masterData.js';
+import { customerOptions, logisticsProductOptions } from '../data/masterData.js';
+import { getInventoryLogicalWarehouseOptions } from '../data/warehouseData.js';
 import { getDeliveryNoticeStatusBadges } from '../data/salesDeliveryNoticeData.js';
 import { formatDeliveryMode, formatShipMethod, loadNoticeById, refreshNoticeLines } from '../lib/salesDeliveryNoticeLogic.js';
 import { salesOrders } from '../data/salesOrderData.js';
@@ -49,8 +51,8 @@ function buildNoticeInfoFields({ detail, row, onOpenPage }) {
   const fields = [
     { key: 'noticeNo', label: '单号', value: detail.noticeNo },
     { key: 'sourceOrderNo', label: '来源销售订单', value: buildSourceOrderLink(detail, onOpenPage) },
-    { key: 'customer', label: '客户', value: resolveOptionLabel(detail.customer, customerOptions) },
-    { key: 'warehouse', label: '发货仓库', value: resolveOptionLabel(detail.warehouse, logicalWarehouseOptions) },
+    { key: 'customer', label: '客户', value: formatSnapshotCodeName(detail.customer, detail.customerNameSnapshot) },
+    { key: 'warehouse', label: '发货仓库', value: formatSnapshotCodeName(detail.warehouse, detail.warehouseNameSnapshot) },
     { key: 'deliveryMode', label: '发货处理方式', value: formatDeliveryMode(detail) },
     { key: 'pushTime', label: '推送时间', value: row.pushTime || EMPTY_PLACEHOLDER },
     { key: 'finalShipTime', label: '最终发货确认时间', value: row.finalShipTime || EMPTY_PLACEHOLDER },

@@ -14,7 +14,7 @@ import {
   priceRangeLabels,
   resolvePriceCurrencyLabel,
 } from '../lib/priceLogic.js';
-import { customerOptions, productOptions, skuOptions, supplierOptions, taxRateOptions, unitOptions } from './masterData.js';
+import { customerOptions, productOptions, skuOptions, supplierOptions, unitOptions } from './masterData.js';
 
 /**
  * 价格调整单（采购／销售）列表列、状态字典与演示种子数据。
@@ -25,8 +25,9 @@ import { customerOptions, productOptions, skuOptions, supplierOptions, taxRateOp
 export const priceAdjustLineEditorOptions = {
   productOptions,
   skuOptions,
+  showReferencePrice: false,
   unitOptions,
-  taxRateOptions,
+  taxRateControl: 'number',
 };
 
 function seedLine(id, product, price, taxRate) {
@@ -547,7 +548,7 @@ export const defaultPurchaseAdjustForm = {
   side: 'purchase',
   adjustNo: '保存后显示',
   supplier: '',
-  currency: '人民币',
+  currency: '',
   remark: '',
   lines: [createPriceAdjustLine()],
 };
@@ -559,7 +560,7 @@ export const defaultSalesAdjustForm = {
   range: '',
   customerLevel: '',
   customer: '',
-  currency: '人民币',
+  currency: '',
   remark: '',
   lines: [createPriceAdjustLine()],
 };

@@ -10,13 +10,13 @@ import { createElement } from 'react';
 import { EMPTY_PLACEHOLDER } from '../lib/format.js';
 import {
   ensureOtherOutboundSeeds,
-  kingdeePushStatusLabels,
-  kingdeePushStatusTones,
+  financeErpPushStatusLabels,
+  financeErpPushStatusTones,
   normalizeOtherOutboundRow,
   otherOutboundAuditLabels,
   otherOutboundAuditTones,
   otherOutboundSourceTypeLabels,
-  resolveKingdeePushStatusTone,
+  resolveFinanceErpPushStatusTone,
   resolveOtherOutboundAuditTone,
 } from '../lib/otherOutboundLogic.js';
 import { resolveLogicalWarehouseLabel } from './warehouseData.js';
@@ -28,9 +28,9 @@ const seedOutbounds = [
     sourceType: 'request',
     sourceRequestNo: 'QTCKSQ-20260922-0001',
     logicalWarehouse: 'LWH000001',
-    businessType: '盘亏',
+    businessType: '报废',
     actualOutboundTime: '2026-09-23 09:40:00',
-    kingdeePushStatus: 'push_success',
+    financeErpPushStatus: 'push_success',
     pushTime: '2026-09-23 09:41:00',
     createdAt: '2026-09-23 09:40:00',
     updatedAt: '2026-09-23 09:41:00',
@@ -46,11 +46,11 @@ const seedOutbounds = [
     logicalWarehouse: 'LWH000009',
     businessType: '盘亏',
     actualOutboundTime: '2026-09-22 15:10:00',
-    kingdeePushStatus: 'push_success',
+    financeErpPushStatus: 'push_success',
     pushTime: '2026-09-22 15:11:00',
     createdAt: '2026-09-22 15:10:00',
     updatedAt: '2026-09-22 15:11:00',
-    remark: '在途仓直接记账生成',
+    remark: '在途仓盘亏直接记账生成',
     lines: [
       { product: 'SP0101010001', quantity: 2, sourceOutboundLine: 'QTCKSQ-20260922-0004 第1行' },
     ],
@@ -63,9 +63,9 @@ const seedOutbounds = [
     logicalWarehouse: 'LWH000002',
     businessType: '报废',
     actualOutboundTime: '2026-09-23 08:30:00',
-    kingdeePushStatus: 'push_failed',
+    financeErpPushStatus: 'push_failed',
     pushTime: '2026-09-23 08:31:00',
-    pushFailReason: '金蝶接口超时，未确认接收',
+    pushFailReason: '财务ERP接口超时，未确认接收',
     createdAt: '2026-09-23 08:30:00',
     updatedAt: '2026-09-23 08:31:00',
     lines: [
@@ -82,7 +82,7 @@ const seedOutbounds = [
     logicalWarehouse: 'LWH000002',
     businessType: '盘亏',
     actualOutboundTime: '2026-09-23 09:20:00',
-    kingdeePushStatus: 'push_success',
+    financeErpPushStatus: 'push_success',
     pushTime: '2026-09-23 09:21:00',
     createdAt: '2026-09-23 09:20:00',
     updatedAt: '2026-09-23 09:21:00',
@@ -101,9 +101,9 @@ const seedOutbounds = [
     logicalWarehouse: 'LWH000006',
     businessType: '盘亏',
     actualOutboundTime: '2026-09-23 10:40:00',
-    kingdeePushStatus: 'push_failed',
+    financeErpPushStatus: 'push_failed',
     pushTime: '2026-09-23 10:41:00',
-    pushFailReason: '金蝶接口超时，未确认接收',
+    pushFailReason: '财务ERP接口超时，未确认接收',
     createdAt: '2026-09-23 10:40:00',
     updatedAt: '2026-09-23 10:41:00',
     lines: [
@@ -118,7 +118,7 @@ const seedOutbounds = [
     logicalWarehouse: 'LWH000005',
     businessType: '赠送',
     actualOutboundTime: '2026-09-23 14:20:00',
-    kingdeePushStatus: 'un_pushed',
+    financeErpPushStatus: 'un_pushed',
     pushTime: '',
     createdAt: '2026-09-23 14:20:00',
     updatedAt: '2026-09-23 14:20:00',
@@ -135,7 +135,7 @@ const seedOutbounds = [
     logicalWarehouse: 'LWH000007',
     businessType: '样品领用',
     actualOutboundTime: '2026-09-23 16:05:00',
-    kingdeePushStatus: 'pushing',
+    financeErpPushStatus: 'pushing',
     pushTime: '',
     createdAt: '2026-09-23 16:05:00',
     updatedAt: '2026-09-23 16:06:00',
@@ -153,7 +153,7 @@ const seedOutbounds = [
     logicalWarehouse: 'LWH000001',
     businessType: '盘亏',
     actualOutboundTime: '2026-09-23 11:30:00',
-    kingdeePushStatus: 'push_success',
+    financeErpPushStatus: 'push_success',
     pushTime: '2026-09-23 11:31:00',
     createdAt: '2026-09-23 11:30:00',
     updatedAt: '2026-09-23 11:31:00',
@@ -168,7 +168,7 @@ export const otherOutbounds = seedOutbounds.map(normalizeOtherOutboundRow);
 // Demo 引导：首次运行时把种子结果单写入本地 Mock。
 ensureOtherOutboundSeeds(otherOutbounds);
 
-/** 页头两枚状态标签：审核状态、金蝶推送状态（其他出库单主PRD §6.1）。 */
+/** 页头两枚状态标签：审核状态、推送财务ERP状态（其他出库单主PRD §6.1）。 */
 export function getOtherOutboundStatusBadges(row) {
   if (!row) return [];
   return [
@@ -177,8 +177,8 @@ export function getOtherOutboundStatusBadges(row) {
       tone: otherOutboundAuditTones[row.auditStatus] || 'success',
     },
     {
-      label: kingdeePushStatusLabels[row.kingdeePushStatus] || row.kingdeePushStatus,
-      tone: kingdeePushStatusTones[row.kingdeePushStatus] || 'warning',
+      label: financeErpPushStatusLabels[row.financeErpPushStatus] || row.financeErpPushStatus,
+      tone: financeErpPushStatusTones[row.financeErpPushStatus] || 'warning',
     },
   ];
 }
@@ -256,14 +256,14 @@ export const otherOutboundColumns = [
     tone: (value) => resolveOtherOutboundAuditTone(value),
   },
   {
-    key: 'kingdeePushStatus',
-    label: '金蝶推送状态',
+    key: 'financeErpPushStatus',
+    label: '推送财务ERP状态',
     defaultWidth: 120,
     minWidth: 104,
     maxWidth: 160,
     ellipsis: true,
-    render: (value) => kingdeePushStatusLabels[value] || value,
-    tone: (value) => resolveKingdeePushStatusTone(value),
+    render: (value) => financeErpPushStatusLabels[value] || value,
+    tone: (value) => resolveFinanceErpPushStatusTone(value),
   },
   { key: 'totalOutboundQty', label: '实际出库数量', defaultWidth: 120, minWidth: 104, maxWidth: 150, ellipsis: true, align: 'right', sortable: true, render: qtyCell },
   { key: 'createdAt', label: '创建时间', defaultWidth: 170, minWidth: 150, maxWidth: 220, ellipsis: true, sortable: true },

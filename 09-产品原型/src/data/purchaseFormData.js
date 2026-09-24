@@ -1,4 +1,4 @@
-import { productOptions, skuOptions, unitOptions, taxRateOptions } from './masterData.js';
+import { productOptions, skuOptions, unitOptions } from './masterData.js';
 import { orderStatusLabels } from './orderData.js';
 
 export const paymentTermOptions = [
@@ -17,19 +17,19 @@ export const purchaseLineEditorOptions = {
   productOptions,
   skuOptions,
   unitOptions,
-  taxRateOptions,
+  taxRateControl: 'number',
+  showReferencePrice: false,
 };
 
 export const defaultOrderForm = {
   orderNo: '保存后自动生成',
-  date: '2026-09-19',
   supplier: '',
   currency: '人民币',
   warehouse: '',
   deliveryDate: '',
   remark: '',
   lines: [
-    { id: 'order-line-1', product: '', productCode: '', productName: '', barcode: '', unit: '个', quantity: 1, received: 0, notifyQty: 0, pushableQty: 0, price: 0, taxRate: '13' },
+    { id: 'order-line-1', product: '', productCode: '', productName: '', barcode: '', unit: '个', quantity: 1, received: 0, notifyQty: 0, pushableQty: 0, price: '', taxRate: '' },
   ],
 };
 
@@ -37,7 +37,6 @@ export function getEditableOrder(row) {
   return {
     ...defaultOrderForm,
     orderNo: row?.orderNo || defaultOrderForm.orderNo,
-    date: row?.date || defaultOrderForm.date,
     supplier: row?.supplier || defaultOrderForm.supplier,
     currency: row?.currency || defaultOrderForm.currency,
     warehouse: row?.warehouse || defaultOrderForm.warehouse,

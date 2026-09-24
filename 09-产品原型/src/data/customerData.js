@@ -24,6 +24,12 @@ export function getSelectableCustomerOptions() {
     .map((row) => buildMasterOption({ code: row.code, name: row.name, defaultCurrency: row.currency }));
 }
 
+export function getCustomerLevel(customerCode) {
+  if (!customerCode) return '';
+  const customer = readMockRows(CUSTOMER_STORAGE_KEY, customers).find((row) => row.code === customerCode);
+  return customer?.level || 'unrated';
+}
+
 function createEmptyBusinessInfo() {
   return { companyName: '', taxNo: '', registeredAddress: '', registeredPhone: '', bankName: '', bankAccount: '' };
 }

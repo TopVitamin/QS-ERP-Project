@@ -10,11 +10,11 @@ import { RelatedDocumentsCard } from '../components/erp/RelatedDocumentsCard.jsx
 import { useSalesOrderRow } from '../hooks/useSalesOrderRow.js';
 import { resolveAddressLabel } from '../lib/cnAddress.js';
 import { resolveOptionLabel } from '../lib/codeName.js';
+import { formatSnapshotCodeName } from '../lib/documentNameSnapshots.js';
 import { formatAmount } from '../lib/format.js';
 import { currencySymbol } from '../lib/money.js';
 import { formatShipMethod } from '../lib/salesDeliveryNoticeLogic.js';
 import { buildSalesOrderRelatedDocumentSections } from '../lib/salesOrderRelatedDocs.js';
-import { customerOptions, logicalWarehouseOptions, logisticsProductOptions } from '../data/masterData.js';
 import { loadOrderById, refreshOrderLines } from '../lib/salesOrderLogic.js';
 import { defaultSalesOrderForm, getEditableSalesOrder, getSalesOrderStatusBadges, salesLineEditorOptions } from '../data/salesFormData.js';
 
@@ -43,8 +43,7 @@ const orderDetailConfig = {
       title: '单据信息',
       fields: ({ detail, row }) => [
         { key: 'orderNo', label: '单号', value: detail.orderNo },
-        { key: 'date', label: '单据日期', value: detail.date },
-        { key: 'customer', label: '客户', value: resolveOptionLabel(detail.customer, customerOptions) },
+        { key: 'customer', label: '客户', value: formatSnapshotCodeName(detail.customer, detail.customerNameSnapshot) },
         { key: 'currency', label: '币别', value: detail.currency || '人民币' },
         { key: 'amount', label: '价税合计', value: `${currencySymbol(row.currency)} ${formatAmount(row.amount)}` },
         { key: 'taxAmount', label: '税额', value: `${currencySymbol(row.currency)} ${formatAmount(row.taxAmount)}` },
@@ -57,13 +56,13 @@ const orderDetailConfig = {
       title: '发货与交期',
       fields: ({ detail }) => {
         const fields = [
-          { key: 'warehouse', label: '发货仓库', value: resolveOptionLabel(detail.warehouse, logicalWarehouseOptions) },
+          { key: 'warehouse', label: '发货仓库', value: formatSnapshotCodeName(detail.warehouse, detail.warehouseNameSnapshot) },
           { key: 'deliveryDate', label: '交期', value: detail.deliveryDate },
           { key: 'shipMethod', label: '发货方式', value: formatShipMethod(detail.shipMethod || 'logistics') },
         ];
         if ((detail.shipMethod || 'logistics') === 'logistics') {
           fields.push(
-            { key: 'logisticsProduct', label: '物流服务产品', value: resolveOptionLabel(detail.logisticsProduct, logisticsProductOptions) },
+            { key: 'logisticsProduct', label: '物流服务产品', value: formatSnapshotCodeName(detail.logisticsProduct, detail.logisticsProductNameSnapshot) },
             { key: 'deliveryAddress', label: '发货地址', value: resolveAddressLabel(detail.deliveryAddress), className: 'col-span-2' },
           );
         }
@@ -73,12 +72,21 @@ const orderDetailConfig = {
   ],
   extraSections: [
     {
+      title: '信用提醒',
+      fields: () => [{
+        key: 'creditReminder',
+        label: '业务提醒',
+        value: '请核对客户当前欠款与信用情况；本提示仅供业务关注，不限制订单审核或后续发货。',
+        className: 'col-span-3',
+      }],
+    },
+    {
       title: '终止信息',
       visibleWhen: ({ row }) => row.businessStatus === 'closed' || row.businessStatus === 'cancelled',
       fields: ({ row }) => {
         if (row.businessStatus === 'closed') {
           return [
-            { key: 'closeType', label: '关闭方式', value: row.closeType === 'manual' ? '手动关闭' : '自动关单' },
+            { key: 'closeType', label: '关闭方式', value: row.closeType === 'manual' ? '手动关闭' : row.closeType === 'full_fulfillment' ? '全部履约自动关闭' : '到期自动关闭' },
             { key: 'closeReason', label: '关闭原因', value: row.closeReason },
             { key: 'closeTime', label: '关闭时间', value: row.closeTime },
             { key: 'closeOperator', label: '关闭操作人', value: row.closeOperator },

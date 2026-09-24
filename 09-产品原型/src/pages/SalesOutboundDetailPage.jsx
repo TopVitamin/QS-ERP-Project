@@ -3,9 +3,11 @@ import { buildCreateMetaFields } from '../components/erp/DocumentMetaTabsCard.js
 import { buildSalesOutboundOperationLogs } from '../lib/operationLog.js';
 import { useSalesOutboundRow } from '../hooks/useSalesOutboundRow.js';
 import { resolveOptionLabel } from '../lib/codeName.js';
+import { formatSnapshotCodeName } from '../lib/documentNameSnapshots.js';
 import { EMPTY_PLACEHOLDER, formatAmount } from '../lib/format.js';
 import { currencySymbol } from '../lib/money.js';
-import { customerOptions, logicalWarehouseOptions } from '../data/masterData.js';
+import { customerOptions } from '../data/masterData.js';
+import { getInventoryLogicalWarehouseOptions } from '../data/warehouseData.js';
 import { getSalesOutboundStatusBadges } from '../data/salesOutboundData.js';
 import { salesOrders } from '../data/salesOrderData.js';
 import { salesDeliveryNotices } from '../data/salesDeliveryNoticeData.js';
@@ -42,26 +44,34 @@ function buildOutboundInfoFields({ detail, row, onOpenPage }) {
     {
       key: 'sourceNoticeNo',
       label: '来源销售发货通知单',
-      value: buildDocumentLink(detail.sourceNoticeNo, () => onOpenPage?.('sales-delivery-notice-detail', {
+      value: detail.sourceType === 'b2b_notice' ? buildDocumentLink(detail.sourceNoticeNo, () => onOpenPage?.('sales-delivery-notice-detail', {
         row: relatedNotice || { noticeNo: detail.sourceNoticeNo, id: detail.sourceNoticeId },
-      })),
+      })) : EMPTY_PLACEHOLDER,
     },
     {
       key: 'sourceOrderNo',
       label: '来源销售订单',
-      value: buildDocumentLink(detail.sourceOrderNo, () => onOpenPage?.('sales-order-detail', {
+      value: detail.sourceType === 'b2b_notice' ? buildDocumentLink(detail.sourceOrderNo, () => onOpenPage?.('sales-order-detail', {
         row: relatedOrder || { orderNo: detail.sourceOrderNo, id: detail.sourceOrderId },
-      })),
+      })) : detail.sourceOrderNo || EMPTY_PLACEHOLDER,
     },
-    { key: 'customer', label: '客户', value: resolveOptionLabel(detail.customer, customerOptions) },
-    { key: 'warehouse', label: '出库仓库', value: resolveOptionLabel(detail.warehouse, logicalWarehouseOptions) },
+    { key: 'customer', label: '客户', value: formatSnapshotCodeName(detail.customer, detail.customerNameSnapshot) },
+    { key: 'warehouse', label: '出库仓库', value: formatSnapshotCodeName(detail.warehouse, detail.warehouseNameSnapshot) },
     { key: 'amount', label: '价税合计', value: `${currencySymbol(row.currency)} ${formatAmount(row.amount ?? 0)}` },
     { key: 'taxAmount', label: '税额', value: `${currencySymbol(row.currency)} ${formatAmount(row.taxAmount ?? 0)}` },
     { key: 'netAmount', label: '金额', value: `${currencySymbol(row.currency)} ${formatAmount(row.netAmount ?? 0)}` },
     { key: 'businessDate', label: '业务日期', value: detail.businessDate || EMPTY_PLACEHOLDER },
     { key: 'actualOutboundTime', label: '实际出库时间', value: detail.actualOutboundTime || EMPTY_PLACEHOLDER },
-    { key: 'pushTime', label: '推送金蝶时间', value: detail.pushTime || EMPTY_PLACEHOLDER },
+    { key: 'pushTime', label: '推送财务ERP时间', value: detail.pushTime || EMPTY_PLACEHOLDER },
   ];
+
+  if (detail.sourceType === 'external_toc') {
+    fields.splice(4, 0, {
+      key: 'externalOrderNo',
+      label: '外部原始订单',
+      value: detail.externalOrderNo || EMPTY_PLACEHOLDER,
+    });
+  }
 
   if (row.pushFailReason) {
     fields.push({ key: 'pushFailReason', label: '推送失败原因', value: row.pushFailReason, className: 'col-span-3' });

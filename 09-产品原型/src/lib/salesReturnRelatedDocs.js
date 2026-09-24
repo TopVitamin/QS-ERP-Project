@@ -2,7 +2,7 @@ import { formatAmount } from './format.js';
 import { currencySymbol } from './money.js';
 import {
   auditStatusLabels,
-  kingdeePushStatusLabels,
+  financeErpPushStatusLabels,
   loadSalesReturnInboundsByNoticeId,
   loadSalesReturnInboundsByReturnId,
 } from './salesReturnInboundLogic.js';
@@ -22,7 +22,7 @@ const noticeStatusToneMap = {
   cancelled: 'danger',
 };
 
-const kingdeeStatusToneMap = {
+const financeErpStatusToneMap = {
   push_success: 'success',
   push_failed: 'danger',
   pushing: 'info',
@@ -112,11 +112,11 @@ export function buildSalesReturnRelatedDocumentSections(row) {
           badgeTone: () => 'success',
         },
         {
-          key: 'kingdeePushStatus',
-          label: '金蝶推送状态',
+          key: 'financeErpPushStatus',
+          label: '推送财务ERP状态',
           badge: true,
-          render: (inbound) => kingdeePushStatusLabels[inbound.kingdeePushStatus] || inbound.kingdeePushStatus,
-          badgeTone: (inbound) => kingdeeStatusToneMap[inbound.kingdeePushStatus] || 'default',
+          render: (inbound) => financeErpPushStatusLabels[inbound.financeErpPushStatus] || inbound.financeErpPushStatus,
+          badgeTone: (inbound) => financeErpStatusToneMap[inbound.financeErpPushStatus] || 'default',
         },
         {
           key: 'totalReceiveQty',
@@ -167,11 +167,11 @@ export function buildSalesReturnNoticeRelatedDocumentSections(notice) {
           badgeTone: () => 'success',
         },
         {
-          key: 'kingdeePushStatus',
-          label: '金蝶推送状态',
+          key: 'financeErpPushStatus',
+          label: '推送财务ERP状态',
           badge: true,
-          render: (inbound) => kingdeePushStatusLabels[inbound.kingdeePushStatus] || inbound.kingdeePushStatus,
-          badgeTone: (inbound) => kingdeeStatusToneMap[inbound.kingdeePushStatus] || 'default',
+          render: (inbound) => financeErpPushStatusLabels[inbound.financeErpPushStatus] || inbound.financeErpPushStatus,
+          badgeTone: (inbound) => financeErpStatusToneMap[inbound.financeErpPushStatus] || 'default',
         },
         {
           key: 'totalReceiveQty',

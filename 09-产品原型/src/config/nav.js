@@ -150,8 +150,6 @@ export const defaultNavItems = [
         items: [
           { label: '业财结果单据', pageId: 'integration-finance-results' },
           { label: '推送异常', pageId: 'integration-push-exceptions' },
-          { label: '人工补充', pageId: 'integration-manual-supplement' },
-          { label: '外部映射', pageId: 'integration-mapping' },
         ],
       },
     ],

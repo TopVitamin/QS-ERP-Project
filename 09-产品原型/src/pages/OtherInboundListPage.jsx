@@ -12,7 +12,7 @@ import {
   otherInbounds,
 } from '../data/otherInboundData.js';
 import {
-  kingdeePushStatusLabels,
+  financeErpPushStatusLabels,
   otherInboundAuditLabels,
   otherInboundBusinessTypes,
   otherInboundSourceTypeLabels,
@@ -27,7 +27,7 @@ const initialFilters = {
   warehouse: '',
   businessType: '',
   auditStatus: [],
-  kingdeePushStatus: [],
+  financeErpPushStatus: [],
   productCode: '',
 };
 
@@ -56,7 +56,7 @@ const filterFields = [
     options: [{ value: '', label: '全部' }, ...otherInboundBusinessTypes.map((value) => ({ value, label: value }))],
   },
   statusMultiSelectField('auditStatus', '审核状态', otherInboundAuditLabels),
-  statusMultiSelectField('kingdeePushStatus', '金蝶推送状态', kingdeePushStatusLabels),
+  statusMultiSelectField('financeErpPushStatus', '推送财务ERP状态', financeErpPushStatusLabels),
   { key: 'productCode', label: '商品', type: 'search', placeholder: '请输入商品编码' },
 ];
 
@@ -72,7 +72,7 @@ function filterRows(row, filters) {
     && (!filters.warehouse || row.warehouse === filters.warehouse)
     && (!filters.businessType || row.businessType === filters.businessType)
     && matchesMultiSelect(row.auditStatus, filters.auditStatus)
-    && matchesMultiSelect(row.kingdeePushStatus, filters.kingdeePushStatus)
+    && matchesMultiSelect(row.financeErpPushStatus, filters.financeErpPushStatus)
     && (!filters.productCode || row.lines?.some((line) => matchesBatchSearch(line.productCode, filters.productCode)));
 }
 

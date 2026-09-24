@@ -71,7 +71,7 @@ export const otherOutboundBusinessTypeOptions = Object.values(otherOutboundBusin
 
 /**
  * 建单可选业务类型（2026-09-24确认）：
- * 盘亏由仓库盘点回传形成结果单，普通出库仓不建单；只有出库仓为虚拟在途仓（分步式调拨少收差异）时可选盘亏。
+ * 盘亏由仓库盘点回传形成结果单，普通出库仓不建单；虚拟在途仓可用盘亏处理该仓库存。
  */
 export const OTHER_OUTBOUND_TRANSIT_ONLY_TYPE = '盘亏';
 
@@ -241,7 +241,7 @@ export function canRetryPushRequest(row) {
   return row?.status === 'push_failed';
 }
 
-/** Demo Mock：仅待发货可模拟仓库回传；在途仓直接记账路径不经过回传（主PRD R20）。 */
+/** Demo Mock：仅待发货可模拟仓库回传；在途仓盘亏直接记账路径不经过回传（主PRD R20）。 */
 export function canMockDeliveryRequest(row) {
   return row?.status === 'pending_delivery';
 }
@@ -253,6 +253,11 @@ export function canMockWarehouseCancelReply(row) {
 
 export function isTransitRequest(row) {
   return isTransitLogicalWarehouse(row?.logicalWarehouse);
+}
+
+/** 「在途仓＋盘亏」申请按该仓可用库存直接记账（主PRD R20），无需来源调拨单。 */
+export function isTransitDirectPostingRequest(row) {
+  return isTransitRequest(row) && isTransitWriteOffBusinessType(row?.businessType);
 }
 
 // —— 表单与校验（Demo 新增编辑页 §4）——
@@ -281,7 +286,7 @@ export function validateOutboundRequestForSave(form) {
   if (!form?.logicalWarehouse) fieldErrors.logicalWarehouse = emptyFieldMessage('出库仓');
   if (!form?.businessType) fieldErrors.businessType = emptyFieldMessage('业务类型');
   if (Object.keys(fieldErrors).length) return { fieldErrors };
-  // 盘亏由仓库盘点回传形成结果单，普通出库仓不建单；仅虚拟在途仓的在途差异可按盘亏办理（2026-09-24确认）
+  // 普通出库仓的盘亏由仓库盘点回传形成结果单；虚拟在途仓可用盘亏处理该仓库存（2026-09-24确认）
   if (isTransitWriteOffBusinessType(form.businessType) && !isTransitLogicalWarehouse(form.logicalWarehouse)) {
     return { fieldErrors: { businessType: '盘亏仅在出库仓为虚拟在途仓时可选；普通出库仓的盘亏由仓库回传形成结果单' } };
   }
@@ -430,7 +435,7 @@ function occupyRequestLines(row, { time }) {
 
 /**
  * 审核通过：按可用量预占（可用不足阻断），系统自动推送仓库。
- * 出库仓为虚拟在途仓时不推送，由系统按申请数量直接生成已审核其他出库单并记账，申请单直接已发货（主PRD R20）。
+ * 虚拟在途仓的盘亏申请不推送，按申请数量生成已审核其他出库单并记账（主PRD R20）；其他类型正常推送。
  * 返回审核后的申请单行。
  */
 export function applyApproveRequest(row, { operator = '当前用户' } = {}) {
@@ -452,7 +457,7 @@ export function applyApproveRequest(row, { operator = '当前用户' } = {}) {
     updatedAt: time,
   });
 
-  if (isTransitRequest(approved)) {
+  if (isTransitDirectPostingRequest(approved)) {
     const result = generateOtherOutboundFromRequest(approved, {
       lineActuals: (approved.lines || []).map((line) => Number(line.quantity || 0)),
       directPosting: true,

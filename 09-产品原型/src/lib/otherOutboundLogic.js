@@ -1,19 +1,19 @@
 /**
- * 其他出库单（结果单）：生成、记账、金蝶推送与查询。
+ * 其他出库单（结果单）：生成、记账、推送财务ERP与查询。
  *
  * 依据《其他出库单主PRD》§6（状态—功能矩阵）、§7（R01～R12）与《其他出库单前端Demo版PRD_弹窗与Mock》：
  * - 两类来源统一收口：其他出库申请单回传实出>0，或仓库主动回传校验通过；
  * - 创建即为已审核，审核人留空，创建人与最后更新人显示「系统」；
  * - 记账统一走 `postStockEntries`：减少逻辑仓即时库存、消耗实出预占、释放未出预占、写库存流水；
  * - 零出不生成结果单，由申请单侧按取消结束并释放全部预占；
- * - 金蝶推送状态从「未推送」开始，Demo 模拟推送进度（明确失败可自动重试最多 3 次）。
+ * - 推送财务ERP状态从「未推送」开始，Demo 模拟推送进度（明确失败可自动重试最多 3 次）。
  */
 import { skuOptions } from '../data/masterData.js';
 import { nextDocumentNo } from './documentNo.js';
 import { nowStamp, postStockEntries } from './inventoryStockLogic.js';
 import { readMockRows, upsertMockRow, writeMockRows } from './mockStorage.js';
 
-export const OTHER_OUTBOUND_STORAGE_KEY = 'qs-erp:other-outbounds:v1';
+export const OTHER_OUTBOUND_STORAGE_KEY = 'qs-erp:other-outbounds:v2';
 
 /** 来源类型枚举（逐字取自《其他出库单（详细稿）》）：申请执行、仓库主动回传。 */
 export const otherOutboundSourceTypeLabels = {
@@ -34,37 +34,37 @@ export const otherOutboundAuditTones = {
   approved: 'success',
 };
 
-export const kingdeePushStatusLabels = {
+export const financeErpPushStatusLabels = {
   un_pushed: '未推送',
   pushing: '推送中',
   push_success: '推送成功',
   push_failed: '推送失败',
 };
 
-export const kingdeePushStatusTones = {
+export const financeErpPushStatusTones = {
   un_pushed: 'warning',
   pushing: 'info',
   push_success: 'success',
   push_failed: 'danger',
 };
 
-const kingdeePushTextToneMap = {
+const financeErpPushTextToneMap = {
   un_pushed: 'text-erp-warning',
   pushing: 'text-erp-info',
   push_success: 'text-erp-success',
   push_failed: 'text-erp-danger',
 };
 
-export function resolveKingdeePushStatusTone(status) {
-  return kingdeePushTextToneMap[status] || 'text-erp-text';
+export function resolveFinanceErpPushStatusTone(status) {
+  return financeErpPushTextToneMap[status] || 'text-erp-text';
 }
 
 export function resolveOtherOutboundAuditTone(status) {
   return status === 'approved' ? 'text-erp-success' : 'text-erp-warning';
 }
 
-const KINGDEE_AUTO_RETRY_MAX = 3;
-const kingdeeTimers = new Map();
+const FINANCE_ERP_AUTO_RETRY_MAX = 3;
+const financeErpTimers = new Map();
 
 let outboundLineSequence = 0;
 
@@ -112,7 +112,7 @@ export function normalizeOtherOutboundRow(row) {
     sourceSystem: row.sourceSystem || '',
     sourceNo: row.sourceNo || '',
     auditStatus: row.auditStatus || 'approved',
-    kingdeePushStatus: row.kingdeePushStatus || 'un_pushed',
+    financeErpPushStatus: row.financeErpPushStatus || 'un_pushed',
     actualOutboundTime,
     businessDate: row.businessDate || String(actualOutboundTime).slice(0, 10),
     pushTime: row.pushTime || '',
@@ -163,8 +163,8 @@ function resolveOutboundNo(businessDate) {
  * 由申请单回传生成其他出库单（主PRD R02、R03、R05、R06、R11）。
  *
  * deliveryPayload：
- * - lineActuals：按申请行顺序的实出数量；缺省或为空视为按申请数量一次记账（在途仓直接记账路径）；
- * - directPosting：在途仓直接记账路径，来源申请单此时处于已审核（主PRD R20）；
+ * - lineActuals：按申请行顺序的实出数量；缺省或为空视为按申请数量一次记账（在途仓盘亏直接记账路径）；
+ * - directPosting：在途仓盘亏申请的直接记账路径，来源申请单此时处于已审核（主PRD R20）；
  * - operator / time：记账人与时间，默认「系统」与当前时间。
  *
  * 返回 `{ outbound, zeroOut, request }`：
@@ -286,7 +286,7 @@ export function generateOtherOutboundFromRequest(request, deliveryPayload = {}) 
     auditStatus: 'approved',
     auditor: '',
     auditTime: time,
-    kingdeePushStatus: 'un_pushed',
+    financeErpPushStatus: 'un_pushed',
     pushTime: '',
     pushFailReason: '',
     remark: '',
@@ -297,7 +297,7 @@ export function generateOtherOutboundFromRequest(request, deliveryPayload = {}) 
     lines: outboundLines,
   });
 
-  simulateKingdeePush(outbound.id);
+  simulateFinanceErpPush(outbound.id);
 
   return {
     outbound,
@@ -383,7 +383,7 @@ export function createMockWarehouseOutbound(form = {}) {
     auditStatus: 'approved',
     auditor: '',
     auditTime: time,
-    kingdeePushStatus: 'un_pushed',
+    financeErpPushStatus: 'un_pushed',
     pushTime: '',
     pushFailReason: '',
     remark: form.remark || '',
@@ -402,68 +402,68 @@ export function createMockWarehouseOutbound(form = {}) {
     isMock: true,
   });
 
-  simulateKingdeePush(outbound.id);
+  simulateFinanceErpPush(outbound.id);
   return outbound;
 }
 
-function clearKingdeeTimer(outboundId) {
-  const timer = kingdeeTimers.get(outboundId);
+function clearFinanceErpTimer(outboundId) {
+  const timer = financeErpTimers.get(outboundId);
   if (timer) {
     window.clearTimeout(timer);
-    kingdeeTimers.delete(outboundId);
+    financeErpTimers.delete(outboundId);
   }
 }
 
-/** Demo：模拟金蝶推送进度，明确失败时自动重试最多 3 次（主PRD R10）。 */
-function scheduleKingdeeAttempt(outboundId, attempt = 1, forceFail = false) {
-  clearKingdeeTimer(outboundId);
+/** Demo：模拟推送财务ERP进度，明确失败时自动重试最多 3 次（主PRD R10）。 */
+function scheduleFinanceErpAttempt(outboundId, attempt = 1, forceFail = false) {
+  clearFinanceErpTimer(outboundId);
   const current = loadOtherOutboundById(outboundId);
-  if (!current || current.kingdeePushStatus === 'push_success') return current;
+  if (!current || current.financeErpPushStatus === 'push_success') return current;
 
   persistOtherOutbound({
     ...current,
-    kingdeePushStatus: 'pushing',
+    financeErpPushStatus: 'pushing',
     pushFailReason: attempt > 1 ? current.pushFailReason : '',
   });
 
   const timer = window.setTimeout(() => {
-    kingdeeTimers.delete(outboundId);
+    financeErpTimers.delete(outboundId);
     const latest = loadOtherOutboundById(outboundId);
-    if (!latest || latest.kingdeePushStatus !== 'pushing') return;
+    if (!latest || latest.financeErpPushStatus !== 'pushing') return;
 
-    if (forceFail && attempt >= KINGDEE_AUTO_RETRY_MAX) {
+    if (forceFail && attempt >= FINANCE_ERP_AUTO_RETRY_MAX) {
       persistOtherOutbound({
         ...latest,
-        kingdeePushStatus: 'push_failed',
-        pushFailReason: latest.pushFailReason || '接口超时，金蝶未确认接收',
+        financeErpPushStatus: 'push_failed',
+        pushFailReason: latest.pushFailReason || '接口超时，财务ERP未确认接收',
       });
       return;
     }
 
-    if (forceFail && attempt < KINGDEE_AUTO_RETRY_MAX) {
+    if (forceFail && attempt < FINANCE_ERP_AUTO_RETRY_MAX) {
       persistOtherOutbound({
         ...latest,
-        kingdeePushStatus: 'push_failed',
+        financeErpPushStatus: 'push_failed',
         pushFailReason: `第${attempt}次推送失败，系统将自动重试`,
       });
-      scheduleKingdeeAttempt(outboundId, attempt + 1, true);
+      scheduleFinanceErpAttempt(outboundId, attempt + 1, true);
       return;
     }
 
     persistOtherOutbound({
       ...latest,
-      kingdeePushStatus: 'push_success',
+      financeErpPushStatus: 'push_success',
       pushTime: nowStamp(),
       pushFailReason: '',
     });
   }, attempt === 1 ? 800 : 600);
 
-  kingdeeTimers.set(outboundId, timer);
+  financeErpTimers.set(outboundId, timer);
   return loadOtherOutboundById(outboundId);
 }
 
-export function simulateKingdeePush(outboundId, { forceFail = false } = {}) {
-  return scheduleKingdeeAttempt(outboundId, 1, forceFail);
+export function simulateFinanceErpPush(outboundId, { forceFail = false } = {}) {
+  return scheduleFinanceErpAttempt(outboundId, 1, forceFail);
 }
 
 /** Demo 引导：首次运行时把种子结果单写入本地 Mock。 */
@@ -473,7 +473,7 @@ export function ensureOtherOutboundSeeds(seedRows = []) {
   writeMockRows(OTHER_OUTBOUND_STORAGE_KEY, seedRows);
 }
 
-/** 其他出库单操作日志：按单据字段推导生成、审核、推送金蝶三类记录（一期简化版，倒序）。 */
+/** 其他出库单操作日志：按单据字段推导生成、审核、推送财务ERP三类记录（一期简化版，倒序）。 */
 export function buildOtherOutboundOperationLogs(row) {
   const entries = [];
   if (!row) return entries;
@@ -503,10 +503,10 @@ export function buildOtherOutboundOperationLogs(row) {
       id: `push-${row.pushTime || row.pushFailReason}`,
       time: row.pushTime || row.updatedAt || row.createdAt,
       operator: '系统',
-      action: '推送金蝶',
+      action: '推送财务ERP',
       remark: row.pushFailReason
         ? `推送失败：${row.pushFailReason}`
-        : (kingdeePushStatusLabels[row.kingdeePushStatus] || '推送金蝶'),
+        : (financeErpPushStatusLabels[row.financeErpPushStatus] || '推送财务ERP'),
     });
   }
 

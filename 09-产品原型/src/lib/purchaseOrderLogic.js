@@ -1,8 +1,9 @@
 import { skuOptions } from '../data/masterData.js';
 import { computeLinesTotals } from './format.js';
 import { emptyFieldMessage } from './formValidation.js';
-import { hasNegativePrice } from './validation.js';
+import { hasInvalidTaxRate, hasNegativePrice } from './validation.js';
 import { upsertMockRow, readMockRows, writeMockRows } from './mockStorage.js';
+import { capturePurchaseDocumentNames, loadRowsWithNameSnapshots } from './documentNameSnapshots.js';
 
 export const ORDER_STORAGE_KEY = 'qs-erp:purchase-orders:v4';
 export const NOTICE_STORAGE_KEY = 'qs-erp:purchase-receipt-notices:v2';
@@ -141,7 +142,6 @@ export function getCancelBlockReason(row) {
 export function validateOrderRequiredFields(form) {
   const fieldErrors = {};
   if (!form.supplier) fieldErrors.supplier = emptyFieldMessage('供应商');
-  if (!form.date) fieldErrors.date = emptyFieldMessage('单据日期');
   if (!form.warehouse) fieldErrors.warehouse = emptyFieldMessage('收货仓库');
   if (!form.deliveryDate) fieldErrors.deliveryDate = emptyFieldMessage('承诺交期');
   return fieldErrors;
@@ -158,6 +158,7 @@ export function validateOrderForSave(form) {
   if (hasNegativePrice(form.lines)) {
     return { message: '含税单价不能为负数' };
   }
+  if (hasInvalidTaxRate(form.lines)) return { message: '税率最多2位小数，允许0%' };
   return null;
 }
 
@@ -171,6 +172,7 @@ export function validateOrderForSubmit(form) {
     if (Number(line.quantity) <= 0) return { message: `第${index + 1}行采购数量必须大于0` };
     if (line.price === '' || line.price == null) return { message: `第${index + 1}行含税单价不能为空` };
     if (Number(line.price) < 0) return { message: `第${index + 1}行含税单价不能为负` };
+    if (line.taxRate === '' || line.taxRate == null) return { message: `第${index + 1}行税率不能为空` };
   }
   return null;
 }
@@ -202,13 +204,18 @@ export function normalizeOrderRow(row) {
 }
 
 export function persistOrder(row) {
-  const next = normalizeOrderRow(row);
+  const previous = readMockRows(ORDER_STORAGE_KEY, []).find((item) => item.id === row.id) || null;
+  const next = normalizeOrderRow(capturePurchaseDocumentNames(row, { previous }));
   upsertMockRow(ORDER_STORAGE_KEY, next);
   return next;
 }
 
+export function loadAllOrders(seed = []) {
+  return loadRowsWithNameSnapshots(ORDER_STORAGE_KEY, seed, capturePurchaseDocumentNames);
+}
+
 export function loadOrderById(id) {
-  const rows = readMockRows(ORDER_STORAGE_KEY, []);
+  const rows = loadAllOrders([]);
   return rows.find((item) => item.id === id) || null;
 }
 
@@ -284,4 +291,3 @@ export function applyAdjustDelivery(row, deliveryDate) {
     updater: '当前用户',
   });
 }
-

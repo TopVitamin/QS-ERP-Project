@@ -14,7 +14,6 @@ import {
   logicalWarehouseOptions,
   productOptions,
   skuOptions,
-  taxRateOptions,
   unitOptions,
 } from './masterData.js';
 import { salesOutbounds } from './salesOutboundData.js';
@@ -45,7 +44,7 @@ function sourcedLine({ id, outboundId, index = 0, quantity, returnedQty = 0, inT
     unit: line.unit || '个',
     quantity,
     price: line.price ?? 0,
-    taxRate: line.taxRate ?? '13',
+    taxRate: line.taxRate ?? '',
     returnedQty,
     inTransitQty,
   });
@@ -399,7 +398,8 @@ export const salesReturnLineEditorOptions = {
   productOptions,
   skuOptions,
   unitOptions,
-  taxRateOptions,
+  taxRateControl: 'number',
+  showReferencePrice: false,
 };
 
 export const defaultSalesReturnForm = {
@@ -424,7 +424,7 @@ export const defaultSalesReturnForm = {
       unit: '个',
       quantity: 1,
       price: '',
-      taxRate: '13',
+  taxRate: '',
       returnedQty: 0,
       inTransitQty: 0,
     },

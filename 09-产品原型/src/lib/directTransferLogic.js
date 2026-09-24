@@ -23,9 +23,9 @@ import {
 import { readMockRows, upsertMockRow, writeMockRows } from './mockStorage.js';
 import { mergeTransferLogs, pushTransferLogEntry } from './transferOrderLogic.js';
 
-export const DIRECT_TRANSFER_STORAGE_KEY = 'qs-erp:direct-transfers:v1';
+export const DIRECT_TRANSFER_STORAGE_KEY = 'qs-erp:direct-transfers:v2';
 
-/** 虚拟在途仓编码：只用于分步式调拨在途记账，不能被业务单据选为出入库仓（《库存与仓储业务设计》§4.2）。 */
+/** 虚拟在途仓编码：不能手工作为一步式调拨来源或目标仓；其他入库、其他出库按各自规则使用（《库存与仓储业务设计》§4.2）。 */
 export const TRANSIT_WAREHOUSE_CODE = 'LWH000009';
 
 export const directTransferSourceTypeLabels = {
@@ -41,7 +41,7 @@ export const directTransferAuditLabels = {
   approved: '已审核',
 };
 
-export const kingdeePushStatusLabels = {
+export const financeErpPushStatusLabels = {
   un_pushed: '未推送',
   pushing: '推送中',
   push_success: '推送成功',
@@ -55,7 +55,7 @@ export const directTransferStatusTones = {
     pending: 'text-erp-info',
     approved: 'text-erp-success',
   },
-  kingdeePushStatus: {
+  financeErpPushStatus: {
     un_pushed: 'text-erp-warning',
     pushing: 'text-erp-info',
     push_success: 'text-erp-success',
@@ -70,7 +70,7 @@ export const directTransferBadgeTones = {
     pending: 'info',
     approved: 'success',
   },
-  kingdeePushStatus: {
+  financeErpPushStatus: {
     un_pushed: 'warning',
     pushing: 'info',
     push_success: 'success',
@@ -194,7 +194,7 @@ export function canWithdrawDirectTransfer(row) {
 }
 
 /**
- * 金蝶推送失败后在系统集成中心针对原单重推（R09）；本模块列表与详情不提供重推按钮，
+ * 推送财务ERP失败后在系统集成中心针对原单重推（R09）；本模块列表与详情不提供重推按钮，
  * 这里显式返回 false，避免后续误加结果单重推入口。
  */
 export function canRetryPushDirectTransfer() {
@@ -421,36 +421,36 @@ export function postManualDirectTransfer(transferRow, { operator = '当前用户
   return [...outFlows, ...inFlows];
 }
 
-// —— 金蝶推送（Demo 模拟；正式重推入口在系统集成中心）——
+// —— 推送财务ERP（Demo 模拟；正式重推入口在系统集成中心）——
 
-const KINGDEE_AUTO_RETRY_MAX = 3;
-const kingdeeTimers = new Map();
+const FINANCE_ERP_AUTO_RETRY_MAX = 3;
+const financeErpTimers = new Map();
 
-function clearKingdeeTimer(transferId) {
-  const timer = kingdeeTimers.get(transferId);
+function clearFinanceErpTimer(transferId) {
+  const timer = financeErpTimers.get(transferId);
   if (timer) {
     window.clearTimeout(timer);
-    kingdeeTimers.delete(transferId);
+    financeErpTimers.delete(transferId);
   }
 }
 
-function scheduleKingdeeAttempt(transferId, attempt = 1, forceFail = false) {
-  clearKingdeeTimer(transferId);
+function scheduleFinanceErpAttempt(transferId, attempt = 1, forceFail = false) {
+  clearFinanceErpTimer(transferId);
   const current = loadDirectTransferById(transferId);
-  if (!current || current.kingdeePushStatus === 'push_success') return current;
+  if (!current || current.financeErpPushStatus === 'push_success') return current;
 
-  persistDirectTransfer({ ...current, kingdeePushStatus: 'pushing' });
+  persistDirectTransfer({ ...current, financeErpPushStatus: 'pushing' });
 
   const timer = window.setTimeout(() => {
-    kingdeeTimers.delete(transferId);
+    financeErpTimers.delete(transferId);
     const latest = loadDirectTransferById(transferId);
-    if (!latest || latest.kingdeePushStatus !== 'pushing') return;
+    if (!latest || latest.financeErpPushStatus !== 'pushing') return;
 
-    if (forceFail && attempt >= KINGDEE_AUTO_RETRY_MAX) {
+    if (forceFail && attempt >= FINANCE_ERP_AUTO_RETRY_MAX) {
       persistDirectTransfer({
         ...latest,
-        kingdeePushStatus: 'push_failed',
-        pushFailReason: latest.pushFailReason || '接口超时，金蝶未确认接收',
+        financeErpPushStatus: 'push_failed',
+        pushFailReason: latest.pushFailReason || '接口超时，财务ERP未确认接收',
       });
       return;
     }
@@ -458,28 +458,28 @@ function scheduleKingdeeAttempt(transferId, attempt = 1, forceFail = false) {
     if (forceFail) {
       persistDirectTransfer({
         ...latest,
-        kingdeePushStatus: 'push_failed',
+        financeErpPushStatus: 'push_failed',
         pushFailReason: `第${attempt}次推送失败，系统将自动重试`,
       });
-      scheduleKingdeeAttempt(transferId, attempt + 1, true);
+      scheduleFinanceErpAttempt(transferId, attempt + 1, true);
       return;
     }
 
     persistDirectTransfer({
       ...latest,
-      kingdeePushStatus: 'push_success',
+      financeErpPushStatus: 'push_success',
       pushTime: nowStamp(),
       pushFailReason: '',
     });
   }, attempt === 1 ? 800 : 600);
 
-  kingdeeTimers.set(transferId, timer);
+  financeErpTimers.set(transferId, timer);
   return loadDirectTransferById(transferId);
 }
 
-/** Demo 模拟金蝶推送：未推送→推送中→推送成功；forceFail 时自动重试最多3次后保持推送失败。 */
-export function simulateKingdeePush(transferId, { forceFail = false } = {}) {
-  return scheduleKingdeeAttempt(transferId, 1, forceFail);
+/** Demo 模拟推送财务ERP：未推送→推送中→推送成功；forceFail 时自动重试最多3次后保持推送失败。 */
+export function simulateFinanceErpPush(transferId, { forceFail = false } = {}) {
+  return scheduleFinanceErpAttempt(transferId, 1, forceFail);
 }
 
 // —— 人工一步式：新增、编辑、提交、撤回、审核、删除 ——
@@ -505,7 +505,7 @@ export function createDirectTransfer(form, { operator = '当前用户', time } =
     businessDate: stamp.slice(0, 10),
     remark: form.remark || '',
     auditStatus: 'draft',
-    kingdeePushStatus: 'un_pushed',
+    financeErpPushStatus: 'un_pushed',
     pushTime: '',
     pushFailReason: '',
     auditor: '',
@@ -565,7 +565,7 @@ export function applyDeleteDirectTransfer(row) {
   removeDirectTransfer(row.id);
 }
 
-/** 人工一步式审核：一减一增记账、写库存流水，然后触发金蝶推送（R04、R05、R06、R09）。 */
+/** 人工一步式审核：一减一增记账、写库存流水，然后触发推送财务ERP（R04、R05、R06、R09）。 */
 export function applyApproveDirectTransfer(row, { operator = '当前用户', time } = {}) {
   const transfer = loadDirectTransferById(row?.id) || row;
   if (transfer.sourceType !== 'manual') throw new Error('自动生成的结果单不支持审核');
@@ -586,13 +586,13 @@ export function applyApproveDirectTransfer(row, { operator = '当前用户', tim
     auditTime: stamp,
     actualTransferTime: stamp,
     businessDate: stamp.slice(0, 10),
-    kingdeePushStatus: 'un_pushed',
+    financeErpPushStatus: 'un_pushed',
     pushTime: '',
     pushFailReason: '',
     updater: operator,
     updatedAt: stamp,
   });
-  simulateKingdeePush(approved.id);
+  simulateFinanceErpPush(approved.id);
   return approved;
 }
 
@@ -663,7 +663,7 @@ export function generateDirectTransferFromOutNotice(noticeRow) {
     businessDate: String(stamp).slice(0, 10),
     remark: '',
     auditStatus: 'approved',
-    kingdeePushStatus: 'un_pushed',
+    financeErpPushStatus: 'un_pushed',
     pushTime: '',
     pushFailReason: '',
     auditor: '',
@@ -680,7 +680,7 @@ export function generateDirectTransferFromOutNotice(noticeRow) {
 
   postOutDirectTransfer(transfer, noticeRow, { time: stamp });
   const persisted = persistDirectTransfer(transfer);
-  simulateKingdeePush(persisted.id);
+  simulateFinanceErpPush(persisted.id);
   return persisted;
 }
 
@@ -712,7 +712,7 @@ export function generateDirectTransferFromInNotice(inNoticeRow) {
     businessDate: String(stamp).slice(0, 10),
     remark: '',
     auditStatus: 'approved',
-    kingdeePushStatus: 'un_pushed',
+    financeErpPushStatus: 'un_pushed',
     pushTime: '',
     pushFailReason: '',
     auditor: '',
@@ -729,7 +729,7 @@ export function generateDirectTransferFromInNotice(inNoticeRow) {
 
   postInDirectTransfer(transfer, { time: stamp });
   const persisted = persistDirectTransfer(transfer);
-  simulateKingdeePush(persisted.id);
+  simulateFinanceErpPush(persisted.id);
   return persisted;
 }
 
@@ -763,7 +763,7 @@ export function createDirectTransferFromWarehouseCallback(form, { operator = '�
     businessDate: stamp.slice(0, 10),
     remark: form.remark || '',
     auditStatus: 'approved',
-    kingdeePushStatus: 'un_pushed',
+    financeErpPushStatus: 'un_pushed',
     pushTime: '',
     pushFailReason: '',
     auditor: '',
@@ -780,7 +780,7 @@ export function createDirectTransferFromWarehouseCallback(form, { operator = '�
 
   postManualDirectTransfer(transfer, { operator, time: stamp });
   const persisted = persistDirectTransfer(transfer);
-  simulateKingdeePush(persisted.id);
+  simulateFinanceErpPush(persisted.id);
   return persisted;
 }
 
@@ -789,7 +789,7 @@ export function createDirectTransferFromWarehouseCallback(form, { operator = '�
 export function buildDirectTransferSeedFromOutNotice(noticeRow, plan = {}) {
   const lines = buildOutTransferLines(noticeRow);
   const time = plan.time || noticeRow.finalShipTime || noticeRow.createdAt || nowStamp();
-  const pushStatus = plan.kingdeePushStatus || 'push_success';
+  const pushStatus = plan.financeErpPushStatus || 'push_success';
   return normalizeDirectTransferRow({
     id: plan.id || `direct-transfer-seed-out-${noticeRow.id}`,
     transferNo: plan.transferNo,
@@ -806,9 +806,9 @@ export function buildDirectTransferSeedFromOutNotice(noticeRow, plan = {}) {
     businessDate: String(time).slice(0, 10),
     remark: '',
     auditStatus: 'approved',
-    kingdeePushStatus: pushStatus,
+    financeErpPushStatus: pushStatus,
     pushTime: pushStatus === 'push_success' ? time : '',
-    pushFailReason: plan.pushFailReason || (pushStatus === 'push_failed' ? '接口超时，金蝶未确认接收' : ''),
+    pushFailReason: plan.pushFailReason || (pushStatus === 'push_failed' ? '接口超时，财务ERP未确认接收' : ''),
     auditor: '',
     auditTime: time,
     returnComment: '',
@@ -825,7 +825,7 @@ export function buildDirectTransferSeedFromOutNotice(noticeRow, plan = {}) {
 export function buildDirectTransferSeedFromInNotice(inNoticeRow, plan = {}) {
   const lines = buildInTransferLines(inNoticeRow);
   const time = plan.time || inNoticeRow.finalReceiveTime || inNoticeRow.createdAt || nowStamp();
-  const pushStatus = plan.kingdeePushStatus || 'push_success';
+  const pushStatus = plan.financeErpPushStatus || 'push_success';
   return normalizeDirectTransferRow({
     id: plan.id || `direct-transfer-seed-in-${inNoticeRow.id}`,
     transferNo: plan.transferNo,
@@ -842,9 +842,9 @@ export function buildDirectTransferSeedFromInNotice(inNoticeRow, plan = {}) {
     businessDate: String(time).slice(0, 10),
     remark: '',
     auditStatus: 'approved',
-    kingdeePushStatus: pushStatus,
+    financeErpPushStatus: pushStatus,
     pushTime: pushStatus === 'push_success' ? time : '',
-    pushFailReason: plan.pushFailReason || (pushStatus === 'push_failed' ? '接口超时，金蝶未确认接收' : ''),
+    pushFailReason: plan.pushFailReason || (pushStatus === 'push_failed' ? '接口超时，财务ERP未确认接收' : ''),
     auditor: '',
     auditTime: time,
     returnComment: '',
@@ -935,10 +935,10 @@ export function buildDirectTransferOperationLogs(row) {
     pushTransferLogEntry(entries, {
       time: row.pushTime,
       operator: '系统',
-      action: '推送金蝶',
+      action: '推送财务ERP',
       remark: row.pushFailReason
         ? `推送失败：${row.pushFailReason}`
-        : (kingdeePushStatusLabels[row.kingdeePushStatus] || '推送金蝶'),
+        : (financeErpPushStatusLabels[row.financeErpPushStatus] || '推送财务ERP'),
     });
   }
   return mergeTransferLogs(entries, row.operationLogs || []);

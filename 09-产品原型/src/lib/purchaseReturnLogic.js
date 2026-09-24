@@ -7,7 +7,7 @@ import { computeLinesTotals, EMPTY_PLACEHOLDER } from './format.js';
 import { emptyFieldMessage } from './formValidation.js';
 import { loadAllInbounds } from './inboundLogic.js';
 import { readMockRows, writeMockRows } from './mockStorage.js';
-import { hasNegativePrice } from './validation.js';
+import { hasInvalidTaxRate, hasNegativePrice } from './validation.js';
 
 /**
  * 采购退货单模块逻辑。
@@ -18,7 +18,7 @@ import { hasNegativePrice } from './validation.js';
 
 export const PURCHASE_RETURN_STORAGE_KEY = 'qs-erp:purchase-returns:v1';
 export const RETURN_NOTICE_STORAGE_KEY = 'qs-erp:purchase-return-notices:v1';
-export const RETURN_OUTBOUND_STORAGE_KEY = 'qs-erp:purchase-return-outbounds:v1';
+export const RETURN_OUTBOUND_STORAGE_KEY = 'qs-erp:purchase-return-outbounds:v2';
 
 /** 未结束通知状态：创建即占用退货单可下推量，取消成功才释放（主PRD R08）。 */
 const BLOCKING_NOTICE_STATUSES = new Set(['pushing', 'pending_ship', 'cancelling']);
@@ -407,6 +407,7 @@ export function validateReturnForSave(form) {
     if (quotaMessage) return { message: quotaMessage };
   }
   if (hasNegativePrice(lines)) return { message: '含税单价不能为负数' };
+  if (hasInvalidTaxRate(lines)) return { message: '税率最多2位小数，允许0%' };
   return null;
 }
 

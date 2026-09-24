@@ -5,7 +5,7 @@ import { registerReturnOutboundSeedRows } from './purchaseReturnLogic.js';
 import { loadReturnNoticesByReturnId, returnNoticeStatusLabels } from './purchaseReturnNoticeLogic.js';
 import {
   auditStatusLabels,
-  kingdeePushStatusLabels,
+  financeErpPushStatusLabels,
   loadReturnOutboundsByNoticeId,
   loadReturnOutboundsByReturnId,
 } from './purchaseReturnOutboundLogic.js';
@@ -28,7 +28,7 @@ const noticeStatusToneMap = {
   cancelled: 'danger',
 };
 
-const kingdeeStatusToneMap = {
+const financeErpStatusToneMap = {
   un_pushed: 'warning',
   pushing: 'info',
   push_success: 'success',
@@ -92,11 +92,11 @@ function buildOutboundColumns({ withSourceNotice, withCreatedAt }) {
       badgeTone: () => 'success',
     },
     {
-      key: 'kingdeePushStatus',
-      label: '金蝶推送状态',
+      key: 'financeErpPushStatus',
+      label: '推送财务ERP状态',
       badge: true,
-      render: (outbound) => kingdeePushStatusLabels[outbound.kingdeePushStatus] || outbound.kingdeePushStatus,
-      badgeTone: (outbound) => kingdeeStatusToneMap[outbound.kingdeePushStatus] || 'default',
+      render: (outbound) => financeErpPushStatusLabels[outbound.financeErpPushStatus] || outbound.financeErpPushStatus,
+      badgeTone: (outbound) => financeErpStatusToneMap[outbound.financeErpPushStatus] || 'default',
     },
     { key: 'totalOutboundQty', label: '实际出库数量', align: 'right', render: (outbound) => outbound.totalOutboundQty ?? 0 },
     { key: 'amount', label: '价税合计', align: 'right', render: (outbound) => formatCurrency(outbound.amount, outbound.currency) },

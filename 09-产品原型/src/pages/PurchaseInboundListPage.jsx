@@ -3,7 +3,9 @@ import { DocumentListPage } from '../components/erp/DocumentListPage.jsx';
 import { ImportExportActions } from '../components/erp/ImportExportActions.jsx';
 import { getTransferTarget } from '../lib/transferTargets.js';
 import { matchesMultiSelect, statusMultiSelectField } from '../lib/listFilters.js';
-import { supplierOptions, warehouseOptions } from '../data/masterData.js';
+import { supplierOptions } from '../data/masterData.js';
+import { getInventoryLogicalWarehouseOptions } from '../data/warehouseData.js';
+import { normalizePurchaseRows } from '../lib/documentNameSnapshots.js';
 import { orders } from '../data/orderData.js';
 import { receiptNotices } from '../data/receiptNoticeData.js';
 import {
@@ -15,7 +17,7 @@ import {
 import {
   auditStatusLabels,
   INBOUND_STORAGE_KEY,
-  kingdeePushStatusLabels,
+  financeErpPushStatusLabels,
 } from '../lib/inboundLogic.js';
 
 const initialFilters = {
@@ -25,7 +27,7 @@ const initialFilters = {
   supplier: '',
   warehouse: '',
   auditStatus: [],
-  kingdeePushStatus: [],
+  financeErpPushStatus: [],
   productCode: '',
   barcode: '',
 };
@@ -37,8 +39,8 @@ function createFilterFields(rows) {
     { key: 'sourceOrderNo', label: '来源采购订单', type: 'select', options: buildSourceOrderFilterOptions(rows) },
     { key: 'supplier', label: '供应商', type: 'select', options: [{ value: '', label: '全部供应商' }, ...supplierOptions] },
     statusMultiSelectField('auditStatus', '审核状态', auditStatusLabels),
-    statusMultiSelectField('kingdeePushStatus', '金蝶推送状态', kingdeePushStatusLabels),
-    { key: 'warehouse', label: '入库仓库', type: 'select', options: [{ value: '', label: '全部仓库' }, ...warehouseOptions] },
+    statusMultiSelectField('financeErpPushStatus', '推送财务ERP状态', financeErpPushStatusLabels),
+    { key: 'warehouse', label: '入库仓库', type: 'select', options: [{ value: '', label: '全部仓库' }, ...getInventoryLogicalWarehouseOptions()] },
     { key: 'productCode', label: '商品编码', type: 'search', placeholder: '请输入商品编码' },
     { key: 'barcode', label: '商品条码', type: 'search', placeholder: '请输入商品条码' },
   ];
@@ -58,7 +60,7 @@ function filterRows(row, filters) {
     && (!filters.supplier || row.supplier === filters.supplier)
     && (!filters.warehouse || row.warehouse === filters.warehouse)
     && matchesMultiSelect(row.auditStatus, filters.auditStatus)
-    && matchesMultiSelect(row.kingdeePushStatus, filters.kingdeePushStatus)
+    && matchesMultiSelect(row.financeErpPushStatus, filters.financeErpPushStatus)
     && (!productCode || row.lines?.some((line) => String(line.productCode || '').toLowerCase().includes(productCode)))
     && (!barcode || row.lines?.some((line) => String(line.barcode || '').toLowerCase().includes(barcode)));
 }
@@ -84,6 +86,8 @@ export function PurchaseInboundListPage(props) {
     title: '采购入库单',
     rows: inboundOrders,
     storageKey: INBOUND_STORAGE_KEY,
+    normalizeRows: normalizePurchaseRows,
+    mergeSeedRows: true,
     initialFilters,
     filterRows,
     initialVisibility,

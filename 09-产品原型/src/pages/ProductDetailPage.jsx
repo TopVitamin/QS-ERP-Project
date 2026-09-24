@@ -109,7 +109,7 @@ export function ProductDetailPage({ context, onFeedback, onOpenPage }) {
       <Button variant="outline" size="compact" onClick={() => handleAction('edit')}>编辑</Button>
       {canDisableProduct(row) && <Button variant="outline" size="compact" onClick={() => handleAction('disable')}>禁用</Button>}
       {canEnableProduct(row) && <Button variant="outline" size="compact" onClick={() => handleAction('enable')}>启用</Button>}
-      <Button variant="outline" size="compact" disabled={deleteBlocked} onClick={() => handleAction('delete')}>删除</Button>
+      <Button variant="outline" size="compact" disabled={deleteBlocked} title={deleteBlocked ? getDeleteBlockReason(row) : undefined} onClick={() => handleAction('delete')}>删除</Button>
     </div>
   );
 

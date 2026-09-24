@@ -5,7 +5,7 @@ import { OtherOutboundActionDialogs } from '../components/erp/OtherOutboundActio
 import { getTransferTarget } from '../lib/transferTargets.js';
 import { matchesMultiSelect, statusMultiSelectField } from '../lib/listFilters.js';
 import {
-  kingdeePushStatusLabels,
+  financeErpPushStatusLabels,
   otherOutboundAuditLabels,
   otherOutboundSourceTypeLabels,
   OTHER_OUTBOUND_STORAGE_KEY,
@@ -21,11 +21,11 @@ const initialFilters = {
   logicalWarehouse: '',
   businessType: '',
   auditStatus: [],
-  kingdeePushStatus: [],
+  financeErpPushStatus: [],
   productCode: '',
 };
 
-/** 查询区按《其他出库单前端Demo版PRD_列表页》§2 顺序：单号、来源申请单、来源类型、出库仓库、业务类型、审核状态、金蝶推送状态、商品。 */
+/** 查询区按《其他出库单前端Demo版PRD_列表页》§2 顺序：单号、来源申请单、来源类型、出库仓库、业务类型、审核状态、推送财务ERP状态、商品。 */
 const filterFields = [
   { key: 'outboundNo', label: '单号', type: 'search', placeholder: '请输入其他出库单号' },
   { key: 'sourceRequestNo', label: '来源其他出库申请单', type: 'select', options: buildSourceRequestFilterOptions(otherOutbounds) },
@@ -51,7 +51,7 @@ const filterFields = [
     options: [{ value: '', label: '全部' }, ...otherOutboundBusinessTypeOptions],
   },
   statusMultiSelectField('auditStatus', '审核状态', otherOutboundAuditLabels),
-  statusMultiSelectField('kingdeePushStatus', '金蝶推送状态', kingdeePushStatusLabels),
+  statusMultiSelectField('financeErpPushStatus', '推送财务ERP状态', financeErpPushStatusLabels),
   { key: 'productCode', label: '商品', type: 'search', placeholder: '请输入商品编码' },
 ];
 
@@ -68,7 +68,7 @@ function filterRows(row, filters) {
     && (!filters.logicalWarehouse || row.logicalWarehouse === filters.logicalWarehouse)
     && (!filters.businessType || row.businessType === filters.businessType)
     && matchesMultiSelect(row.auditStatus, filters.auditStatus)
-    && matchesMultiSelect(row.kingdeePushStatus, filters.kingdeePushStatus)
+    && matchesMultiSelect(row.financeErpPushStatus, filters.financeErpPushStatus)
     && (!productCode || row.lines?.some((line) => String(line.productCode || '').toLowerCase().includes(productCode)));
 }
 

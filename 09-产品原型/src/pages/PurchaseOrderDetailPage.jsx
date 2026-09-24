@@ -9,10 +9,12 @@ import { buildPurchaseOrderOperationLogs } from '../lib/operationLog.js';
 import { RelatedDocumentsCard } from '../components/erp/RelatedDocumentsCard.jsx';
 import { usePurchaseOrderRow } from '../hooks/usePurchaseOrderRow.js';
 import { resolveOptionLabel } from '../lib/codeName.js';
+import { formatSnapshotCodeName } from '../lib/documentNameSnapshots.js';
 import { formatAmount } from '../lib/format.js';
 import { currencySymbol } from '../lib/money.js';
 import { buildOrderRelatedDocumentSections } from '../lib/purchaseOrderRelatedDocs.js';
-import { supplierOptions, warehouseOptions } from '../data/masterData.js';
+import { supplierOptions } from '../data/masterData.js';
+import { getInventoryLogicalWarehouseOptions } from '../data/warehouseData.js';
 import { loadOrderById, refreshOrderLines } from '../lib/purchaseOrderLogic.js';
 import { defaultOrderForm, getEditableOrder, getOrderStatusBadges, purchaseLineEditorOptions } from '../data/purchaseFormData.js';
 
@@ -41,8 +43,7 @@ const orderDetailConfig = {
       title: '单据信息',
       fields: ({ detail, row }) => [
         { key: 'orderNo', label: '单号', value: detail.orderNo },
-        { key: 'date', label: '单据日期', value: detail.date },
-        { key: 'supplier', label: '供应商', value: resolveOptionLabel(detail.supplier, supplierOptions) },
+        { key: 'supplier', label: '供应商', value: formatSnapshotCodeName(detail.supplier, detail.supplierNameSnapshot) },
         { key: 'currency', label: '币别', value: detail.currency || '人民币' },
         { key: 'amount', label: '价税合计', value: `${currencySymbol(row.currency)} ${formatAmount(row.amount)}` },
         { key: 'taxAmount', label: '税额', value: `${currencySymbol(row.currency)} ${formatAmount(row.taxAmount)}` },
@@ -54,7 +55,7 @@ const orderDetailConfig = {
     {
       title: '收货与交期',
       fields: ({ detail }) => [
-        { key: 'warehouse', label: '收货仓库', value: resolveOptionLabel(detail.warehouse, warehouseOptions) },
+        { key: 'warehouse', label: '收货仓库', value: formatSnapshotCodeName(detail.warehouse, detail.warehouseNameSnapshot) },
         { key: 'deliveryDate', label: '承诺交期', value: detail.deliveryDate },
       ],
     },

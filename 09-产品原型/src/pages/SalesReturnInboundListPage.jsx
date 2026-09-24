@@ -16,7 +16,7 @@ import {
 } from '../data/salesReturnInboundData.js';
 import {
   auditStatusLabels,
-  kingdeePushStatusLabels,
+  financeErpPushStatusLabels,
   RETURN_INBOUND_STORAGE_KEY,
   sourceTypeLabels,
 } from '../lib/salesReturnInboundLogic.js';
@@ -35,7 +35,7 @@ const initialFilters = {
   customer: '',
   warehouse: '',
   auditStatus: [],
-  kingdeePushStatus: [],
+  financeErpPushStatus: [],
   product: '',
   productCode: '',
   barcode: '',
@@ -51,7 +51,7 @@ function createFilterFields(rows) {
     { key: 'customer', label: '客户', type: 'select', options: [{ value: '', label: '全部客户' }, ...customerOptions] },
     { key: 'warehouse', label: '收货仓库', type: 'select', options: [{ value: '', label: '全部仓库' }, ...logicalWarehouseOptions] },
     statusMultiSelectField('auditStatus', '审核状态', auditStatusLabels),
-    statusMultiSelectField('kingdeePushStatus', '金蝶推送状态', kingdeePushStatusLabels),
+    statusMultiSelectField('financeErpPushStatus', '推送财务ERP状态', financeErpPushStatusLabels),
     { key: 'product', label: '商品', type: 'select', options: buildProductFilterOptions() },
     { key: 'productCode', label: '商品编码', type: 'search', placeholder: '请输入商品编码' },
     { key: 'barcode', label: '商品条码', type: 'search', placeholder: '请输入商品条码' },
@@ -74,7 +74,7 @@ function filterRows(row, filters) {
     && (!filters.customer || row.customer === filters.customer)
     && (!filters.warehouse || row.warehouse === filters.warehouse)
     && matchesMultiSelect(row.auditStatus, filters.auditStatus)
-    && matchesMultiSelect(row.kingdeePushStatus, filters.kingdeePushStatus)
+    && matchesMultiSelect(row.financeErpPushStatus, filters.financeErpPushStatus)
     && (!filters.product || row.lines?.some((line) => line.product === filters.product))
     && (!productCode || row.lines?.some((line) => String(line.productCode || '').toLowerCase().includes(productCode)))
     && (!barcode || row.lines?.some((line) => String(line.barcode || '').toLowerCase().includes(barcode)));

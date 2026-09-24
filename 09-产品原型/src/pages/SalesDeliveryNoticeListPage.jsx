@@ -4,7 +4,9 @@ import { ImportExportActions } from '../components/erp/ImportExportActions.jsx';
 import { SalesDeliveryNoticeActionDialogs } from '../components/erp/SalesDeliveryNoticeActionDialogs.jsx';
 import { getTransferTarget } from '../lib/transferTargets.js';
 import { matchesMultiSelect, statusMultiSelectField } from '../lib/listFilters.js';
-import { customerOptions, logicalWarehouseOptions } from '../data/masterData.js';
+import { customerOptions } from '../data/masterData.js';
+import { getInventoryLogicalWarehouseOptions } from '../data/warehouseData.js';
+import { normalizeSalesRows } from '../lib/documentNameSnapshots.js';
 import { salesOrders } from '../data/salesOrderData.js';
 import {
   buildSourceSalesOrderFilterOptions,
@@ -48,7 +50,7 @@ function createFilterFields(rows) {
     { key: 'noticeNo', label: '单号', type: 'search', placeholder: '请输入销售发货通知单号' },
     { key: 'sourceOrderNo', label: '来源销售订单', type: 'select', options: buildSourceSalesOrderFilterOptions(rows) },
     { key: 'customer', label: '客户', type: 'select', options: [{ value: '', label: '全部客户' }, ...customerOptions] },
-    { key: 'warehouse', label: '发货仓库', type: 'select', options: [{ value: '', label: '全部仓库' }, ...logicalWarehouseOptions] },
+    { key: 'warehouse', label: '发货仓库', type: 'select', options: [{ value: '', label: '全部仓库' }, ...getInventoryLogicalWarehouseOptions()] },
     statusMultiSelectField('deliveryMode', '发货处理方式', deliveryModeLabels),
     statusMultiSelectField('status', '单据状态', noticeStatusLabels),
     { key: 'productCode', label: '商品编码', type: 'search', placeholder: '请输入商品编码' },
@@ -120,6 +122,8 @@ export function SalesDeliveryNoticeListPage(props) {
     title: '销售发货通知单',
     rows: salesDeliveryNotices,
     storageKey: DELIVERY_NOTICE_STORAGE_KEY,
+    normalizeRows: normalizeSalesRows,
+    mergeSeedRows: true,
     initialFilters,
     filterRows,
     initialVisibility,

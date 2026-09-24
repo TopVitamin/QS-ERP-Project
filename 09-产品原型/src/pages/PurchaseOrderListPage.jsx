@@ -5,7 +5,9 @@ import { ImportExportActions } from '../components/erp/ImportExportActions.jsx';
 import { PurchaseOrderActionDialogs } from '../components/erp/PurchaseOrderActionDialogs.jsx';
 import { getTransferTarget } from '../lib/transferTargets.js';
 import { matchesMultiSelect, statusMultiSelectField } from '../lib/listFilters.js';
-import { supplierOptions, warehouseOptions } from '../data/masterData.js';
+import { supplierOptions } from '../data/masterData.js';
+import { getInventoryLogicalWarehouseOptions } from '../data/warehouseData.js';
+import { normalizePurchaseRows } from '../lib/documentNameSnapshots.js';
 import { orders, orderStatusLabels, tableColumns } from '../data/orderData.js';
 import {
   canCancelApprovedOrder,
@@ -19,7 +21,7 @@ import {
 } from '../lib/purchaseOrderLogic.js';
 
 const initialFilters = {
-  dateRange: { from: '', to: '' },
+  deliveryDateRange: { from: '', to: '' },
   orderNo: '',
   supplier: '',
   warehouse: '',
@@ -32,10 +34,10 @@ const initialFilters = {
 };
 
 const filterFields = [
-  { key: 'dateRange', label: '单据日期', type: 'date-range', placeholder: '不限' },
   { key: 'orderNo', label: '单号', type: 'search', placeholder: '请输入采购订单号' },
   { key: 'supplier', label: '供应商', type: 'select', options: [{ value: '', label: '全部供应商' }, ...supplierOptions] },
-  { key: 'warehouse', label: '收货仓库', type: 'select', options: [{ value: '', label: '全部仓库' }, ...warehouseOptions] },
+  { key: 'warehouse', label: '收货仓库', type: 'select', options: [{ value: '', label: '全部仓库' }, ...getInventoryLogicalWarehouseOptions()] },
+  { key: 'deliveryDateRange', label: '承诺交期', type: 'date-range', placeholder: '不限' },
   statusMultiSelectField('auditStatus', '审核状态', orderStatusLabels.auditStatus),
   statusMultiSelectField('businessStatus', '业务状态', orderStatusLabels.businessStatus),
   statusMultiSelectField('receiveStatus', '收货状态', orderStatusLabels.receiveStatus),
@@ -66,7 +68,7 @@ function filterRows(row, filters) {
     && matchesMultiSelect(row.auditStatus, filters.auditStatus)
     && matchesMultiSelect(row.businessStatus, filters.businessStatus)
     && matchesMultiSelect(row.receiveStatus, filters.receiveStatus)
-    && matchDateRange(row.date, filters.dateRange)
+    && matchDateRange(row.deliveryDate, filters.deliveryDateRange)
     && matchDateRange(row.createdAt, filters.createdAtRange)
     && (!productCode || row.lines?.some((line) => String(line.productCode || '').toLowerCase().includes(productCode)))
     && (!barcode || row.lines?.some((line) => String(line.barcode || '').toLowerCase().includes(barcode)));
@@ -139,6 +141,8 @@ const orderListConfig = {
   title: '采购订单',
   rows: orders,
   storageKey: ORDER_STORAGE_KEY,
+  normalizeRows: normalizePurchaseRows,
+  mergeSeedRows: true,
   initialFilters,
   filterRows,
   initialVisibility,

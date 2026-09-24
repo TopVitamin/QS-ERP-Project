@@ -1,7 +1,9 @@
 import { resolveOptionLabel } from '../lib/codeName.js';
 import { EMPTY_PLACEHOLDER } from '../lib/format.js';
 import { formatReceiptMode, normalizeNoticeRow, noticeStatusLabels } from '../lib/receiptNoticeLogic.js';
-import { supplierOptions, warehouseOptions } from './masterData.js';
+import { supplierOptions } from './masterData.js';
+import { getInventoryLogicalWarehouseOptions } from './warehouseData.js';
+import { formatSnapshotCodeName } from '../lib/documentNameSnapshots.js';
 
 const seedNotices = [
   {
@@ -10,7 +12,7 @@ const seedNotices = [
     sourceOrderId: 'order-6',
     sourceOrderNo: 'CGDD-20260920-0006',
     supplier: 'SUP000001',
-    warehouse: 'WH000001',
+    warehouse: 'LWH000001',
     receiptMode: 'warehouse',
     status: 'pending_push',
     remark: '待推送演示',
@@ -43,7 +45,7 @@ const seedNotices = [
     sourceOrderId: 'order-2',
     sourceOrderNo: 'CGDD-20260918-0002',
     supplier: 'SUP000002',
-    warehouse: 'WH000002',
+    warehouse: 'LWH000002',
     receiptMode: 'warehouse',
     status: 'pending_receive',
     remark: '第二批发货',
@@ -76,7 +78,7 @@ const seedNotices = [
     sourceOrderId: 'order-2',
     sourceOrderNo: 'CGDD-20260918-0002',
     supplier: 'SUP000002',
-    warehouse: 'WH000002',
+    warehouse: 'LWH000002',
     receiptMode: 'warehouse',
     status: 'received',
     remark: '',
@@ -110,7 +112,7 @@ const seedNotices = [
     sourceOrderId: 'order-2',
     sourceOrderNo: 'CGDD-20260918-0002',
     supplier: 'SUP000002',
-    warehouse: 'WH000002',
+    warehouse: 'LWH000002',
     receiptMode: 'warehouse',
     status: 'received',
     remark: '少收演示后入库',
@@ -144,7 +146,7 @@ const seedNotices = [
     sourceOrderId: 'order-2',
     sourceOrderNo: 'CGDD-20260918-0002',
     supplier: 'SUP000002',
-    warehouse: 'WH000002',
+    warehouse: 'LWH000002',
     receiptMode: 'warehouse',
     status: 'cancelled',
     remark: '',
@@ -179,7 +181,7 @@ const seedNotices = [
     sourceOrderId: 'order-6',
     sourceOrderNo: 'CGDD-20260920-0006',
     supplier: 'SUP000001',
-    warehouse: 'WH000001',
+    warehouse: 'LWH000001',
     receiptMode: 'warehouse',
     status: 'push_failed',
     remark: '推送失败演示',
@@ -206,6 +208,53 @@ const seedNotices = [
       },
     ],
   },
+  {
+    id: 'notice-seed-pushing',
+    noticeNo: 'CGSHTZ-20260921-0001',
+    sourceOrderId: 'order-8',
+    sourceOrderNo: 'CGDD-20260921-0008',
+    supplier: 'SUP000002',
+    warehouse: 'LWH000001',
+    receiptMode: 'warehouse',
+    status: 'pushing',
+    remark: '推送中状态演示',
+    pushTime: '',
+    finalReceiveTime: '',
+    pushFailReason: '',
+    creator: '张三',
+    createdAt: '2026-09-21 11:00:00',
+    lines: [{ id: 'order-line-8-pushing', sourceOrderLineId: 'order-line-8', product: 'SP0102020001', productCode: 'SP0102020001', productName: '27 英寸办公显示器', unit: '台', notifyQty: 2, receivedQty: 0, shortQty: 0 }],
+  },
+  {
+    id: 'notice-seed-cancelling',
+    noticeNo: 'CGSHTZ-20260921-0002',
+    sourceOrderId: 'order-8',
+    sourceOrderNo: 'CGDD-20260921-0008',
+    supplier: 'SUP000002',
+    warehouse: 'LWH000001',
+    receiptMode: 'warehouse',
+    status: 'cancelling',
+    remark: '取消申请处理中',
+    pushTime: '2026-09-21 11:10:00',
+    finalReceiveTime: '',
+    pushFailReason: '',
+    cancelReason: '采购计划调整',
+    creator: '张三',
+    createdAt: '2026-09-21 11:05:00',
+    lines: [{ id: 'order-line-8-cancelling', sourceOrderLineId: 'order-line-8', product: 'SP0102020001', productCode: 'SP0102020001', productName: '27 英寸办公显示器', unit: '台', notifyQty: 1, receivedQty: 0, shortQty: 0 }],
+  },
+  {
+    id: 'notice-seed-inbound-3', noticeNo: 'CGSHTZ-20260921-0003', sourceOrderId: 'order-9', sourceOrderNo: 'CGDD-20260921-0009', supplier: 'SUP000002', warehouse: 'LWH000002', receiptMode: 'virtual', status: 'received', inboundId: 'inbound-seed-3', inboundNo: 'CGRK-20260921-0001', finalReceiveTime: '2026-09-21 12:00:00', creator: '系统', createdAt: '2026-09-21 11:55:00', lines: [{ id: 'order-line-9-notice-1', sourceOrderLineId: 'order-line-9', product: 'SP0101010001', productCode: 'SP0101010001', productName: '无线键盘 K380', unit: '个', notifyQty: 4, receivedQty: 4, shortQty: 0 }] },
+  {
+    id: 'notice-seed-inbound-4', noticeNo: 'CGSHTZ-20260921-0004', sourceOrderId: 'order-9', sourceOrderNo: 'CGDD-20260921-0009', supplier: 'SUP000002', warehouse: 'LWH000002', receiptMode: 'warehouse', status: 'received', inboundId: 'inbound-seed-4', inboundNo: 'CGRK-20260921-0002', finalReceiveTime: '2026-09-21 12:30:00', creator: '系统', createdAt: '2026-09-21 12:25:00', lines: [{ id: 'order-line-9-notice-2', sourceOrderLineId: 'order-line-9', product: 'SP0101010001', productCode: 'SP0101010001', productName: '无线键盘 K380', unit: '个', notifyQty: 3, receivedQty: 3, shortQty: 0 }] },
+  {
+    id: 'notice-seed-inbound-5', noticeNo: 'CGSHTZ-20260921-0005', sourceOrderId: 'order-10', sourceOrderNo: 'CGDD-20260921-0010', supplier: 'SUP000003', warehouse: 'LWH000003', receiptMode: 'warehouse', status: 'received', inboundId: 'inbound-seed-5', inboundNo: 'CGRK-20260921-0003', finalReceiveTime: '2026-09-21 13:00:00', creator: '系统', createdAt: '2026-09-21 12:55:00', lines: [{ id: 'order-line-10-notice-1', sourceOrderLineId: 'order-line-10', product: 'SP0101020001', productCode: 'SP0101020001', productName: '人体工学鼠标 M720', unit: '个', notifyQty: 4, receivedQty: 4, shortQty: 0 }] },
+  {
+    id: 'notice-seed-inbound-6', noticeNo: 'CGSHTZ-20260921-0006', sourceOrderId: 'order-10', sourceOrderNo: 'CGDD-20260921-0010', supplier: 'SUP000003', warehouse: 'LWH000003', receiptMode: 'warehouse', status: 'received', inboundId: 'inbound-seed-6', inboundNo: 'CGRK-20260921-0004', finalReceiveTime: '2026-09-21 13:30:00', creator: '系统', createdAt: '2026-09-21 13:25:00', lines: [{ id: 'order-line-10-notice-2', sourceOrderLineId: 'order-line-10', product: 'SP0101020001', productCode: 'SP0101020001', productName: '人体工学鼠标 M720', unit: '个', notifyQty: 3, receivedQty: 3, shortQty: 0 }] },
+  {
+    id: 'notice-seed-inbound-7', noticeNo: 'CGSHTZ-20260921-0007', sourceOrderId: 'order-2', sourceOrderNo: 'CGDD-20260918-0002', supplier: 'SUP000002', warehouse: 'LWH000002', receiptMode: 'warehouse', status: 'received', inboundId: 'inbound-seed-7', inboundNo: 'CGRK-20260921-0005', finalReceiveTime: '2026-09-21 14:00:00', creator: '系统', createdAt: '2026-09-21 13:55:00', lines: [{ id: 'order-line-2-notice-3', sourceOrderLineId: 'order-line-2', product: 'SP0101020001', productCode: 'SP0101020001', productName: '人体工学鼠标 M720', unit: '个', notifyQty: 2, receivedQty: 2, shortQty: 0 }] },
+  {
+    id: 'notice-seed-inbound-8', noticeNo: 'CGSHTZ-20260921-0008', sourceOrderId: 'order-2', sourceOrderNo: 'CGDD-20260918-0002', supplier: 'SUP000002', warehouse: 'LWH000002', receiptMode: 'virtual', status: 'received', inboundId: 'inbound-seed-8', inboundNo: 'CGRK-20260921-0006', finalReceiveTime: '2026-09-21 14:30:00', creator: '系统', createdAt: '2026-09-21 14:25:00', lines: [{ id: 'order-line-2-notice-4', sourceOrderLineId: 'order-line-2', product: 'SP0101020001', productCode: 'SP0101020001', productName: '人体工学鼠标 M720', unit: '个', notifyQty: 2, receivedQty: 2, shortQty: 0 }] },
 ];
 
 export const receiptNotices = seedNotices.map(normalizeNoticeRow);
@@ -228,8 +277,8 @@ const qtyCell = (value) => value ?? 0;
 export const receiptNoticeColumns = [
   { key: 'noticeNo', label: '单号', defaultWidth: 190, minWidth: 170, maxWidth: 240, ellipsis: true, link: true },
   { key: 'sourceOrderNo', label: '来源采购订单', defaultWidth: 180, minWidth: 160, maxWidth: 240, ellipsis: true, link: true },
-  { key: 'supplier', label: '供应商', defaultWidth: 200, minWidth: 140, maxWidth: 280, ellipsis: true, render: (value) => resolveOptionLabel(value, supplierOptions) },
-  { key: 'warehouse', label: '收货仓库', defaultWidth: 160, minWidth: 120, maxWidth: 220, ellipsis: true, render: (value) => resolveOptionLabel(value, warehouseOptions) },
+  { key: 'supplier', label: '供应商', defaultWidth: 200, minWidth: 140, maxWidth: 280, ellipsis: true, render: (value, row) => formatSnapshotCodeName(value, row?.supplierNameSnapshot) },
+  { key: 'warehouse', label: '收货仓库', defaultWidth: 160, minWidth: 120, maxWidth: 220, ellipsis: true, render: (value, row) => formatSnapshotCodeName(value, row?.warehouseNameSnapshot) },
   { key: 'receiptMode', label: '收货处理方式', defaultWidth: 120, minWidth: 110, maxWidth: 160, ellipsis: true, render: (value) => formatReceiptMode(value) },
   { key: 'status', label: '单据状态', defaultWidth: 96, minWidth: 88, maxWidth: 140, ellipsis: true, render: (value) => noticeStatusLabels[value] || value, tone: (value) => (value === 'received' ? 'text-erp-success' : value === 'pending_receive' ? 'text-erp-info' : value === 'push_failed' || value === 'cancelled' ? 'text-erp-danger' : 'text-erp-warning') },
   { key: 'totalNotifyQty', label: '通知数量', defaultWidth: 96, minWidth: 80, maxWidth: 120, ellipsis: true, align: 'right', sortable: true, render: qtyCell },

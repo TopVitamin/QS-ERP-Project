@@ -366,8 +366,8 @@ export function ProductForm({ mode, context, config, onFeedback, onOpenPage }) {
               </FormField>
               <FormFields
                 fields={[
-                  { key: 'initialPurchasePrice', label: '初始含税采购价', type: 'text', placeholder: '请输入采购价', disabled: readOnlyPrice },
-                  { key: 'initialSalePrice', label: '初始含税销售价', type: 'text', placeholder: '请输入销售价', disabled: readOnlyPrice },
+                  { key: 'initialPurchasePrice', label: '初始含税采购价', type: 'number', min: 0.0001, step: 0.0001, placeholder: '请输入采购价', disabled: readOnlyPrice },
+                  { key: 'initialSalePrice', label: '初始含税销售价', type: 'number', min: 0.0001, step: 0.0001, placeholder: '请输入销售价', disabled: readOnlyPrice },
                   { key: 'currency', label: '币别', type: 'select', options: currencySelectOptions, placeholder: '请选择币别', disabled: readOnlyPrice },
                 ]}
                 form={form}

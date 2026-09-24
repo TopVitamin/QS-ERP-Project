@@ -2,6 +2,7 @@ import { skuOptions } from '../data/masterData.js';
 import { nextDocumentNo } from './documentNo.js';
 import { upsertMockRow, readMockRows, writeMockRows } from './mockStorage.js';
 import { generateInboundFromNotice } from './inboundLogic.js';
+import { capturePurchaseDocumentNames, loadRowsWithNameSnapshots } from './documentNameSnapshots.js';
 import {
   enrichOrderLine,
   loadOrderById,
@@ -104,17 +105,18 @@ export function normalizeNoticeRow(row) {
 }
 
 export function persistNotice(row) {
-  const next = normalizeNoticeRow(row);
+  const previous = readMockRows(NOTICE_STORAGE_KEY, []).find((item) => item.id === row.id) || null;
+  const next = normalizeNoticeRow(capturePurchaseDocumentNames(row, { previous }));
   upsertMockRow(NOTICE_STORAGE_KEY, next);
   return next;
 }
 
 export function loadNoticeById(id) {
-  return readMockRows(NOTICE_STORAGE_KEY, []).find((item) => item.id === id) || null;
+  return loadAllNotices([]).find((item) => item.id === id) || null;
 }
 
 export function loadAllNotices(seed = []) {
-  return readMockRows(NOTICE_STORAGE_KEY, seed);
+  return loadRowsWithNameSnapshots(NOTICE_STORAGE_KEY, seed, capturePurchaseDocumentNames);
 }
 
 export function loadNoticesByOrderId(orderId, orderNo) {
@@ -157,7 +159,11 @@ export function buildNoticeFormFromOrder(orderRow) {
     sourceOrderId: orderRow.id,
     sourceOrderNo: orderRow.orderNo,
     supplier: orderRow.supplier,
+    supplierNameSnapshot: orderRow.supplierNameSnapshot,
+    supplierSnapshotCode: orderRow.supplierSnapshotCode,
     warehouse: orderRow.warehouse,
+    warehouseNameSnapshot: orderRow.warehouseNameSnapshot,
+    warehouseSnapshotCode: orderRow.warehouseSnapshotCode,
     receiptMode: 'warehouse',
     status: 'pending_push',
     remark: '',
@@ -278,7 +284,11 @@ export function createReceiptNotice(orderRow, form) {
     sourceOrderId: orderRow.id,
     sourceOrderNo: orderRow.orderNo,
     supplier: orderRow.supplier,
+    supplierNameSnapshot: orderRow.supplierNameSnapshot,
+    supplierSnapshotCode: orderRow.supplierSnapshotCode,
     warehouse: orderRow.warehouse,
+    warehouseNameSnapshot: orderRow.warehouseNameSnapshot,
+    warehouseSnapshotCode: orderRow.warehouseSnapshotCode,
     receiptMode,
     status: 'pending_push',
     remark: form.remark || '',
@@ -315,7 +325,11 @@ function createVirtualReceiptNotice(orderRow, form, activeLines, noticeNo) {
     sourceOrderId: orderRow.id,
     sourceOrderNo: orderRow.orderNo,
     supplier: orderRow.supplier,
+    supplierNameSnapshot: orderRow.supplierNameSnapshot,
+    supplierSnapshotCode: orderRow.supplierSnapshotCode,
     warehouse: orderRow.warehouse,
+    warehouseNameSnapshot: orderRow.warehouseNameSnapshot,
+    warehouseSnapshotCode: orderRow.warehouseSnapshotCode,
     receiptMode: 'virtual',
     status: 'received',
     remark: form.remark || '',
@@ -327,15 +341,15 @@ function createVirtualReceiptNotice(orderRow, form, activeLines, noticeNo) {
     lines: receivedLines,
   });
 
-  occupyOrderLines(orderRow, receivedLines);
-  substituteOrderOccupancy(loadOrderById(orderRow.id) || orderRow, receivedLines);
   const inbound = generateInboundFromNotice(loadNoticeById(notice.id) || notice);
 
   if (!inbound) {
     removeNoticeById(notice.id);
-    persistOrder(orderRow);
     throw new Error('虚拟入库生成入库单失败，未创建通知单');
   }
+
+  occupyOrderLines(orderRow, receivedLines);
+  substituteOrderOccupancy(loadOrderById(orderRow.id) || orderRow, receivedLines);
 
   return {
     notice: loadNoticeById(notice.id) || notice,
@@ -462,8 +476,9 @@ export function applyMockReceipt(row, payload) {
     finalReceiveTime: nowStamp(),
   });
 
+  const inbound = generateInboundFromNotice(notice);
+  if (!inbound) throw new Error('入库结果未生成，采购收货未完成');
   substituteOrderOccupancy(orderRow, nextLines);
-  generateInboundFromNotice(notice);
   return loadNoticeById(row.id);
 }
 

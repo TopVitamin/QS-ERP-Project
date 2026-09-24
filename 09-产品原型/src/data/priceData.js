@@ -34,7 +34,7 @@ function buildGeneratedPriceRows() {
       unit: product.unit,
       currency: product.currency || '人民币',
       price: Number(product.initialPurchasePrice),
-      taxRate: product.defaultTaxRate || '',
+      taxRate: '',
       lastAdjustNo: '',
       creator: product.creator || '阿盛',
       createdAt: product.createdAt,

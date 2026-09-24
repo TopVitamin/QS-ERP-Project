@@ -17,8 +17,8 @@ import {
 } from '../lib/salesReturnInboundLogic.js';
 
 /**
- * 销退入库单详情（F04）：整单只读，页头展示审核状态与金蝶推送状态两枚标签；
- * 单据信息分区顺序见页面骨架；金蝶推送失败原因展示，重推在系统集成中心。
+ * 销退入库单详情（F04）：整单只读，页头展示审核状态与推送财务ERP状态两枚标签；
+ * 单据信息分区顺序见页面骨架；推送财务ERP失败原因展示，重推在系统集成中心。
  */
 
 function useSalesReturnInboundRow(context) {
@@ -90,7 +90,7 @@ function buildInboundInfoFields({ detail, row, onOpenPage }) {
     { key: 'amount', label: '价税合计', value: `${currencySymbol(detail.currency)} ${formatAmount(detail.amount ?? 0)}` },
     { key: 'taxAmount', label: '税额', value: `${currencySymbol(detail.currency)} ${formatAmount(detail.taxAmount ?? 0)}` },
     { key: 'netAmount', label: '金额', value: `${currencySymbol(detail.currency)} ${formatAmount(detail.netAmount ?? 0)}` },
-    { key: 'pushTime', label: '推送金蝶时间', value: detail.pushTime || EMPTY_PLACEHOLDER },
+    { key: 'pushTime', label: '推送财务ERP时间', value: detail.pushTime || EMPTY_PLACEHOLDER },
   ];
 
   if (row.pushFailReason) {

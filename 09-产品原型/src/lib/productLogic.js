@@ -4,6 +4,22 @@ import { formatNow } from './partnerMasterLogic.js';
 
 export const PRODUCT_STORAGE_KEY = 'qs-erp:products:v1';
 
+function hasOptionalPriceValue(value) {
+  return value != null && String(value).trim() !== '';
+}
+
+function isValidInitialPrice(value) {
+  const text = String(value ?? '').trim();
+  if (!text) return true;
+  if (!/^(?:\d+(?:\.\d{0,4})?|\.\d{1,4})$/.test(text)) return false;
+  return Number.isFinite(Number(text)) && Number(text) > 0;
+}
+
+function normalizeOptionalPrice(value) {
+  if (!hasOptionalPriceValue(value)) return '';
+  return typeof value === 'string' ? value.trim() : value;
+}
+
 export const lifecycleStatusLabels = {
   on_sale: '在售',
   stopped: '停售',
@@ -67,7 +83,16 @@ export function canDisableProduct(row) {
 }
 
 export function getDeleteBlockReason(row) {
-  if (row.referenced) return '该商品已被业务引用，不能删除，可改为禁用';
+  const hasInitialPriceRecord = [row?.initialPurchasePrice, row?.initialSalePrice]
+    .some((value) => value != null && String(value).trim() !== '');
+  if (
+    row?.referenced
+    || row?.purchaseReferenced
+    || row?.hasPurchaseHistory
+    || row?.documentReferenced
+    || row?.priceReferenced
+    || hasInitialPriceRecord
+  ) return '该商品已发生采购或存在业务单据、价目表引用，不能删除，可改为禁用';
   return null;
 }
 
@@ -146,8 +171,16 @@ export function validateProductForSave(form, existingRows = [], currentId = null
 
   const purchasePrice = form.initialPurchasePrice;
   const salePrice = form.initialSalePrice;
-  if (purchasePrice && !form.initialSupplier) fieldErrors.initialSupplier = '请选择初始供应商';
-  if ((purchasePrice || salePrice) && !form.currency) fieldErrors.currency = '请选择币别';
+  const hasPurchasePrice = hasOptionalPriceValue(purchasePrice);
+  const hasSalePrice = hasOptionalPriceValue(salePrice);
+  if (hasPurchasePrice && !isValidInitialPrice(purchasePrice)) {
+    fieldErrors.initialPurchasePrice = '请输入大于0且最多4位小数的金额';
+  }
+  if (hasSalePrice && !isValidInitialPrice(salePrice)) {
+    fieldErrors.initialSalePrice = '请输入大于0且最多4位小数的金额';
+  }
+  if (hasPurchasePrice && !form.initialSupplier) fieldErrors.initialSupplier = '请选择初始供应商';
+  if ((hasPurchasePrice || hasSalePrice) && !form.currency) fieldErrors.currency = '请选择币别';
 
   if (form.stockAlertEnabled && !String(form.minStock || '').trim()) {
     fieldErrors.minStock = emptyFieldMessage('最低库存数量');
@@ -166,6 +199,8 @@ export function validateProductForSave(form, existingRows = [], currentId = null
 export function formToProductRow(form, contextRow = null) {
   const now = formatNow();
   const categoryId = form.categoryLevel3;
+  const hasInitialPriceRecord = [form.initialPurchasePrice, form.initialSalePrice]
+    .some((value) => value != null && String(value).trim() !== '');
   return {
     ...contextRow,
     ...form,
@@ -177,9 +212,10 @@ export function formToProductRow(form, contextRow = null) {
     createdAt: contextRow?.createdAt || now,
     updater: '当前用户',
     updatedAt: now,
-    referenced: contextRow?.referenced || false,
-    initialPurchasePrice: contextRow?.initialPurchasePrice ?? form.initialPurchasePrice,
-    initialSalePrice: contextRow?.initialSalePrice ?? form.initialSalePrice,
+    // Demo uses one aggregate marker for purchase, document, and price-list references.
+    referenced: Boolean(contextRow?.referenced || contextRow?.purchaseReferenced || contextRow?.documentReferenced || contextRow?.priceReferenced || hasInitialPriceRecord),
+    initialPurchasePrice: contextRow?.initialPurchasePrice ?? normalizeOptionalPrice(form.initialPurchasePrice),
+    initialSalePrice: contextRow?.initialSalePrice ?? normalizeOptionalPrice(form.initialSalePrice),
     initialSupplier: contextRow?.initialSupplier ?? form.initialSupplier,
     currency: contextRow?.currency ?? form.currency,
     code: contextRow?.code || form.code,

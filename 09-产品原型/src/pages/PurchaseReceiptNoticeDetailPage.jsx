@@ -10,8 +10,10 @@ import {
 } from '../components/erp/PurchaseReceiptNoticeActionDialogs.jsx';
 import { usePurchaseReceiptNoticeRow } from '../hooks/usePurchaseReceiptNoticeRow.js';
 import { resolveOptionLabel } from '../lib/codeName.js';
+import { formatSnapshotCodeName } from '../lib/documentNameSnapshots.js';
 import { EMPTY_PLACEHOLDER } from '../lib/format.js';
-import { supplierOptions, warehouseOptions } from '../data/masterData.js';
+import { supplierOptions } from '../data/masterData.js';
+import { getInventoryLogicalWarehouseOptions } from '../data/warehouseData.js';
 import { getNoticeStatusBadges } from '../data/receiptNoticeData.js';
 import { formatReceiptMode, loadNoticeById, refreshNoticeLines } from '../lib/receiptNoticeLogic.js';
 import { orders } from '../data/orderData.js';
@@ -44,8 +46,8 @@ function buildNoticeInfoFields({ detail, row, onOpenPage }) {
   const fields = [
     { key: 'noticeNo', label: '单号', value: detail.noticeNo },
     { key: 'sourceOrderNo', label: '来源采购订单', value: buildSourceOrderLink(detail, onOpenPage) },
-    { key: 'supplier', label: '供应商', value: resolveOptionLabel(detail.supplier, supplierOptions) },
-    { key: 'warehouse', label: '收货仓库', value: resolveOptionLabel(detail.warehouse, warehouseOptions) },
+    { key: 'supplier', label: '供应商', value: formatSnapshotCodeName(detail.supplier, detail.supplierNameSnapshot) },
+    { key: 'warehouse', label: '收货仓库', value: formatSnapshotCodeName(detail.warehouse, detail.warehouseNameSnapshot) },
     { key: 'receiptMode', label: '收货处理方式', value: formatReceiptMode(detail) },
     { key: 'pushTime', label: '推送时间', value: row.pushTime || EMPTY_PLACEHOLDER },
     { key: 'finalReceiveTime', label: '最终收货确认时间', value: row.finalReceiveTime || EMPTY_PLACEHOLDER },

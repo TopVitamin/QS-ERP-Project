@@ -28,7 +28,7 @@ function today() {
 
 /**
  * 其他出库单的模块弹窗：仅 Demo 的仓库主动回传（弹窗与Mock §3）。
- * 本模块列表/详情不提供新增、编辑、取消、作废与重推金蝶入口。
+ * 本模块列表/详情不提供新增、编辑、取消、作废与重推财务ERP入口。
  */
 export function OtherOutboundActionDialogs({ dialog, onClose, onComplete, onNotify }) {
   const [form, setForm] = useState(null);
@@ -225,7 +225,7 @@ export function OtherOutboundActionDialogs({ dialog, onClose, onComplete, onNoti
               </tbody>
             </table>
           </div>
-          <div className="text-[12px] text-erp-text-muted">演示数据：生成后从「未推送」开始，由 Demo 模拟金蝶推送进度；库存不足时阻断且不生成出库单。</div>
+          <div className="text-[12px] text-erp-text-muted">演示数据：生成后从「未推送」开始，由 Demo 模拟推送财务ERP进度；库存不足时阻断且不生成出库单。</div>
         </div>
       </div>
     </SimpleDialog>

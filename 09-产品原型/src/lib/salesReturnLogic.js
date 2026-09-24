@@ -5,11 +5,11 @@ import { computeLinesTotals, EMPTY_PLACEHOLDER } from './format.js';
 import { emptyFieldMessage } from './formValidation.js';
 import { readMockRows, upsertMockRow, writeMockRows } from './mockStorage.js';
 import { loadAllOutbounds } from './salesOutboundLogic.js';
-import { hasNegativePrice } from './validation.js';
+import { hasInvalidTaxRate, hasNegativePrice } from './validation.js';
 
 export const SALES_RETURN_STORAGE_KEY = 'qs-erp:sales-returns:v1';
 export const RETURN_NOTICE_STORAGE_KEY = 'qs-erp:sales-return-notices:v1';
-export const RETURN_INBOUND_STORAGE_KEY = 'qs-erp:sales-return-inbounds:v1';
+export const RETURN_INBOUND_STORAGE_KEY = 'qs-erp:sales-return-inbounds:v2';
 
 /** 未结束、仍占用退货单可下推量的通知状态（R10、R14、R17） */
 const BLOCKING_NOTICE_STATUSES = new Set(['pushing', 'pending_receive', 'cancelling']);
@@ -253,6 +253,7 @@ export function validateSalesReturnForSave(form) {
     }
   }
   if (hasNegativePrice(form.lines)) return { message: '含税单价不能为负数' };
+  if (hasInvalidTaxRate(form.lines)) return { message: '税率最多2位小数，允许0%' };
   return null;
 }
 

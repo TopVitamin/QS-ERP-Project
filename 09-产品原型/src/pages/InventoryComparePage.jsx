@@ -88,6 +88,7 @@ export function InventoryComparePage(props) {
     initialFilters,
     filterRows,
     initialVisibility,
+    initialPinnedKeys: ['productCode', 'productName'],
     columns,
     columnOptions,
     filterFields,

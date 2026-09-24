@@ -1,16 +1,18 @@
 import { skuOptions } from '../data/masterData.js';
 import { computeLineTaxMetrics, computeLinesTotals } from './format.js';
 import { nextDocumentNo } from './documentNo.js';
-import { upsertMockRow, readMockRows } from './mockStorage.js';
+import { upsertMockRow, readMockRows, writeMockRows } from './mockStorage.js';
 import { loadOrderById, nowStamp, DELIVERY_NOTICE_STORAGE_KEY } from './salesOrderLogic.js';
+import { getAvailableStock, getReservationRemaining, loadStockFlows, postStockEntries } from './inventoryStockLogic.js';
+import { captureSalesDocumentNames, loadRowsWithNameSnapshots } from './documentNameSnapshots.js';
 
-export const SALES_OUTBOUND_STORAGE_KEY = 'qs-erp:sales-outbounds:v1';
+export const SALES_OUTBOUND_STORAGE_KEY = 'qs-erp:sales-outbounds:v2';
 
 export const auditStatusLabels = {
   approved: '已审核',
 };
 
-export const kingdeePushStatusLabels = {
+export const financeErpPushStatusLabels = {
   un_pushed: '未推送',
   pushing: '推送中',
   push_success: '推送成功',
@@ -23,8 +25,8 @@ export const sourceTypeLabels = {
   external_toc: '外部ToC',
 };
 
-const KINGDEE_AUTO_RETRY_MAX = 3;
-const kingdeeTimers = new Map();
+const FINANCE_ERP_AUTO_RETRY_MAX = 3;
+const financeErpTimers = new Map();
 
 export function enrichOutboundLine(line) {
   const sku = skuOptions.find((item) => item.value === line.product);
@@ -68,13 +70,37 @@ export function normalizeOutboundRow(row) {
 }
 
 export function persistOutbound(row) {
-  const next = normalizeOutboundRow(row);
+  const previous = readMockRows(SALES_OUTBOUND_STORAGE_KEY, []).find((item) => item.id === row.id) || null;
+  const next = normalizeOutboundRow(captureSalesDocumentNames(row, { previous }));
   upsertMockRow(SALES_OUTBOUND_STORAGE_KEY, next);
   return next;
 }
 
 export function loadAllOutbounds(seed = []) {
-  return readMockRows(SALES_OUTBOUND_STORAGE_KEY, seed);
+  const rows = readMockRows(SALES_OUTBOUND_STORAGE_KEY, seed);
+  const legacyTocSeed = rows.find((row) => row.id === 'sales-outbound-toc-seed'
+    && row.sourceType === 'external_toc'
+    && row.sourceOrderNo === 'TOC-20260922-0001'
+    && row.warehouse === 'LWH000009'
+    && row.lines?.some((line) => line.product === 'SP0101020001'));
+  if (legacyTocSeed) {
+    const next = rows.map((row) => row.id !== legacyTocSeed.id ? row : normalizeOutboundRow({
+      ...row,
+      sourceOrderNo: '',
+      externalOrderNo: row.externalOrderNo || row.sourceOrderNo,
+      warehouse: 'LWH000001',
+      warehouseNameSnapshot: '',
+      warehouseSnapshotCode: '',
+      lines: row.lines.map((line) => line.product === 'SP0101020001'
+        ? { ...line, product: 'SP0101010001', price: 128 }
+        : line),
+    }));
+    writeMockRows(SALES_OUTBOUND_STORAGE_KEY, next);
+  }
+  const currentRows = readMockRows(SALES_OUTBOUND_STORAGE_KEY, seed);
+  const missingSeeds = seed.filter((row) => !currentRows.some((item) => item.id === row.id));
+  if (missingSeeds.length) writeMockRows(SALES_OUTBOUND_STORAGE_KEY, [...currentRows, ...missingSeeds]);
+  return loadRowsWithNameSnapshots(SALES_OUTBOUND_STORAGE_KEY, seed, captureSalesDocumentNames);
 }
 
 export function loadOutboundById(id) {
@@ -118,64 +144,64 @@ function buildOutboundLinesFromNotice(noticeRow, orderRow) {
   );
 }
 
-function clearKingdeeTimer(outboundId) {
-  const timer = kingdeeTimers.get(outboundId);
+function clearFinanceErpTimer(outboundId) {
+  const timer = financeErpTimers.get(outboundId);
   if (timer) {
     window.clearTimeout(timer);
-    kingdeeTimers.delete(outboundId);
+    financeErpTimers.delete(outboundId);
   }
 }
 
-function scheduleKingdeeAttempt(outboundId, attempt = 1, forceFail = false) {
-  clearKingdeeTimer(outboundId);
+function scheduleFinanceErpAttempt(outboundId, attempt = 1, forceFail = false) {
+  clearFinanceErpTimer(outboundId);
   const current = loadOutboundById(outboundId);
-  if (!current || current.kingdeePushStatus === 'push_success') return current;
+  if (!current || current.financeErpPushStatus === 'push_success') return current;
 
   persistOutbound({
     ...current,
-    kingdeePushStatus: 'pushing',
+    financeErpPushStatus: 'pushing',
     pushFailReason: attempt > 1 ? current.pushFailReason : '',
   });
 
   const timer = window.setTimeout(() => {
-    kingdeeTimers.delete(outboundId);
+    financeErpTimers.delete(outboundId);
     const latest = loadOutboundById(outboundId);
-    if (!latest || latest.kingdeePushStatus !== 'pushing') return;
+    if (!latest || latest.financeErpPushStatus !== 'pushing') return;
 
-    const shouldFail = forceFail && attempt >= KINGDEE_AUTO_RETRY_MAX;
+    const shouldFail = forceFail && attempt >= FINANCE_ERP_AUTO_RETRY_MAX;
     if (shouldFail) {
       persistOutbound({
         ...latest,
-        kingdeePushStatus: 'push_failed',
-        pushFailReason: latest.pushFailReason || '接口超时，金蝶未确认接收',
+        financeErpPushStatus: 'push_failed',
+        pushFailReason: latest.pushFailReason || '接口超时，财务ERP未确认接收',
       });
       return;
     }
 
-    if (forceFail && attempt < KINGDEE_AUTO_RETRY_MAX) {
+    if (forceFail && attempt < FINANCE_ERP_AUTO_RETRY_MAX) {
       persistOutbound({
         ...latest,
-        kingdeePushStatus: 'push_failed',
+        financeErpPushStatus: 'push_failed',
         pushFailReason: `第${attempt}次推送失败，系统将自动重试`,
       });
-      scheduleKingdeeAttempt(outboundId, attempt + 1, true);
+      scheduleFinanceErpAttempt(outboundId, attempt + 1, true);
       return;
     }
 
     persistOutbound({
       ...latest,
-      kingdeePushStatus: 'push_success',
+      financeErpPushStatus: 'push_success',
       pushTime: nowStamp(),
       pushFailReason: '',
     });
   }, attempt === 1 ? 800 : 600);
 
-  kingdeeTimers.set(outboundId, timer);
+  financeErpTimers.set(outboundId, timer);
   return loadOutboundById(outboundId);
 }
 
-export function simulateKingdeePush(outboundId, { forceFail = false } = {}) {
-  return scheduleKingdeeAttempt(outboundId, 1, forceFail);
+export function simulateFinanceErpPush(outboundId, { forceFail = false } = {}) {
+  return scheduleFinanceErpAttempt(outboundId, 1, forceFail);
 }
 
 export function generateOutboundFromNotice(noticeRow) {
@@ -192,10 +218,53 @@ export function generateOutboundFromNotice(noticeRow) {
   const actualOutboundTime = noticeRow.finalShipTime || nowStamp();
   const businessDate = actualOutboundTime.slice(0, 10);
   const existingNos = loadAllOutbounds([]).map((row) => row.outboundNo);
-  const outboundNo = nextDocumentNo('XSCK', businessDate, existingNos);
+  if (!orderRow) throw new Error('来源销售订单不存在，不能生成销售出库单');
+  const outboundNo = noticeRow.outboundNo || nextDocumentNo('XSCK', businessDate, existingNos);
+  const outboundId = noticeRow.outboundId || `outbound-${noticeRow.id}`;
+  const alreadyPosted = loadStockFlows().some((flow) => flow.sourceType === '销售出库单' && flow.sourceNo === outboundNo);
+  if (!alreadyPosted) {
+    postStockEntries(lines.map((line) => {
+      const noticeLine = (noticeRow.lines || []).find((item) => item.id === line.sourceNoticeLineId);
+      const shippedQty = Number(line.quantity || 0);
+      const shortQty = Math.max(0, Number(noticeLine?.notifyQty || 0) - shippedQty);
+      const reservationSourceLineNo = noticeLine?.sourceOrderLineId;
+      const reservationRemaining = getReservationRemaining({
+        logicalWarehouse: noticeRow.warehouse,
+        product: line.product,
+        sourceNo: orderRow.orderNo,
+        sourceLineNo: reservationSourceLineNo,
+      });
+      if (reservationRemaining === 0) {
+        if (getAvailableStock(noticeRow.warehouse, line.product) < shippedQty) {
+          throw new Error(`逻辑仓${noticeRow.warehouse}商品${line.product}可用库存不足，不能生成出库结果`);
+        }
+        return { logicalWarehouse: noticeRow.warehouse, product: line.product, instantDelta: -shippedQty };
+      }
+      if (reservationRemaining < shippedQty + (orderRow.businessStatus === 'closed' ? shortQty : 0)) {
+        throw new Error(`来源订单商品${line.product}预占数量不足，不能生成出库结果`);
+      }
+      return {
+        logicalWarehouse: noticeRow.warehouse,
+        product: line.product,
+        instantDelta: -shippedQty,
+        consumeReserved: shippedQty,
+        releaseReserved: orderRow.businessStatus === 'closed' ? shortQty : 0,
+        reservationSourceNo: orderRow.orderNo,
+        reservationSourceLineNo,
+      };
+    }), {
+      eventType: 'result_out',
+      sourceType: '销售出库单',
+      sourceNo: outboundNo,
+      businessType: '销售出库',
+      reservationSourceNo: orderRow.orderNo,
+      operator: '系统',
+      time: actualOutboundTime,
+    });
+  }
 
   const outbound = persistOutbound({
-    id: `outbound-${Date.now()}`,
+    id: outboundId,
     outboundNo,
     sourceType: 'b2b_notice',
     sourceNoticeId: noticeRow.id,
@@ -203,10 +272,14 @@ export function generateOutboundFromNotice(noticeRow) {
     sourceOrderId: noticeRow.sourceOrderId,
     sourceOrderNo: noticeRow.sourceOrderNo,
     customer: noticeRow.customer,
+    customerNameSnapshot: noticeRow.customerNameSnapshot,
+    customerSnapshotCode: noticeRow.customerSnapshotCode,
     warehouse: noticeRow.warehouse,
+    warehouseNameSnapshot: noticeRow.warehouseNameSnapshot,
+    warehouseSnapshotCode: noticeRow.warehouseSnapshotCode,
     currency: orderRow?.currency || '人民币',
     auditStatus: 'approved',
-    kingdeePushStatus: 'un_pushed',
+    financeErpPushStatus: 'un_pushed',
     businessDate,
     actualOutboundTime,
     pushTime: '',
@@ -226,7 +299,7 @@ export function generateOutboundFromNotice(noticeRow) {
     outboundNo: outbound.outboundNo,
   });
 
-  simulateKingdeePush(outbound.id);
+  simulateFinanceErpPush(outbound.id);
   return outbound;
 }
 
@@ -243,10 +316,14 @@ export function buildSeedOutboundFromNotice(noticeRow, orderRow, overrides = {})
     sourceOrderId: noticeRow.sourceOrderId,
     sourceOrderNo: noticeRow.sourceOrderNo,
     customer: noticeRow.customer,
+    customerNameSnapshot: noticeRow.customerNameSnapshot,
+    customerSnapshotCode: noticeRow.customerSnapshotCode,
     warehouse: noticeRow.warehouse,
+    warehouseNameSnapshot: noticeRow.warehouseNameSnapshot,
+    warehouseSnapshotCode: noticeRow.warehouseSnapshotCode,
     currency: orderRow?.currency || '人民币',
     auditStatus: 'approved',
-    kingdeePushStatus: overrides.kingdeePushStatus || 'push_success',
+    financeErpPushStatus: overrides.financeErpPushStatus || 'push_success',
     businessDate,
     actualOutboundTime,
     pushTime: overrides.pushTime || actualOutboundTime,

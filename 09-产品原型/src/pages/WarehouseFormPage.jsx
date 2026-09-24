@@ -102,7 +102,7 @@ function WarehouseForm({ mode, context, onFeedback, onOpenPage }) {
     { key: 'dockingSystem', label: '对接系统', type: 'select', options: dockingSystemOptions, placeholder: '请选择对接系统' },
     { key: 'thirdPartyCode', label: '第三方仓库编码', type: 'text', placeholder: '请输入外部系统提供的仓库编码' },
     { key: 'thirdPartyOwner', label: '第三方仓库货主', type: 'text', placeholder: '请输入货主标识' },
-    { key: 'authConfig', label: '对接授权配置', type: 'text', placeholder: '请选择授权配置' },
+    { key: 'authConfig', label: '对接授权配置', type: 'text', placeholder: '由系统集成侧维护', disabled: true, hint: '仅显示授权配置引用；密钥、令牌和协议参数由系统集成侧管理' },
   ];
 
   const statusBadges = !isCreate && context?.row ? buildPhysicalStatusBadges(context.row) : [];

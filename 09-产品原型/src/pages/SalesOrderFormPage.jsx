@@ -25,10 +25,11 @@ import {
   validateOrderForSave,
 } from '../lib/salesOrderLogic.js';
 import { currencyOptions } from '../data/masterData.js';
-import { getSelectableCustomerOptions } from '../data/customerData.js';
+import { getCustomerLevel, getSelectableCustomerOptions } from '../data/customerData.js';
 import { getSelectableLogicalWarehouseOptions } from '../data/warehouseData.js';
 import { getSelectableLogisticsProductOptions } from '../data/logisticsData.js';
 import { toSelectOptions } from '../lib/options.js';
+import { findCurrentSalesPrice, getProductDefaultTaxRate } from '../lib/priceLogic.js';
 import {
   defaultSalesOrderForm,
   getEditableSalesOrder,
@@ -55,13 +56,19 @@ function createOrderLine() {
     shipped: 0,
     notifyQty: 0,
     pushableQty: 0,
-    price: 0,
-    taxRate: '13',
+    price: '',
+    taxRate: '',
   };
 }
 
-function createOrderLineFromSku(sku, template) {
+function createOrderLineFromSku(sku, template, form = {}) {
   const sameSku = template?.product === sku?.value;
+  const currentPrice = findCurrentSalesPrice({
+    customer: form.customer,
+    customerLevel: getCustomerLevel(form.customer),
+    product: sku?.value,
+    currency: form.currency,
+  });
   const line = createOrderLine();
   return {
     ...line,
@@ -71,13 +78,15 @@ function createOrderLineFromSku(sku, template) {
     barcode: sku?.barcode || '',
     unit: sku?.unit === '-' ? template?.unit || '个' : sku?.unit || template?.unit || '个',
     quantity: sameSku ? template.quantity : 1,
-    price: sameSku ? template.price : sku?.referencePrice ?? 0,
-    taxRate: sameSku ? template.taxRate : '13',
+    price: sameSku && template.price !== '' ? template.price : currentPrice?.price ?? (sameSku ? template.price : ''),
+    taxRate: sameSku && template.taxRate !== ''
+      ? template.taxRate
+      : currentPrice?.taxRate || getProductDefaultTaxRate(sku?.value) || (sameSku ? template.taxRate : ''),
   };
 }
 
 function clearLinePrices(lines) {
-  return lines.map((line) => ({ ...line, price: 0, taxRate: '13' }));
+  return lines.map((line) => ({ ...line, price: '', taxRate: '' }));
 }
 
 function buildSalesOrderFormFields() {
@@ -85,7 +94,6 @@ function buildSalesOrderFormFields() {
   const customerOptions = getSelectableCustomerOptions();
   return [
   { key: 'orderNo', label: '单号', type: 'disabled', section: 'header' },
-  { key: 'date', label: '单据日期 *', type: 'date', section: 'header' },
   {
     key: 'customer',
     label: '客户 *',
@@ -161,7 +169,7 @@ function buildSalesOrderFormFields() {
 function prepareOrderForm(form) {
   if (form.orderNo && form.orderNo !== '保存后自动生成') return form;
   const existingNos = readMockRows(SALES_ORDER_STORAGE_KEY, salesOrders).map((row) => row.orderNo);
-  return { ...form, orderNo: nextDocumentNo('XSDD', form.date, existingNos) };
+  return { ...form, orderNo: nextDocumentNo('XSDD', undefined, existingNos) };
 }
 
 function toOrderRow(form, { context, shouldSubmit }) {
@@ -171,7 +179,6 @@ function toOrderRow(form, { context, shouldSubmit }) {
   const base = {
     id: source.id || `sales-order-${Date.now()}`,
     orderNo: form.orderNo,
-    date: form.date,
     customer: form.customer,
     warehouse: form.warehouse,
     deliveryDate: form.deliveryDate,

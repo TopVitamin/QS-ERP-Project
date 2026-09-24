@@ -36,7 +36,7 @@ function createMockPushForm() {
 /**
  * 其他入库单模块弹窗：Demo「模拟仓库主动回传」。
  * 正式规则见《其他入库单主PRD》R04（不补建申请、不补通知）；弹窗文案与生成规则见
- * 《其他入库单前端Demo版PRD_弹窗与Mock》§3。本模块不提供重推金蝶、编辑、取消等弹窗（§1.1）。
+ * 《其他入库单前端Demo版PRD_弹窗与Mock》§3。本模块不提供重推财务ERP、编辑、取消等弹窗（§1.1）。
  */
 export function OtherInboundActionDialogs({ dialog, onClose, onComplete, onNotify }) {
   const [form, setForm] = useState(createMockPushForm);
@@ -50,8 +50,8 @@ export function OtherInboundActionDialogs({ dialog, onClose, onComplete, onNotif
   const { type } = dialog;
 
   if (type === 'warehouse-push') {
-    // 选项按当前主数据实时读取：入库仓库只能选审核通过且启用的逻辑仓（不含虚拟在途仓）。
-    const warehouseOptions = getInventoryLogicalWarehouseOptions({ includeDisabled: false, includeTransit: false });
+    // 选项按当前主数据实时读取：审核通过且启用的逻辑仓（含虚拟在途仓）。
+    const warehouseOptions = getInventoryLogicalWarehouseOptions({ includeDisabled: false, includeTransit: true });
     const businessTypeOptions = otherInboundBusinessTypes.map((value) => ({ value, label: value }));
 
     function updateLine(lineId, key, value) {
@@ -197,7 +197,7 @@ export function OtherInboundActionDialogs({ dialog, onClose, onComplete, onNotif
         </div>
 
         <p className="mt-3 text-[12px] text-erp-text-muted">
-          生成后：审核状态=已审核、金蝶推送状态从未推送开始由 Demo 模拟推送进度；库存按所选逻辑仓增加，写一条增加方向库存流水。
+          生成后：审核状态=已审核、推送财务ERP状态从未推送开始由 Demo 模拟推送进度；库存按所选逻辑仓增加，写一条增加方向库存流水。
           演示数据与正式回传生成的入库单以「Demo 演示数据」标记区分。
         </p>
       </SimpleDialog>

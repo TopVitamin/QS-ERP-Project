@@ -34,7 +34,7 @@ function buildFormFields() {
       key: 'warehouse',
       label: '入库仓 *',
       type: 'select',
-      // 只能选审核通过且启用的逻辑仓，不含虚拟在途仓（R02、Q02）。
+      // 可选审核通过且启用的逻辑仓，含虚拟在途仓（R02、Q02）。
       options: getRequestWarehouseOptions(),
       placeholder: '请选择入库仓',
     },

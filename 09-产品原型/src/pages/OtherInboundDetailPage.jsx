@@ -16,7 +16,7 @@ import {
   refreshOtherInboundLines,
 } from '../lib/otherInboundLogic.js';
 
-/** 详情行跟随本地 Mock 集合刷新（Demo 生成后金蝶推送状态即时更新）。 */
+/** 详情行跟随本地 Mock 集合刷新（Demo 生成后推送财务ERP状态即时更新）。 */
 function useOtherInboundRow(context) {
   const contextRow = context?.row;
   const [row, setRow] = useState(contextRow || null);
@@ -88,7 +88,7 @@ function buildInboundInfoFields({ detail, row, onOpenPage, onFeedback }) {
     { key: 'businessType', label: '业务类型', value: detail.businessType || EMPTY_PLACEHOLDER },
     { key: 'actualInboundTime', label: '实际入库时间', value: detail.actualInboundTime || EMPTY_PLACEHOLDER },
     { key: 'businessDate', label: '业务日期', value: detail.businessDate || EMPTY_PLACEHOLDER },
-    { key: 'pushTime', label: '推送金蝶时间', value: detail.pushTime || EMPTY_PLACEHOLDER },
+    { key: 'pushTime', label: '推送财务ERP时间', value: detail.pushTime || EMPTY_PLACEHOLDER },
     { key: 'pushFailReason', label: '推送失败原因', value: row.pushFailReason || EMPTY_PLACEHOLDER, className: 'col-span-3' },
     { key: 'remark', label: '备注', value: detail.remark || EMPTY_PLACEHOLDER, className: 'col-span-3' },
   ];

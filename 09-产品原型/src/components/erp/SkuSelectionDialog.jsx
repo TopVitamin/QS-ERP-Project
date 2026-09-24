@@ -2,7 +2,7 @@ import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '../ui/button.jsx';
 import { Checkbox } from '../ui/checkbox.jsx';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog.jsx';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog.jsx';
 import { Input } from '../ui/input.jsx';
 import { cn } from '../../lib/utils.js';
 import { EMPTY_PLACEHOLDER, formatUnitPrice } from '../../lib/format.js';
@@ -40,6 +40,7 @@ export function SkuSelectionDialog({
   onConfirm,
   title = '选择商品 / SKU',
   pageSize = 8,
+  showReferencePrice = true,
 }) {
   const normalizedOptions = useMemo(
     () => options.filter((option) => option?.value !== '' && option?.value != null).map(normalizeSkuOption),
@@ -116,6 +117,7 @@ export function SkuSelectionDialog({
         <DialogHeader className="shrink-0 space-y-0 border-b border-erp-border-header p-0">
           <div className="border-b border-erp-border-header px-4 pb-3 pt-4 pr-12">
             <DialogTitle className="text-[16px]">{title}</DialogTitle>
+            <DialogDescription className="sr-only">按商品名称、SKU编码或条码筛选商品，勾选后点击确定加入当前明细。</DialogDescription>
           </div>
           <div className="px-4 pb-4 pr-12 pt-3">
             <div className="grid w-[calc(100%_-_220px)] grid-cols-[repeat(3,minmax(0,1fr))_auto_auto] items-end gap-2">
@@ -131,7 +133,7 @@ export function SkuSelectionDialog({
         <div className="flex min-h-0 flex-1">
           <section className="flex min-w-0 flex-1 flex-col border-r border-erp-border-header" aria-label="可选 SKU">
             <div className="min-h-0 flex-1 overflow-auto">
-              <table className="w-full min-w-[776px] table-fixed border-collapse text-left text-[12px]">
+              <table className="w-full table-fixed border-collapse text-left text-[12px]" style={{ minWidth: showReferencePrice ? 776 : 676 }}>
                 <colgroup>
                   <col className="w-9" />
                   <col className="w-[105px]" />
@@ -140,7 +142,7 @@ export function SkuSelectionDialog({
                   <col className="w-[115px]" />
                   <col className="w-[45px]" />
                   <col className="w-[70px]" />
-                  <col className="w-[100px]" />
+                  {showReferencePrice && <col className="w-[100px]" />}
                 </colgroup>
                 <thead className="sticky top-0 z-10 h-9 border-b border-erp-border-table-header bg-erp-surface-table-head text-erp-text-section">
                   <tr>
@@ -157,7 +159,7 @@ export function SkuSelectionDialog({
                     <th className="border-r border-erp-border-table-column px-2 font-normal">条码</th>
                     <th className="border-r border-erp-border-table-column px-2 font-normal">单位</th>
                     <th className="border-r border-erp-border-table-column px-2 text-right font-normal">可用库存</th>
-                    <th className="px-2 text-right font-normal">参考含税采购价</th>
+                    {showReferencePrice && <th className="px-2 text-right font-normal">参考含税采购价</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -186,13 +188,13 @@ export function SkuSelectionDialog({
                         <td className="truncate border-r border-erp-border-table-column px-2 text-erp-text-muted" title={option.barcode}>{option.barcode}</td>
                         <td className="border-r border-erp-border-table-column px-2 text-erp-text-muted">{option.unit}</td>
                         <td className="border-r border-erp-border-table-column px-2 text-right text-erp-text-muted">{option.availableStock}</td>
-                        <td className="px-2 text-right text-erp-text-muted">{option.referencePrice == null ? EMPTY_PLACEHOLDER : `¥ ${formatUnitPrice(option.referencePrice)}`}</td>
+                        {showReferencePrice && <td className="px-2 text-right text-erp-text-muted">{option.referencePrice == null ? EMPTY_PLACEHOLDER : `¥ ${formatUnitPrice(option.referencePrice)}`}</td>}
                       </tr>
                     );
                   })}
                   {!pageOptions.length && (
                     <tr>
-                      <td colSpan="8" className="h-32 text-center text-[12px] text-erp-text-muted">没有匹配的 SKU</td>
+                      <td colSpan={showReferencePrice ? 8 : 7} className="h-32 text-center text-[12px] text-erp-text-muted">没有匹配的 SKU</td>
                     </tr>
                   )}
                 </tbody>

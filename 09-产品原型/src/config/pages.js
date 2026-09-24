@@ -82,6 +82,8 @@ import { PurchasePriceAdjustDetailPage } from '../pages/PurchasePriceAdjustDetai
 import { SalesPriceAdjustListPage } from '../pages/SalesPriceAdjustListPage.jsx';
 import { SalesPriceAdjustCreatePage, SalesPriceAdjustEditPage } from '../pages/SalesPriceAdjustFormPage.jsx';
 import { SalesPriceAdjustDetailPage } from '../pages/SalesPriceAdjustDetailPage.jsx';
+import { FinanceResultListPage } from '../pages/FinanceResultListPage.jsx';
+import { PushExceptionListPage } from '../pages/PushExceptionListPage.jsx';
 import { defaultNavItems } from './nav.js';
 import { normalizePageId } from '../lib/pageRouting.js';
 
@@ -697,6 +699,18 @@ export const PAGE_REGISTRY = {
     title: '销退入库单详情',
     navId: 'sales',
     component: SalesReturnInboundDetailPage,
+  },
+  'integration-finance-results': {
+    id: 'integration-finance-results',
+    title: '业财结果单据',
+    navId: 'integration',
+    component: FinanceResultListPage,
+  },
+  'integration-push-exceptions': {
+    id: 'integration-push-exceptions',
+    title: '推送异常',
+    navId: 'integration',
+    component: PushExceptionListPage,
   },
 };
 

@@ -3,7 +3,7 @@
  *
  * 口径（《库存查询主PRD》《预占与冻结主PRD》《库存流水主PRD》）：
  * - 可用库存＝即时库存−预占库存−冻结库存；
- * - 预占由来源业务单据审核时占用，实际出库消耗、执行结束或取消释放；预占的占用与释放不记流水；
+ * - 预占由来源业务单据审核时占用，实际出库消耗、执行结束或取消释放；除B2B销售订单审核／释放外，预占与释放不单独记流水（库存流水主PRD R01）；
  * - 冻结、解冻是即时操作，只改冻结与可用，各生成一条库存流水；
  * - 只有已审核结果单改变即时库存并产生流水；
  * - 任何会让即时库存或可用库存为负的记账都阻止（INV-FR09）。
@@ -150,7 +150,24 @@ export function getAvailableStock(logicalWarehouse, product) {
 // —— 预占 ——
 
 export function loadReservations() {
-  return readMockRows(STOCK_RESERVATION_STORAGE_KEY, stockReservationSeeds);
+  const rows = readMockRows(STOCK_RESERVATION_STORAGE_KEY, stockReservationSeeds);
+  const cancelledOrderSeed = stockReservationSeeds.find((row) => row.id === 'res-sales-cancelled-demo');
+  if (cancelledOrderSeed && !rows.some((row) => row.id === cancelledOrderSeed.id)) {
+    const next = [...rows, cancelledOrderSeed];
+    writeMockRows(STOCK_RESERVATION_STORAGE_KEY, next);
+    return next;
+  }
+  return rows;
+}
+
+export function getReservationRemaining({ logicalWarehouse, product, sourceNo, sourceLineNo }) {
+  return loadReservations()
+    .filter((row) => row.logicalWarehouse === logicalWarehouse
+      && row.product === product
+      && row.sourceNo === sourceNo
+      && (sourceLineNo == null || row.sourceLineNo === sourceLineNo)
+      && row.status === 'active')
+    .reduce((sum, row) => sum + Math.max(0, Number(row.reservedQty || 0) - Number(row.consumedQty || 0) - Number(row.releasedQty || 0)), 0);
 }
 
 export function persistReservations(rows) {
@@ -201,6 +218,97 @@ export function reserveStock({ logicalWarehouse, product, quantity, sourceType, 
   };
   persistReservation(reservation);
   return { row: nextRow, reservation };
+}
+
+/** 销售订单审核：整单校验并预占，避免重复商品行导致部分写入；销售订单预占同时记录流水。 */
+export function reserveStockEntries(entries, meta = {}) {
+  const list = (entries || []).filter((entry) => Number(entry?.quantity || 0) > 0);
+  if (!list.length) return [];
+  const time = meta.time || nowStamp();
+  const sourceNo = meta.sourceNo || '';
+  const reservations = loadReservations();
+  const pending = [];
+
+  for (const entry of list) {
+    const amount = Number(entry.quantity || 0);
+    if (!Number.isFinite(amount) || amount <= 0) throw new Error('预占数量必须大于0');
+    const existing = reservations.filter((row) => row.sourceNo === sourceNo
+      && row.sourceLineNo === entry.sourceLineNo
+      && row.logicalWarehouse === entry.logicalWarehouse
+      && row.product === entry.product
+      && row.status === 'active')
+      .reduce((sum, row) => sum + Math.max(0, Number(row.reservedQty || 0) - Number(row.consumedQty || 0) - Number(row.releasedQty || 0)), 0);
+    if (existing >= amount) continue;
+    if (existing > 0) throw new Error(`订单明细${entry.sourceLineNo}已有部分预占，请先核对库存来源`);
+    pending.push({ ...entry, quantity: amount });
+  }
+  if (!pending.length) return [];
+
+  const rows = loadStockRows();
+  const nextRows = [...rows];
+  const groups = new Map();
+  pending.forEach((entry) => {
+    const key = `${entry.logicalWarehouse}\u0000${entry.product}`;
+    const group = groups.get(key) || { logicalWarehouse: entry.logicalWarehouse, product: entry.product, quantity: 0 };
+    group.quantity += entry.quantity;
+    groups.set(key, group);
+  });
+
+  for (const group of groups.values()) {
+    const index = nextRows.findIndex((row) => row.logicalWarehouse === group.logicalWarehouse && row.product === group.product);
+    if (index < 0) throw new Error(`逻辑仓${group.logicalWarehouse}没有商品${group.product}的库存记录`);
+    const row = nextRows[index];
+    const available = computeAvailableQty(row);
+    if (available < group.quantity) throw new Error(`逻辑仓${group.logicalWarehouse}可用库存不足，当前可用${available}，需要${group.quantity}`);
+    nextRows[index] = {
+      ...row,
+      reservedQty: Number(row.reservedQty || 0) + group.quantity,
+      updatedAt: time,
+    };
+  }
+
+  const createdReservations = pending.map((entry) => ({
+    id: `res-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    logicalWarehouse: entry.logicalWarehouse,
+    product: entry.product,
+    sourceType: meta.sourceType || '销售订单',
+    sourceNo,
+    sourceLineNo: entry.sourceLineNo,
+    reservedQty: entry.quantity,
+    consumedQty: 0,
+    releasedQty: 0,
+    status: 'active',
+    createdAt: time,
+  }));
+  const flowRows = [...groups.values()].map((group) => {
+    const before = rows.find((row) => row.logicalWarehouse === group.logicalWarehouse && row.product === group.product);
+    const instantBefore = Number(before.instantQty || 0);
+    const reservedBefore = Number(before.reservedQty || 0);
+    const frozenBefore = Number(before.frozenQty || 0);
+    const availableBefore = computeAvailableQty(before);
+    return {
+      id: `flow-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+      time,
+      eventType: 'reserve',
+      logicalWarehouse: group.logicalWarehouse,
+      product: group.product,
+      instantBefore, instantChange: 0, instantAfter: instantBefore,
+      availableBefore, availableChange: -group.quantity, availableAfter: availableBefore - group.quantity,
+      reservedBefore, reservedChange: group.quantity, reservedAfter: reservedBefore + group.quantity,
+      frozenBefore, frozenChange: 0, frozenAfter: frozenBefore,
+      direction: '',
+      changeQty: 0,
+      sourceType: meta.sourceType || '销售订单',
+      sourceNo,
+      businessType: '',
+      operator: meta.operator || '当前用户',
+    };
+  });
+
+  persistStockRows(nextRows);
+  persistReservations([...reservations, ...createdReservations]);
+  appendStockFlows(flowRows);
+  return flowRows;
 }
 
 /**
@@ -266,7 +374,12 @@ export function resolveStockFlow(row) {
 }
 
 export function loadStockFlows() {
-  return readMockRows(STOCK_FLOW_STORAGE_KEY, stockFlowSeeds)
+  const rows = readMockRows(STOCK_FLOW_STORAGE_KEY, stockFlowSeeds);
+  const requiredSeedIds = new Set(['flow-sales-order-reserve-demo', 'flow-sales-order-release-demo']);
+  const missingSamples = stockFlowSeeds.filter((row) => requiredSeedIds.has(row.id) && !rows.some((stored) => stored.id === row.id));
+  const completeRows = missingSamples.length ? [...rows, ...missingSamples] : rows;
+  if (missingSamples.length) writeMockRows(STOCK_FLOW_STORAGE_KEY, completeRows);
+  return completeRows
     .map(resolveStockFlow)
     .sort((left, right) => String(right.time || '').localeCompare(String(left.time || '')));
 }
@@ -335,6 +448,19 @@ export function postStockEntries(entries, meta = {}) {
     };
 
     // 预占只改内存副本：整批校验通过后与库存行、流水一起落库
+    const reservationSourceNo = entry.reservationSourceNo || meta.reservationSourceNo;
+    const reservationSourceLineNo = entry.reservationSourceLineNo ?? meta.reservationSourceLineNo;
+    const reservationChangeQty = Number(entry.consumeReserved || 0) + Number(entry.releaseReserved || 0);
+    if (reservationChangeQty > 0 && reservationSourceNo) {
+      const matchingQty = nextReservations
+        .filter((reservation) => reservation.logicalWarehouse === entry.logicalWarehouse
+          && reservation.product === entry.product
+          && reservation.sourceNo === reservationSourceNo
+          && (reservationSourceLineNo == null || reservation.sourceLineNo === reservationSourceLineNo)
+          && reservation.status === 'active')
+        .reduce((sum, reservation) => sum + Math.max(0, Number(reservation.reservedQty || 0) - Number(reservation.consumedQty || 0) - Number(reservation.releasedQty || 0)), 0);
+      if (matchingQty < reservationChangeQty) throw new Error('来源订单预占数量不足，本次库存记账被阻止');
+    }
     nextReservations = applyReservationChange(nextReservations, {
       logicalWarehouse: entry.logicalWarehouse,
       product: entry.product,
@@ -418,7 +544,7 @@ export function loadCompareRows() {
     .map((row) => {
       const physical = resolvePhysicalWarehouseLabel(row.physicalWarehouse);
       const product = resolveStockProduct(row.product);
-      const difference = Number(row.erpQty || 0) - Number(row.warehouseQty || 0);
+      const difference = Number(row.erpQty ?? 0) - Number(row.warehouseQty ?? 0);
       return {
         ...row,
         physicalWarehouseLabel: physical,
@@ -427,8 +553,8 @@ export function loadCompareRows() {
         unit: product.unit,
         barcode: product.barcode,
         barcodes: product.barcodes,
-        erpQty: Number(row.erpQty || 0),
-        warehouseQty: Number(row.warehouseQty || 0),
+        erpQty: Number(row.erpQty ?? 0),
+        warehouseQty: Number(row.warehouseQty ?? 0),
         difference,
         direction: resolveCompareDirection(difference),
       };

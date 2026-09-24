@@ -104,6 +104,8 @@ export const IMPLEMENTED_PAGE_IDS = new Set([
   'price-sales-adjust-create',
   'price-sales-adjust-edit',
   'price-sales-adjust-detail',
+  'integration-finance-results',
+  'integration-push-exceptions',
 ]);
 
 export function isPageImplemented(pageId) {

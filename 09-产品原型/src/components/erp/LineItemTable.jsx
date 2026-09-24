@@ -682,6 +682,21 @@ function renderEditCell({ column, line, index, onLineChange, onLineRemove, onPro
         />
       );
     case 'taxRate':
+      if (editorOptions.taxRateControl === 'number') {
+        return (
+          <Input
+            variant="boxed"
+            type="number"
+            min="0"
+            step="0.01"
+            value={line.taxRate}
+            onChange={(event) => onLineChange(line.id, 'taxRate', event.target.value)}
+            className={cn('text-right', cellInvalid && cellInvalidClassName)}
+            aria-label={cellLabel}
+            placeholder="请输入税率"
+          />
+        );
+      }
       return (
         <SelectField
           options={editorOptions.taxRateOptions}
@@ -903,6 +918,7 @@ export function LineItemTable({
           }}
           options={skuOptions}
           selectedValues={activeSkuLine?.product ? [activeSkuLine.product] : []}
+          showReferencePrice={editorOptions.showReferencePrice !== false}
           onConfirm={(selectedSkus) => {
             if (activeSkuLine) onLineSkusSelect?.(activeSkuLine.id, selectedSkus);
             setSkuDialogLineId(null);

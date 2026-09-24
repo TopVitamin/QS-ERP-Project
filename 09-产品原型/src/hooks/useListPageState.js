@@ -11,8 +11,14 @@ function compareValues(a, b) {
   return String(a ?? '').localeCompare(String(b ?? ''), 'zh-CN', { numeric: true });
 }
 
-export function useListPageState({ initialRows, initialFilters, filterRows, initialVisibility, storageKey, columns = [], initialSort = null, initialPinnedKeys = [] }) {
-  const [rows, setRows] = useState(() => readMockRows(storageKey, initialRows));
+export function useListPageState({ initialRows, initialFilters, filterRows, initialVisibility, storageKey, columns = [], initialSort = null, initialPinnedKeys = [], normalizeRows = null, mergeSeedRows = false }) {
+  const [rows, setRows] = useState(() => {
+    const storedRows = readMockRows(storageKey, null);
+    const sourceRows = Array.isArray(storedRows) && mergeSeedRows
+      ? [...storedRows, ...initialRows.filter((seed) => !storedRows.some((row) => row.id === seed.id))]
+      : (Array.isArray(storedRows) ? storedRows : initialRows);
+    return normalizeRows ? normalizeRows(sourceRows) : sourceRows;
+  });
   const skipPersistRef = useRef(false);
   const [draftFilters, setDraftFilters] = useState(initialFilters);
   const [appliedFilters, setAppliedFilters] = useState(initialFilters);
@@ -55,9 +61,9 @@ export function useListPageState({ initialRows, initialFilters, filterRows, init
     if (!storageKey) return undefined;
     return subscribeMockRows(storageKey, (nextRows) => {
       skipPersistRef.current = true;
-      setRows(nextRows);
+      setRows(normalizeRows ? normalizeRows(nextRows) : nextRows);
     });
-  }, [storageKey]);
+  }, [storageKey, normalizeRows]);
 
   useEffect(() => {
     if (!storageKey) return;

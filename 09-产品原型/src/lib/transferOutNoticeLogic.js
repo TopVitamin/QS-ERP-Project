@@ -10,7 +10,7 @@
  * - 实出>0：通知已发货，生成调出端直接调拨单（调出仓减、在途加，消耗实出预占、释放未发），
  *   并按实际调出量生成调入通知单；
  * - 实出=0：来源主单按零调出取消整单，释放未执行预占，不生成后续单据；
- * - 通知单不增减库存、不推送金蝶。
+ * - 通知单不增减库存、不推送财务ERP。
  */
 import { skuOptions } from '../data/masterData.js';
 import { nextDocumentNo } from './documentNo.js';
