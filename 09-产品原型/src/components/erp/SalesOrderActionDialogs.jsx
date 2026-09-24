@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { Button } from '../ui/button.jsx';
 import { ConfirmDialog, InfoDialog } from '../ui/alert-dialog.jsx';
 import { SimpleDialog } from '../ui/dialog.jsx';
-import { Input } from '../ui/input.jsx';
+import { DatePicker } from '../ui/date-picker.jsx';
 import { Textarea } from '../ui/textarea.jsx';
+import { formatFormDate, parseFormDate } from '../../lib/formDate.js';
 import {
   applyAdjustDelivery,
   applyApprove,
@@ -166,8 +167,14 @@ export function SalesOrderActionDialogs({ dialog, onClose, onComplete }) {
         )}
       >
         <div className="mt-3 space-y-1.5">
-          <label className="text-[12px] text-erp-text">新交期</label>
-          <Input type="date" value={deliveryDate} onChange={(event) => setDeliveryDate(event.target.value)} />
+          <label className="text-[12px] text-erp-text" htmlFor="sales-order-delivery-date">新交期</label>
+          <DatePicker
+            id="sales-order-delivery-date"
+            value={parseFormDate(deliveryDate)}
+            onChange={(nextDate) => setDeliveryDate(formatFormDate(nextDate))}
+            ariaLabel="新交期"
+            placeholder="请选择日期"
+          />
         </div>
       </SimpleDialog>
     );

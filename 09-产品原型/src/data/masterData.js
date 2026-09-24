@@ -110,21 +110,21 @@ export const departmentOptions = [
 ];
 
 export const skuOptions = [
-  { value: 'SKU-1001', label: '无线键盘 K380', skuCode: 'SKU-1001', productName: '无线键盘 K380', spec: '蓝牙 / 便携版', barcode: '6901001001', unit: '个', availableStock: 120, referencePrice: 120 },
-  { value: 'SKU-1002', label: '人体工学鼠标 M720', skuCode: 'SKU-1002', productName: '人体工学鼠标 M720', spec: '黑色 / 无线版', barcode: '6901001002', unit: '个', availableStock: 80, referencePrice: 159 },
-  { value: 'SKU-1003', label: 'USB-C 多功能扩展坞', skuCode: 'SKU-1003', productName: 'USB-C 多功能扩展坞', spec: '深空灰 / 8 合 1', barcode: '6901001003', unit: '件', availableStock: 36, referencePrice: 339 },
-  { value: 'SKU-1004', label: '27 英寸办公显示器', skuCode: 'SKU-1004', productName: '27 英寸办公显示器', spec: '黑色 / 4K', barcode: '6901001004', unit: '台', availableStock: 24, referencePrice: 1299 },
-  { value: 'SKU-1005', label: '双肩电脑背包 15.6"', skuCode: 'SKU-1005', productName: '双肩电脑背包 15.6"', spec: '深灰 / 防泼水', barcode: '6901001005', unit: '个', availableStock: 65, referencePrice: 189 },
-  { value: 'SKU-1006', label: '无线键盘 K380', skuCode: 'SKU-1006', productName: '无线键盘 K380', spec: '米白 / 便携版', barcode: '6901001006', unit: '个', availableStock: 48, referencePrice: 125 },
-  { value: 'SKU-1007', label: '人体工学鼠标 M720', skuCode: 'SKU-1007', productName: '人体工学鼠标 M720', spec: '灰色 / 静音版', barcode: '6901001007', unit: '个', availableStock: 52, referencePrice: 165 },
-  { value: 'SKU-1008', label: 'USB-C 多功能扩展坞', skuCode: 'SKU-1008', productName: 'USB-C 多功能扩展坞', spec: '银色 / 6 合 1', barcode: '6901001008', unit: '件', availableStock: 29, referencePrice: 259 },
-  { value: 'SKU-1009', label: '桌面显示器支架', skuCode: 'SKU-1009', productName: '桌面显示器支架', spec: '铝合金 / 单臂', barcode: '6901001009', unit: '个', availableStock: 18, referencePrice: 299 },
-  { value: 'SKU-1010', label: '桌面显示器支架', skuCode: 'SKU-1010', productName: '桌面显示器支架', spec: '铝合金 / 双臂', barcode: '6901001010', unit: '个', availableStock: 11, referencePrice: 489 },
-  { value: 'SKU-1011', label: '办公桌面插座', skuCode: 'SKU-1011', productName: '办公桌面插座', spec: '3孔 / USB-C', barcode: '6901001011', unit: '个', availableStock: 74, referencePrice: 99 },
-  { value: 'SKU-1012', label: '办公桌面插座', skuCode: 'SKU-1012', productName: '办公桌面插座', spec: '5孔 / USB-A', barcode: '6901001012', unit: '个', availableStock: 58, referencePrice: 89 },
-  { value: 'SKU-1013', label: '超五类网线', skuCode: 'SKU-1013', productName: '超五类网线', spec: '蓝色 / 3米', barcode: '6901001013', unit: '条', availableStock: 210, referencePrice: 18 },
-  { value: 'SKU-1014', label: '超五类网线', skuCode: 'SKU-1014', productName: '超五类网线', spec: '蓝色 / 5米', barcode: '6901001014', unit: '条', availableStock: 160, referencePrice: 25 },
-  { value: 'SKU-1015', label: '笔记本电脑支架', skuCode: 'SKU-1015', productName: '笔记本电脑支架', spec: '银色 / 折叠款', barcode: '6901001015', unit: '个', availableStock: 42, referencePrice: 129 },
+  { value: 'SP0101010001', label: '无线键盘 K380', skuCode: 'SP0101010001', productName: '无线键盘 K380', spec: '蓝牙 / 便携版', barcode: '6901001001', unit: '个', availableStock: 120, referencePrice: 120 },
+  { value: 'SP0101020001', label: '人体工学鼠标 M720', skuCode: 'SP0101020001', productName: '人体工学鼠标 M720', spec: '黑色 / 无线版', barcode: '6901001002', unit: '个', availableStock: 80, referencePrice: 159 },
+  { value: 'SP0101030001', label: 'USB-C 多功能扩展坞', skuCode: 'SP0101030001', productName: 'USB-C 多功能扩展坞', spec: '深空灰 / 8 合 1', barcode: '6901001003', unit: '件', availableStock: 36, referencePrice: 339 },
+  { value: 'SP0102010001', label: '27 英寸办公显示器', skuCode: 'SP0102010001', productName: '27 英寸办公显示器', spec: '黑色 / 4K', barcode: '6901001004', unit: '台', availableStock: 24, referencePrice: 1299 },
+  { value: 'SP0103010001', label: '双肩电脑背包 15.6"', skuCode: 'SP0103010001', productName: '双肩电脑背包 15.6"', spec: '深灰 / 防泼水', barcode: '6901001005', unit: '个', availableStock: 65, referencePrice: 189 },
+  { value: 'SP0101010002', label: '无线键盘 K380', skuCode: 'SP0101010002', productName: '无线键盘 K380', spec: '米白 / 便携版', barcode: '6901001006', unit: '个', availableStock: 48, referencePrice: 125 },
+  { value: 'SP0101020002', label: '人体工学鼠标 M720', skuCode: 'SP0101020002', productName: '人体工学鼠标 M720', spec: '灰色 / 静音版', barcode: '6901001007', unit: '个', availableStock: 52, referencePrice: 165 },
+  { value: 'SP0101030002', label: 'USB-C 多功能扩展坞', skuCode: 'SP0101030002', productName: 'USB-C 多功能扩展坞', spec: '银色 / 6 合 1', barcode: '6901001008', unit: '件', availableStock: 29, referencePrice: 259 },
+  { value: 'SP0102020001', label: '桌面显示器支架', skuCode: 'SP0102020001', productName: '桌面显示器支架', spec: '铝合金 / 单臂', barcode: '6901001009', unit: '个', availableStock: 18, referencePrice: 299 },
+  { value: 'SP0102020002', label: '桌面显示器支架', skuCode: 'SP0102020002', productName: '桌面显示器支架', spec: '铝合金 / 双臂', barcode: '6901001010', unit: '个', availableStock: 11, referencePrice: 489 },
+  { value: 'SP0103030001', label: '办公桌面插座', skuCode: 'SP0103030001', productName: '办公桌面插座', spec: '3孔 / USB-C', barcode: '6901001011', unit: '个', availableStock: 74, referencePrice: 99 },
+  { value: 'SP0103030002', label: '办公桌面插座', skuCode: 'SP0103030002', productName: '办公桌面插座', spec: '5孔 / USB-A', barcode: '6901001012', unit: '个', availableStock: 58, referencePrice: 89 },
+  { value: 'SP0103020001', label: '超五类网线', skuCode: 'SP0103020001', productName: '超五类网线', spec: '蓝色 / 3米', barcode: '6901001013', unit: '条', availableStock: 210, referencePrice: 18 },
+  { value: 'SP0103020002', label: '超五类网线', skuCode: 'SP0103020002', productName: '超五类网线', spec: '蓝色 / 5米', barcode: '6901001014', unit: '条', availableStock: 160, referencePrice: 25 },
+  { value: 'SP0102020003', label: '笔记本电脑支架', skuCode: 'SP0102020003', productName: '笔记本电脑支架', spec: '银色 / 折叠款', barcode: '6901001015', unit: '个', availableStock: 42, referencePrice: 129 },
 ];
 
 export const productOptions = skuOptions.map(({ value, label }) => ({ value, label }));

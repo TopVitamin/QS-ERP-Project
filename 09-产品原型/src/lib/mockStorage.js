@@ -46,6 +46,18 @@ export function upsertMockRow(storageKey, row) {
   writeMockRows(storageKey, nextRows);
 }
 
+/**
+ * 首次加载时把种子写进 `localStorage`。
+ * 模块内的 `upsertMockRow` 按 key 读取时没有种子兜底，若某个集合从未落库，
+ * 第一次局部写入（如审核后自动生成下游单据）会把种子挤掉，列表只剩新单；
+ * 各模块在自己的 data 文件末尾调用本函数补齐。
+ */
+export function ensureSeedRows(storageKey, seedRows = []) {
+  if (!storageKey || !seedRows.length) return;
+  if (readMockRows(storageKey, []).length) return;
+  writeMockRows(storageKey, seedRows);
+}
+
 export function subscribeMockRows(storageKey, onChange) {
   if (!storageKey || !getStorage()) return () => {};
 

@@ -55,7 +55,7 @@ export function InternationalAddressFields({
         />
       </FormField>
 
-      {isChina ? (
+      {address.countryRegion && isChina ? (
         <>
           <FormField label="省/市/区" fieldKey={`${fieldKeyPrefix}.region`} error={fieldErrors.region} className="col-span-2">
             <CnRegionPicker
@@ -75,7 +75,7 @@ export function InternationalAddressFields({
             />
           </FormField>
         </>
-      ) : (
+      ) : address.countryRegion ? (
         <>
           <FormField label="省/州" fieldKey={`${fieldKeyPrefix}.stateOrProvince`} error={fieldErrors.stateOrProvince}>
             <Input
@@ -105,7 +105,7 @@ export function InternationalAddressFields({
             />
           </FormField>
         </>
-      )}
+      ) : null}
     </>
   );
 }

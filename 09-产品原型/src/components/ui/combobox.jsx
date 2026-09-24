@@ -39,27 +39,29 @@ export function Combobox({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <FieldTrigger
-          role="combobox"
-          aria-expanded={open}
-          aria-label={ariaLabel}
-          disabled={disabled}
-          hasValue={hasValue}
-          textSize={textSize}
-          className={cn('justify-between', className)}
-        >
-          <span className="truncate">{selectedLabel || placeholder}</span>
-          <FieldAffordance
-            hasValue={hasValue}
-            clearable={clearable}
+      <div className="relative w-full">
+        <PopoverTrigger asChild>
+          <FieldTrigger
+            role="combobox"
+            aria-expanded={open}
+            aria-label={ariaLabel}
             disabled={disabled}
-            clearAriaLabel="清除选择"
-            showClearOnHover
-            onClear={() => onValueChange?.('')}
-          />
-        </FieldTrigger>
-      </PopoverTrigger>
+            hasValue={hasValue}
+            textSize={textSize}
+            className={cn('justify-between', className)}
+          >
+            <span className="truncate">{selectedLabel || placeholder}</span>
+          </FieldTrigger>
+        </PopoverTrigger>
+        <FieldAffordance
+          hasValue={hasValue}
+          clearable={clearable}
+          disabled={disabled}
+          clearAriaLabel="清除选择"
+          showClearOnHover
+          onClear={() => onValueChange?.('')}
+        />
+      </div>
       <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] p-0">
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
@@ -126,27 +128,29 @@ export function MultiSelect({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <FieldTrigger
-          role="combobox"
-          aria-expanded={open}
-          aria-label={ariaLabel}
-          disabled={disabled}
-          hasValue={hasValue}
-          textSize={textSize}
-          className={cn('justify-between', className)}
-        >
-          <span className="truncate">{selectedLabel || placeholder}</span>
-          <FieldAffordance
-            hasValue={hasValue}
-            clearable={clearable}
+      <div className="relative w-full">
+        <PopoverTrigger asChild>
+          <FieldTrigger
+            role="combobox"
+            aria-expanded={open}
+            aria-label={ariaLabel}
             disabled={disabled}
-            clearAriaLabel="清除全部选择"
-            showClearOnHover
-            onClear={() => onValueChange?.([])}
-          />
-        </FieldTrigger>
-      </PopoverTrigger>
+            hasValue={hasValue}
+            textSize={textSize}
+            className={cn('justify-between', className)}
+          >
+            <span className="truncate">{selectedLabel || placeholder}</span>
+          </FieldTrigger>
+        </PopoverTrigger>
+        <FieldAffordance
+          hasValue={hasValue}
+          clearable={clearable}
+          disabled={disabled}
+          clearAriaLabel="清除全部选择"
+          showClearOnHover
+          onClear={() => onValueChange?.([])}
+        />
+      </div>
       <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] p-0">
         <Command>
           <CommandInput placeholder={searchPlaceholder} />

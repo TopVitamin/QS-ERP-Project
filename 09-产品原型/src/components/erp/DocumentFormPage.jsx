@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { DocumentEditorFrame, EditorCard } from './DocumentEditorFrame.jsx';
 import { FormFields } from './FormControl.jsx';
@@ -33,6 +34,8 @@ export function DocumentFormPage({ mode = 'create', context, onFeedback, onOpenP
     dirty,
     fieldErrors,
     setFieldErrors,
+    lineErrors,
+    setLineErrors,
     totalQuantity,
     totalAmount,
     updateField,
@@ -65,6 +68,12 @@ export function DocumentFormPage({ mode = 'create', context, onFeedback, onOpenP
   });
   const sections = groupFormFields(fields, config.fieldSections, config.infoSectionTitle);
 
+  // 明细变化后的模块校验（如重复商品）：由页面把行内错误写回 lineErrors。
+  const onLinesChanged = config.onLinesChanged;
+  useEffect(() => {
+    onLinesChanged?.({ form, setLineErrors });
+  }, [form.lines, onLinesChanged]);
+
   const rawStatusBadges = config.getStatusBadges?.({ form, mode, context }) ?? [];
   const statusBadges = isCreate && config.showStatusOnCreate !== true ? [] : rawStatusBadges;
   const showSubmit = config.showSubmit?.({ form, mode, context }) ?? true;
@@ -85,7 +94,9 @@ export function DocumentFormPage({ mode = 'create', context, onFeedback, onOpenP
 
   return (
     <DocumentEditorFrame
-      title={isCreate ? config.createTitle : config.editTitle}
+      title={isCreate
+        ? config.createTitle
+        : (typeof config.editTitle === 'function' ? config.editTitle(form) : config.editTitle)}
       statuses={statusBadges}
       dirty={dirty}
       onCancel={() => onOpenPage?.(config.listPageId)}
@@ -121,15 +132,20 @@ export function DocumentFormPage({ mode = 'create', context, onFeedback, onOpenP
           onLineSkusSelect={(lineId, selectedSkus) => replaceLineWithItems(lineId, selectedSkus, config.createLineFromSku || config.createLine)}
           enableSkuPicker={config.enableSkuPicker}
           editorOptions={config.lineEditorOptions}
-          summary={config.buildLineSummary?.({
-            form,
-            totalQuantity,
-            totalAmount,
-            currency: form[config.currencyKey || 'currency'],
-          }) ?? {
-            quantity: { label: config.summary.quantityLabel, value: totalQuantity },
-            amount: { label: config.summary.amountLabel, value: totalAmount, format: 'amount', prefix: `${currencySymbol(form[config.currencyKey || 'currency'])} `, emphasis: true },
-          }}
+          hiddenColumns={typeof config.hiddenColumns === 'function' ? config.hiddenColumns({ mode, form }) : (config.hiddenColumns || [])}
+          lineActions={config.lineActions}
+          lineErrors={lineErrors}
+          summary={config.buildLineSummary
+            ? config.buildLineSummary({
+              form,
+              totalQuantity,
+              totalAmount,
+              currency: form[config.currencyKey || 'currency'],
+            })
+            : {
+              quantity: { label: config.summary.quantityLabel, value: totalQuantity },
+              amount: { label: config.summary.amountLabel, value: totalAmount, format: 'amount', prefix: `${currencySymbol(form[config.currencyKey || 'currency'])} `, emphasis: true },
+            }}
         />
       </EditorCard>
     </DocumentEditorFrame>

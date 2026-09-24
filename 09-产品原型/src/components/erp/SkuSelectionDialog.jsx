@@ -5,7 +5,7 @@ import { Checkbox } from '../ui/checkbox.jsx';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog.jsx';
 import { Input } from '../ui/input.jsx';
 import { cn } from '../../lib/utils.js';
-import { EMPTY_PLACEHOLDER, formatAmount } from '../../lib/format.js';
+import { EMPTY_PLACEHOLDER, formatUnitPrice } from '../../lib/format.js';
 
 function normalizeSkuOption(option) {
   return {
@@ -186,7 +186,7 @@ export function SkuSelectionDialog({
                         <td className="truncate border-r border-erp-border-table-column px-2 text-erp-text-muted" title={option.barcode}>{option.barcode}</td>
                         <td className="border-r border-erp-border-table-column px-2 text-erp-text-muted">{option.unit}</td>
                         <td className="border-r border-erp-border-table-column px-2 text-right text-erp-text-muted">{option.availableStock}</td>
-                        <td className="px-2 text-right text-erp-text-muted">{option.referencePrice == null ? EMPTY_PLACEHOLDER : `¥ ${formatAmount(option.referencePrice)}`}</td>
+                        <td className="px-2 text-right text-erp-text-muted">{option.referencePrice == null ? EMPTY_PLACEHOLDER : `¥ ${formatUnitPrice(option.referencePrice)}`}</td>
                       </tr>
                     );
                   })}

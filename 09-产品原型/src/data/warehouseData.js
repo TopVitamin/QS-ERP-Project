@@ -4,6 +4,7 @@ import { readMockRows } from '../lib/mockStorage.js';
 import { formatWarehouseAddress } from '../lib/warehouseAddress.js';
 import {
   LOGICAL_STORAGE_KEY,
+  PHYSICAL_STORAGE_KEY,
   physicalAuditLabels,
   physicalAuditTones,
   stockStatusLabels,
@@ -19,6 +20,63 @@ export function getSelectableLogicalWarehouseOptions() {
   return readMockRows(LOGICAL_STORAGE_KEY, logicalWarehouses)
     .filter((row) => row.auditStatus === 'approved' && row.useStatus === 'enabled')
     .map((row) => buildMasterOption({ code: row.code, name: row.name }));
+}
+
+/** 库存模块口径：全部逻辑仓，含已禁用逻辑仓与虚拟在途仓（库存查询主PRD Q04、库存流水主PRD Q05）。 */
+export function getAllLogicalWarehouses() {
+  return readMockRows(LOGICAL_STORAGE_KEY, logicalWarehouses);
+}
+
+export function isTransitLogicalWarehouse(rowOrCode) {
+  const row = typeof rowOrCode === 'string'
+    ? getAllLogicalWarehouses().find((item) => item.code === rowOrCode)
+    : rowOrCode;
+  return row?.warehouseKind === 'transit';
+}
+
+/**
+ * 库存模块逻辑仓选项（Code-Name）。
+ * 默认含已禁用逻辑仓与虚拟在途仓；业务单据选仓用 `includeDisabled: false`，
+ * 不允许选在途仓的单据再加 `includeTransit: false`（《库存与仓储业务设计》§4.2）。
+ */
+export function getInventoryLogicalWarehouseOptions({ includeDisabled = true, includeTransit = true } = {}) {
+  return getAllLogicalWarehouses()
+    .filter((row) => (includeDisabled || row.useStatus === 'enabled'))
+    .filter((row) => (includeTransit || row.warehouseKind !== 'transit'))
+    .map((row) => buildMasterOption({ code: row.code, name: row.name }));
+}
+
+/** 实体仓选项（库存查询、库存流水的所属实体仓筛选）：码值取实体仓编码，选项含已禁用实体仓。 */
+export function getInventoryPhysicalWarehouseOptions() {
+  return readMockRows(PHYSICAL_STORAGE_KEY, physicalWarehouses)
+    .map((row) => buildMasterOption({ code: row.code, name: row.name }));
+}
+
+export function resolveLogicalWarehouseRow(codeOrId) {
+  return getAllLogicalWarehouses().find((row) => row.code === codeOrId || row.id === codeOrId) || null;
+}
+
+export function resolveLogicalWarehouseLabel(code) {
+  const row = resolveLogicalWarehouseRow(code);
+  return row ? formatCodeName(row.code, row.name) : EMPTY_PLACEHOLDER;
+}
+
+/** 逻辑仓归属的实体仓编码与名称；实体仓档案被删或缺失时按 `-` 兜底。 */
+export function resolveLogicalWarehousePhysical(code, physicalRows = readMockRows(PHYSICAL_STORAGE_KEY, physicalWarehouses)) {
+  const logical = resolveLogicalWarehouseRow(code);
+  const physical = physicalRows.find((row) => row.id === logical?.physicalWarehouseId || row.code === logical?.physicalWarehouseId);
+  if (!physical) return { code: '', name: '', label: EMPTY_PLACEHOLDER, row: null };
+  return { code: physical.code, name: physical.name, label: formatCodeName(physical.code, physical.name), row: physical };
+}
+
+export function resolveLogicalWarehouseStockStatus(code) {
+  return resolveLogicalWarehouseRow(code)?.stockStatus || '';
+}
+
+/** 按实体仓编码（或 id）取 Code-Name 展示值；库存比对按实体仓汇总展示时使用。 */
+export function resolvePhysicalWarehouseLabel(code) {
+  const row = readMockRows(PHYSICAL_STORAGE_KEY, physicalWarehouses).find((item) => item.code === code || item.id === code);
+  return row ? formatCodeName(row.code, row.name) : EMPTY_PLACEHOLDER;
 }
 
 const seedPhysicalWarehouses = [
@@ -300,6 +358,90 @@ const seedLogicalWarehouses = [
     createdAt: '2026-08-16 17:00',
     updater: '周磊',
     updatedAt: '2026-09-13 08:40',
+    referenced: false,
+  },
+  {
+    code: 'LWH000005',
+    name: '深圳正常品二号仓',
+    physicalWarehouseId: 'physical-warehouse-1',
+    stockStatus: 'normal',
+    remark: '与 LWH000001 同实体仓同库存状态，用于库存汇总核对',
+    useStatus: 'enabled',
+    auditStatus: 'approved',
+    auditor: '主数据管理员',
+    auditedAt: '2026-09-05 10:00',
+    creator: '阿盛',
+    createdAt: '2026-09-04 09:30',
+    updater: '阿盛',
+    updatedAt: '2026-09-20 09:00',
+    referenced: false,
+  },
+  {
+    code: 'LWH000006',
+    name: '深圳待检品仓',
+    physicalWarehouseId: 'physical-warehouse-1',
+    stockStatus: 'inspection',
+    remark: '',
+    useStatus: 'enabled',
+    auditStatus: 'approved',
+    auditor: '主数据管理员',
+    auditedAt: '2026-09-05 10:10',
+    creator: '阿盛',
+    createdAt: '2026-09-04 09:40',
+    updater: '阿盛',
+    updatedAt: '2026-09-19 16:20',
+    referenced: false,
+  },
+  {
+    code: 'LWH000007',
+    name: '东莞电商待检品仓',
+    physicalWarehouseId: 'physical-warehouse-2',
+    stockStatus: 'inspection',
+    remark: '',
+    useStatus: 'enabled',
+    auditStatus: 'approved',
+    auditor: '主数据管理员',
+    auditedAt: '2026-09-08 11:00',
+    creator: '陈仓管',
+    createdAt: '2026-09-07 15:30',
+    updater: '陈仓管',
+    updatedAt: '2026-09-18 10:10',
+    referenced: false,
+  },
+  {
+    code: 'LWH000008',
+    name: '东莞电商残次品仓',
+    physicalWarehouseId: 'physical-warehouse-2',
+    stockStatus: 'defective',
+    remark: '已禁用逻辑仓，仍可能有存量库存',
+    useStatus: 'disabled',
+    auditStatus: 'approved',
+    auditor: '主数据管理员',
+    auditedAt: '2026-08-20 09:00',
+    creator: '陈仓管',
+    createdAt: '2026-08-19 14:00',
+    updater: '陈仓管',
+    updatedAt: '2026-09-12 11:40',
+    referenced: false,
+  },
+  {
+    // 虚拟在途仓：用于分步式调拨在途记账（《库存与仓储业务设计》§4.2）。
+    // 档案口径（编码、库存状态、可否人工选用）待主数据在途档案设计定稿，见库存查询主PRD Q04；
+    // 原型先按普通逻辑仓记录承载在途数量，并在待改项登记差异。
+    code: 'LWH000009',
+    name: '深圳在途仓',
+    physicalWarehouseId: 'physical-warehouse-1',
+    stockStatus: 'normal',
+    warehouseKind: 'transit',
+    remark: '虚拟在途仓，仅由分步式调拨在途记账使用',
+    useStatus: 'enabled',
+    auditStatus: 'approved',
+    auditor: '主数据管理员',
+    auditedAt: '2026-09-01 09:00',
+    creator: '系统',
+    createdAt: '2026-09-01 09:00',
+    updater: '系统',
+    updatedAt: '2026-09-23 10:00',
     referenced: false,
   },
 ];

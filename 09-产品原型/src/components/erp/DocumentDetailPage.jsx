@@ -59,17 +59,19 @@ export function DocumentDetailPage({ context, onOpenPage, config }) {
           lines={detail.lines}
           rowKeyPrefix={config.rowKey(detail)}
           editorOptions={config.lineEditorOptions}
-          summary={config.buildLineSummary?.({
-            detail,
-            row,
-            totalQuantity,
-            totalAmount,
-            lineTotals,
-            currency: detail[config.currencyKey || 'currency'] || row.currency,
-          }) ?? {
-            quantity: { label: config.summary.quantityLabel, value: totalQuantity },
-            amount: { label: config.summary.amountLabel, value: totalAmount, format: 'amount', prefix: `${currencySymbol(detail[config.currencyKey || 'currency'] || row.currency)} `, emphasis: true },
-          }}
+          summary={config.buildLineSummary
+            ? config.buildLineSummary({
+              detail,
+              row,
+              totalQuantity,
+              totalAmount,
+              lineTotals,
+              currency: detail[config.currencyKey || 'currency'] || row.currency,
+            })
+            : {
+              quantity: { label: config.summary.quantityLabel, value: totalQuantity },
+              amount: { label: config.summary.amountLabel, value: totalAmount, format: 'amount', prefix: `${currencySymbol(detail[config.currencyKey || 'currency'] || row.currency)} `, emphasis: true },
+            }}
         />
       </EditorCard>
 

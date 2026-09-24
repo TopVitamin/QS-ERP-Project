@@ -30,7 +30,7 @@ export const countryRegionOptions = countryRegions.map(({ code, name }) => ({
 
 export function createEmptyInternationalAddress() {
   return {
-    countryRegion: CHINA_COUNTRY_CODE,
+    countryRegion: '',
     provinceCode: '',
     cityCode: '',
     districtCode: '',

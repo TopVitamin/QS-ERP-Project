@@ -4,10 +4,19 @@ import { Button } from '../ui/button.jsx';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog.jsx';
 import { WizardSteps } from './WizardSteps.jsx';
 import { EMPTY_PLACEHOLDER } from '../../lib/format.js';
+import { feedback } from '../../lib/feedback.js';
 import { cn } from '../../lib/utils.js';
 import { parseSpreadsheetFile } from '../../lib/spreadsheet.js';
 import { getImportFields, validateImportRows } from '../../lib/transferTargets.js';
-import { buildImportSampleFile, commitImport, downloadImportFailures, downloadImportTemplate } from '../../lib/transferService.js';
+import {
+  buildImportSampleFile,
+  commitImport,
+  currentOperator,
+  downloadImportFailures,
+  downloadImportTemplate,
+  downloadValidationFailures,
+  recordDocumentImportTask,
+} from '../../lib/transferService.js';
 
 const steps = ['上传文件', '数据校验', '确认导入', '导入结果'];
 const previewPageSize = 8;
@@ -21,6 +30,11 @@ function displayValue(field, value) {
   return value;
 }
 
+/** 分组导入：target 挂载 validateDocumentImport + commitDocumentImport 时按「单据序号」归并（列表页 §7/§8） */
+function isDocumentImportTarget(target) {
+  return Boolean(target && typeof target.validateDocumentImport === 'function' && typeof target.commitDocumentImport === 'function');
+}
+
 export function ImportWizardDialog({ open, onOpenChange, target, onCompleted, onOpenPage }) {
   const [step, setStep] = useState(1);
   const [file, setFile] = useState(null);
@@ -32,7 +46,11 @@ export function ImportWizardDialog({ open, onOpenChange, target, onCompleted, on
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef(null);
 
-  const importFields = useMemo(() => (target ? getImportFields(target) : []), [target]);
+  const documentImport = isDocumentImportTarget(target);
+  const importFields = useMemo(() => {
+    if (!target) return [];
+    return documentImport ? target.documentImportFields || [] : getImportFields(target);
+  }, [target, documentImport]);
   const previewPageCount = validation ? Math.max(1, Math.ceil(validation.items.length / previewPageSize)) : 1;
   const previewItems = validation ? validation.items.slice((previewPage - 1) * previewPageSize, previewPage * previewPageSize) : [];
 
@@ -59,7 +77,9 @@ export function ImportWizardDialog({ open, onOpenChange, target, onCompleted, on
         setParseError('未读取到表头，请确认文件第一行是字段名称');
         return;
       }
-      const nextValidation = validateImportRows(target, table.headers, table.rows);
+      const nextValidation = documentImport
+        ? target.validateDocumentImport(target, table.headers, table.rows)
+        : validateImportRows(target, table.headers, table.rows);
       setFile(fileObject);
       if (nextValidation.headerErrors.length) {
         setParseError(nextValidation.headerErrors.join('；'));
@@ -69,6 +89,9 @@ export function ImportWizardDialog({ open, onOpenChange, target, onCompleted, on
       setValidation(nextValidation);
       setPreviewPage(1);
       setStep(2);
+      if (documentImport && nextValidation.summary.error > 0) {
+        feedback.error(`导入校验未通过，本次导入已取消，共${nextValidation.summary.error}行错误，可下载错误说明`);
+      }
     } catch {
       setFile(fileObject);
       setParseError('文件解析失败，请另存为 xlsx / csv / tsv 后重试');
@@ -76,6 +99,19 @@ export function ImportWizardDialog({ open, onOpenChange, target, onCompleted, on
   }
 
   function submitImport() {
+    if (documentImport) {
+      const outcome = target.commitDocumentImport(target, { fileName: parsed.fileName, validation, operator: currentOperator });
+      const task = recordDocumentImportTask({ target, fileName: parsed.fileName, validation, outcome });
+      setResult({ ...outcome, task, documentImport: true });
+      setStep(4);
+      if (outcome.status === 'failed') {
+        feedback.error(`导入校验未通过，本次导入已取消，共${task.skippedCount}行错误，可下载错误说明`);
+      } else {
+        feedback.success(`成功导入${task.createdCount}张退货单草稿，请逐单检查后提交审核`);
+      }
+      return;
+    }
+
     const task = commitImport({ target, fileName: parsed.fileName, validation });
     setResult(task);
     setStep(4);
@@ -91,9 +127,15 @@ export function ImportWizardDialog({ open, onOpenChange, target, onCompleted, on
               <FileSpreadsheet className="mt-0.5 h-4 w-4 shrink-0 text-erp-primary" strokeWidth={1.8} />
               <div className="min-w-0">
                 <div className="text-[12px] font-medium text-erp-text-title">先下载模板，按模板填写</div>
-                <p className="mt-0.5 text-[11px] leading-5 text-erp-text-muted">
-                  模板内含字段说明与可选值，列名请保持不变。按「{target.keyLabel}」匹配：已存在则更新非空字段，不存在则新增；导入后统一回到草稿状态待审核。
-                </p>
+                {documentImport ? (
+                  <p className="mt-0.5 text-[11px] leading-5 text-erp-text-muted">
+                    模板内含字段说明与可选值，列名请保持不变。同一「单据序号」的行归并为一张{target.label}，同组单头字段必须一致；任一行校验失败则整批不导入，导入生成的单据为草稿，仍须逐单提交审核。
+                  </p>
+                ) : (
+                  <p className="mt-0.5 text-[11px] leading-5 text-erp-text-muted">
+                    模板内含字段说明与可选值，列名请保持不变。按「{target.keyLabel}」匹配：已存在则更新非空字段，不存在则新增；导入后统一回到草稿状态待审核。
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex shrink-0 gap-2">
@@ -142,11 +184,13 @@ export function ImportWizardDialog({ open, onOpenChange, target, onCompleted, on
               if (selected) handleFile(selected);
             }}
           />
-          <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[11px] text-erp-text-muted">
-            <span>没有现成文件？</span>
-            <Button variant="text" size="compact" onClick={() => handleFile(buildImportSampleFile(target))}>载入示例数据</Button>
-            <span>示例包含新增、更新和异常行，可直接体验校验流程</span>
-          </div>
+          {!documentImport && (
+            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[11px] text-erp-text-muted">
+              <span>没有现成文件？</span>
+              <Button variant="text" size="compact" onClick={() => handleFile(buildImportSampleFile(target))}>载入示例数据</Button>
+              <span>示例包含新增、更新和异常行，可直接体验校验流程</span>
+            </div>
+          )}
           {file && (
             <div className="flex items-center gap-2 rounded-erp-section border border-erp-border-light bg-erp-surface px-3 py-2 text-[12px] text-erp-text">
               <FileSpreadsheet className="h-4 w-4 shrink-0 text-erp-success" strokeWidth={1.8} />
@@ -168,10 +212,21 @@ export function ImportWizardDialog({ open, onOpenChange, target, onCompleted, on
       return (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] text-erp-text">
-            <span>共读取 <span className="font-medium">{validation.summary.total}</span> 行</span>
-            <span className="text-erp-success">新增 {validation.summary.create}</span>
-            <span className="text-erp-primary">更新 {validation.summary.update}</span>
-            <span className="text-erp-danger">校验不通过 {validation.summary.error}</span>
+            {documentImport ? (
+              <>
+                <span>共读取 <span className="font-medium">{validation.summary.total}</span> 行</span>
+                <span>归并为 <span className="font-medium">{validation.summary.documentCount}</span> 张{target.label}</span>
+                <span className="text-erp-success">校验通过 {validation.summary.create} 行</span>
+                <span className={validation.summary.error ? 'text-erp-danger' : 'text-erp-text-muted'}>校验不通过 {validation.summary.error} 行</span>
+              </>
+            ) : (
+              <>
+                <span>共读取 <span className="font-medium">{validation.summary.total}</span> 行</span>
+                <span className="text-erp-success">新增 {validation.summary.create}</span>
+                <span className="text-erp-primary">更新 {validation.summary.update}</span>
+                <span className="text-erp-danger">校验不通过 {validation.summary.error}</span>
+              </>
+            )}
             {validation.unknownColumns.length > 0 && (
               <span className="text-erp-warning" title={validation.unknownColumns.join('、')}>
                 未识别的列将忽略：{validation.unknownColumns.slice(0, 3).join('、')}{validation.unknownColumns.length > 3 ? ` 等 ${validation.unknownColumns.length} 列` : ''}
@@ -217,8 +272,19 @@ export function ImportWizardDialog({ open, onOpenChange, target, onCompleted, on
               </table>
             </div>
             <div className="flex h-10 items-center justify-between border-t border-erp-border-light px-3 text-[11px] text-erp-text-muted">
-              <span>校验不通过的行会跳过，可在导入结果中下载失败明细</span>
-              <div className="flex items-center gap-1.5">
+              <div className="flex min-w-0 items-center gap-2">
+                <span>{documentImport ? '任一行校验不通过则整批不导入' : '校验不通过的行会跳过，可在导入结果中下载失败明细'}</span>
+                {documentImport && validation.summary.error > 0 && (
+                  <Button
+                    variant="text"
+                    size="compact"
+                    onClick={() => downloadValidationFailures({ fileName: parsed?.fileName, fields: importFields, items: validation.items })}
+                  >
+                    <Download className="h-3 w-3" strokeWidth={1.9} />下载错误说明
+                  </Button>
+                )}
+              </div>
+              <div className="flex shrink-0 items-center gap-1.5">
                 <span className="mr-1">第 {previewPage} / {previewPageCount} 页</span>
                 <Button variant="outline" size="icon" className="h-6 w-6" aria-label="上一页" disabled={previewPage <= 1} onClick={() => setPreviewPage((current) => Math.max(1, current - 1))}>
                   <ChevronLeft className="h-3.5 w-3.5" />
@@ -236,23 +302,77 @@ export function ImportWizardDialog({ open, onOpenChange, target, onCompleted, on
     if (step === 3) {
       return (
         <div className="space-y-3">
-          <section className="grid grid-cols-2 gap-x-8 gap-y-3 rounded-erp-section border border-erp-border-light bg-erp-surface p-4 text-[12px]">
-            <SummaryField label="导入对象" value={target.label} />
-            <SummaryField label="文件" value={parsed?.fileName} />
-            <SummaryField label="新增" value={`${validation.summary.create} 条`} tone="text-erp-success" />
-            <SummaryField label="更新" value={`${validation.summary.update} 条`} tone="text-erp-primary" />
-            <SummaryField label="跳过（校验不通过）" value={`${validation.summary.error} 条`} tone={validation.summary.error ? 'text-erp-danger' : undefined} />
-            <SummaryField label="匹配方式" value={`按「${target.keyLabel}」匹配，已存在则更新非空字段`} />
-          </section>
-          <div className="flex items-start gap-2 rounded-erp-section border border-erp-warning/40 bg-erp-warning-bg px-3 py-2.5 text-[12px] text-erp-warning">
-            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={1.9} />
-            <span>导入的数据统一回到「草稿」状态，需人工审核确认后才会生效。</span>
-          </div>
+          {documentImport ? (
+            <>
+              <section className="grid grid-cols-2 gap-x-8 gap-y-3 rounded-erp-section border border-erp-border-light bg-erp-surface p-4 text-[12px]">
+                <SummaryField label="导入对象" value={target.label} />
+                <SummaryField label="文件" value={parsed?.fileName} />
+                <SummaryField label="拟生成" value={`${validation.summary.documentCount} 张草稿`} tone="text-erp-primary" />
+                <SummaryField label="数据行" value={`${validation.summary.total} 行`} />
+                <SummaryField label="校验通过" value={`${validation.summary.create} 行`} tone="text-erp-success" />
+                <SummaryField label="归并方式" value="按「单据序号」归并为一张退货单" />
+              </section>
+              <div className="flex items-start gap-2 rounded-erp-section border border-erp-warning/40 bg-erp-warning-bg px-3 py-2.5 text-[12px] text-erp-warning">
+                <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={1.9} />
+                <span>导入生成 {validation.summary.documentCount} 张「草稿 + 正常」退货单，仍需逐单提交审核；导入草稿与手工草稿同权，可编辑、可提交、可删除。</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <section className="grid grid-cols-2 gap-x-8 gap-y-3 rounded-erp-section border border-erp-border-light bg-erp-surface p-4 text-[12px]">
+                <SummaryField label="导入对象" value={target.label} />
+                <SummaryField label="文件" value={parsed?.fileName} />
+                <SummaryField label="新增" value={`${validation.summary.create} 条`} tone="text-erp-success" />
+                <SummaryField label="更新" value={`${validation.summary.update} 条`} tone="text-erp-primary" />
+                <SummaryField label="跳过（校验不通过）" value={`${validation.summary.error} 条`} tone={validation.summary.error ? 'text-erp-danger' : undefined} />
+                <SummaryField label="匹配方式" value={`按「${target.keyLabel}」匹配，已存在则更新非空字段`} />
+              </section>
+              <div className="flex items-start gap-2 rounded-erp-section border border-erp-warning/40 bg-erp-warning-bg px-3 py-2.5 text-[12px] text-erp-warning">
+                <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={1.9} />
+                <span>导入的数据统一回到「草稿」状态，需人工审核确认后才会生效。</span>
+              </div>
+            </>
+          )}
         </div>
       );
     }
 
     if (step === 4 && result) {
+      if (result.documentImport) {
+        const failed = result.status === 'failed';
+        const task = result.task;
+        return (
+          <div className="flex h-full flex-col items-center justify-center gap-4 py-8 text-center">
+            {failed
+              ? <AlertCircle className="h-10 w-10 text-erp-danger" strokeWidth={1.6} />
+              : <CheckCircle2 className="h-10 w-10 text-erp-success" strokeWidth={1.6} />}
+            <div>
+              <p className="text-[14px] font-medium text-erp-text-title">{failed ? '导入校验未通过' : '导入完成'}</p>
+              <p className="mt-1.5 text-[12px] text-erp-text">
+                {failed ? (
+                  <>本次导入已取消，未生成任何退货单，共 <span className="text-erp-danger">{task.skippedCount}</span> 行错误</>
+                ) : (
+                  <>成功导入 <span className="text-erp-success">{task.createdCount}</span> 张退货单草稿，请逐单检查后提交审核</>
+                )}
+              </p>
+              <p className="mt-1 text-[11px] text-erp-text-muted">
+                {failed ? '可下载错误说明，修正文件后重新导入' : `共 ${validation.summary.total} 行明细，任务号 ${task.id}；草稿仍须逐单提交审核`}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {failed && task.skippedCount > 0 && (
+                <Button variant="outline" onClick={() => downloadImportFailures(task)}>
+                  <Download className="h-3.5 w-3.5" strokeWidth={1.9} />下载失败明细
+                </Button>
+              )}
+              {onOpenPage && (
+                <Button variant="outline" onClick={() => { onOpenChange?.(false); onOpenPage('import-center'); }}>查看导入中心</Button>
+              )}
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div className="flex h-full flex-col items-center justify-center gap-4 py-8 text-center">
           <CheckCircle2 className="h-10 w-10 text-erp-success" strokeWidth={1.6} />
@@ -280,12 +400,19 @@ export function ImportWizardDialog({ open, onOpenChange, target, onCompleted, on
     return null;
   }
 
-  const stepHints = {
-    1: '模板列名需与系统字段一致',
-    2: '仅导入校验通过的数据',
-    3: '导入后需人工审核',
-    4: '可前往导入中心查看任务记录',
-  };
+  const stepHints = documentImport
+    ? {
+      1: '模板列名需与系统字段一致，同一「单据序号」归并为一张单',
+      2: '任一行校验不通过则整批不导入',
+      3: '导入后需逐单提交审核',
+      4: '可前往导入中心查看任务记录',
+    }
+    : {
+      1: '模板列名需与系统字段一致',
+      2: '仅导入校验通过的数据',
+      3: '导入后需人工审核',
+      4: '可前往导入中心查看任务记录',
+    };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -316,7 +443,13 @@ export function ImportWizardDialog({ open, onOpenChange, target, onCompleted, on
             {step === 2 && validation && (
               <>
                 <Button variant="outline" onClick={() => setStep(1)}>上一步</Button>
-                <Button variant="primary" disabled={validation.summary.create + validation.summary.update === 0} onClick={() => setStep(3)}>下一步</Button>
+                <Button
+                  variant="primary"
+                  disabled={documentImport ? validation.summary.error > 0 : validation.summary.create + validation.summary.update === 0}
+                  onClick={() => setStep(3)}
+                >
+                  下一步
+                </Button>
               </>
             )}
             {step === 3 && (

@@ -64,13 +64,13 @@ function buildCustomerFormConfig() {
   createAddress: createEmptyAddress,
   createBank: createEmptyBank,
   bankColumns: customerBankColumns,
-  // 工商开户银行/账号只在默认银行账户变更时带出；保存不回填，保证「仍可修改或清空」。
-  onFieldChange: (key, value, form) => {
-    if (key !== 'banks') return form;
-    const prevDefault = (form.banks || []).find((item) => item.isDefault)?.id;
-    const nextDefault = (value || []).find((item) => item.isDefault)?.id;
-    if (!nextDefault || nextDefault === prevDefault) return form;
-    return { ...form, businessInfo: syncBusinessInfoFromDefaultBank({ ...form, banks: value }) };
+  // 默认银行账户切换时补入工商开户行/账号的空值，不覆盖人工修改或清空的值。
+  onLinesChange: (key, lines, nextForm, previousForm) => {
+    if (key !== 'banks') return nextForm;
+    const previousDefault = (previousForm.banks || []).find((item) => item.isDefault)?.id;
+    const nextDefault = (lines || []).find((item) => item.isDefault)?.id;
+    if (!nextDefault || nextDefault === previousDefault) return nextForm;
+    return { ...nextForm, businessInfo: syncBusinessInfoFromDefaultBank(nextForm) };
   },
   validate: (form, currentId) => validateCustomerForSave(form, readMockRows(CUSTOMER_STORAGE_KEY, customers), currentId),
   sections: [

@@ -11,6 +11,14 @@ function focusFirstFieldError(fieldErrors) {
   target?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
 }
 
+function focusFirstLineError(lineErrors) {
+  if (typeof document === 'undefined') return;
+  const firstLineId = Object.keys(lineErrors)[0];
+  if (!firstLineId) return;
+  const row = document.querySelector(`[data-line-error="${firstLineId}"]`);
+  row?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+}
+
 export function useDocumentForm({
   mode,
   context,
@@ -27,6 +35,7 @@ export function useDocumentForm({
   const [form, setForm] = useState(() => getInitialForm(mode, context));
   const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(getInitialForm(mode, context)));
   const [fieldErrors, setFieldErrors] = useState({});
+  const [lineErrors, setLineErrors] = useState({});
   const dirty = JSON.stringify(form) !== savedSnapshot;
 
   const totalQuantity = useMemo(
@@ -44,6 +53,7 @@ export function useDocumentForm({
     setForm(nextForm);
     setSavedSnapshot(JSON.stringify(nextForm));
     setFieldErrors({});
+    setLineErrors({});
   }, [mode, contextId, context, getInitialForm]);
 
   function clearFieldError(key) {
@@ -55,12 +65,32 @@ export function useDocumentForm({
     });
   }
 
+  /** 明细行内错误：字段变更后清除该行的对应错误；整行替换或删除时清除该行全部错误。 */
+  function clearLineError(id, key) {
+    setLineErrors((current) => {
+      const rowErrors = current[id];
+      if (!rowErrors) return current;
+      if (key && !rowErrors[key]) return current;
+      const next = { ...current };
+      if (key) {
+        const nextRowErrors = { ...rowErrors };
+        delete nextRowErrors[key];
+        if (Object.keys(nextRowErrors).length) next[id] = nextRowErrors;
+        else delete next[id];
+      } else {
+        delete next[id];
+      }
+      return next;
+    });
+  }
+
   function updateField(key, value) {
     clearFieldError(key);
     setForm((current) => ({ ...current, [key]: value }));
   }
 
   function updateLine(id, key, value) {
+    clearLineError(id, key);
     setForm((current) => ({
       ...current,
       lines: current.lines.map((line) => (line.id === id ? { ...line, [key]: value } : line)),
@@ -75,6 +105,7 @@ export function useDocumentForm({
   }
 
   function removeLine(id) {
+    clearLineError(id);
     setForm((current) => ({
       ...current,
       lines: current.lines.length <= 1 ? current.lines : current.lines.filter((line) => line.id !== id),
@@ -82,14 +113,16 @@ export function useDocumentForm({
   }
 
   function replaceLineWithItems(id, items, createLine) {
+    clearLineError(id);
     setForm((current) => {
       const targetIndex = current.lines.findIndex((line) => line.id === id);
       if (targetIndex < 0) return current;
 
       const targetLine = current.lines[targetIndex];
+      // 未选商品（items 为空）时保留一行空行：把原行作为模板传入，避免 createLineFromSku 读 undefined 模板。
       const nextLines = items.length
         ? items.map((item) => createLine(item, targetLine))
-        : [createLine()];
+        : [createLine(undefined, targetLine)];
 
       return {
         ...current,
@@ -103,8 +136,14 @@ export function useDocumentForm({
     if (!normalized) return true;
 
     setFieldErrors(normalized.fieldErrors);
+    setLineErrors(normalized.lineErrors);
     if (hasFieldErrors(normalized.fieldErrors)) {
       focusFirstFieldError(normalized.fieldErrors);
+      return false;
+    }
+    if (Object.keys(normalized.lineErrors).length) {
+      // 明细错误在行内展示，不再重复 Toast。
+      focusFirstLineError(normalized.lineErrors);
       return false;
     }
 
@@ -122,6 +161,7 @@ export function useDocumentForm({
     setForm(nextForm);
     setSavedSnapshot(JSON.stringify(nextForm));
     setFieldErrors({});
+    setLineErrors({});
     onPersist?.(nextForm, { mode, shouldSubmit, context });
     onFeedback?.(message, 'success');
     if (navigateOnSave) onNavigate?.();
@@ -133,6 +173,8 @@ export function useDocumentForm({
     dirty,
     fieldErrors,
     setFieldErrors,
+    lineErrors,
+    setLineErrors,
     totalQuantity,
     totalAmount,
     updateField,

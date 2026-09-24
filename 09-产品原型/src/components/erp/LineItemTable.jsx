@@ -1,15 +1,16 @@
 import { Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Button } from '../ui/button.jsx';
 import { Input } from '../ui/input.jsx';
 import { SelectField } from '../ui/select-field.jsx';
 import {
   calculateGrossAmount,
   calculateNetAmount,
-  calculateNetUnitPrice,
+  calculateNetUnitPrice4,
   calculateTaxAmount,
   EMPTY_PLACEHOLDER,
   formatAmount,
+  formatUnitPrice,
   productLabel,
 } from '../../lib/format.js';
 import { FieldAffordance, FieldTrigger } from '../ui/field.jsx';
@@ -190,6 +191,177 @@ const variants = {
     ],
     viewColgroup: ['w-10', 'w-[108px]', 'w-[108px]', 'w-[140px]', 'w-[64px]', 'w-[96px]', 'w-[96px]', 'w-[72px]', 'w-[96px]', 'w-[96px]', 'w-[96px]', 'w-[96px]'],
   },
+  'purchase-return': {
+    minWidth: '1760px',
+    colgroup: ['w-10', 'w-[150px]', 'w-[72px]', 'w-[180px]', 'w-[96px]', 'w-[96px]', 'w-[72px]', 'w-[96px]', 'w-[96px]', 'w-[96px]', 'w-[96px]', 'w-[80px]', 'w-[80px]', 'w-[80px]', 'w-[64px]'],
+    editColumns: [
+      { key: 'index', label: '行号', align: 'center' },
+      { key: 'product', label: '商品 *', required: true },
+      { key: 'unit', label: '基本单位', readOnly: true },
+      { key: 'sourceInboundLine', label: '来源入库单行', readOnly: true },
+      { key: 'quantity', label: '退货数量 *', align: 'right', required: true },
+      { key: 'price', label: '含税单价 *', align: 'right', required: true },
+      { key: 'taxRate', label: '税率 *', align: 'right', required: true },
+      { key: 'netPrice', label: '不含税单价', align: 'right', readOnly: true },
+      { key: 'grossAmount', label: '价税合计', align: 'right', readOnly: true },
+      { key: 'taxAmount', label: '税额', align: 'right', readOnly: true },
+      { key: 'netAmount', label: '金额', align: 'right', readOnly: true },
+      { key: 'receivedQty', label: '累计实出', align: 'right', readOnly: true },
+      { key: 'inTransitQty', label: '在途通知', align: 'right', readOnly: true },
+      { key: 'pushableQty', label: '可下推', align: 'right', readOnly: true },
+      { key: 'actions', label: '操作', align: 'center' },
+    ],
+    viewColumns: [
+      { key: 'index', label: '行号', align: 'center' },
+      { key: 'product', label: '商品' },
+      { key: 'unit', label: '基本单位' },
+      { key: 'sourceInboundLine', label: '来源入库单行' },
+      { key: 'quantity', label: '退货数量', align: 'right' },
+      { key: 'price', label: '含税单价', align: 'right' },
+      { key: 'taxRate', label: '税率', align: 'right' },
+      { key: 'netPrice', label: '不含税单价', align: 'right' },
+      { key: 'grossAmount', label: '价税合计', align: 'right' },
+      { key: 'taxAmount', label: '税额', align: 'right' },
+      { key: 'netAmount', label: '金额', align: 'right' },
+      { key: 'receivedQty', label: '累计实出', align: 'right', muted: true },
+      { key: 'inTransitQty', label: '在途通知', align: 'right', muted: true },
+      { key: 'pushableQty', label: '可下推', align: 'right', muted: true },
+    ],
+    viewColgroup: ['w-10', 'w-[150px]', 'w-[72px]', 'w-[180px]', 'w-[96px]', 'w-[96px]', 'w-[72px]', 'w-[96px]', 'w-[96px]', 'w-[96px]', 'w-[96px]', 'w-[80px]', 'w-[80px]', 'w-[80px]'],
+  },
+  'purchase-return-notice': {
+    minWidth: '1090px',
+    colgroup: ['w-10', 'w-[190px]', 'w-[108px]', 'w-[108px]', 'w-[140px]', 'w-[64px]', 'w-[96px]', 'w-[96px]'],
+    editColumns: [
+      { key: 'index', label: '行号', align: 'center' },
+      { key: 'sourceReturnLine', label: '来源退货单行', readOnly: true },
+      { key: 'productCode', label: '商品编码', readOnly: true },
+      { key: 'barcode', label: '商品条码', readOnly: true },
+      { key: 'productName', label: '商品名称', readOnly: true },
+      { key: 'unit', label: '基本单位', readOnly: true },
+      { key: 'pushableQty', label: '可下推数量', align: 'right', readOnly: true },
+      { key: 'notifyQty', label: '通知数量 *', align: 'right', required: true },
+    ],
+    viewColumns: [
+      { key: 'index', label: '行号', align: 'center' },
+      { key: 'sourceReturnLine', label: '来源退货单行' },
+      { key: 'productCode', label: '商品编码' },
+      { key: 'barcode', label: '商品条码' },
+      { key: 'productName', label: '商品名称' },
+      { key: 'unit', label: '基本单位' },
+      { key: 'notifyQty', label: '通知数量', align: 'right' },
+      { key: 'shippedQty', label: '实出数量', align: 'right' },
+      { key: 'shortQty', label: '缺出数量', align: 'right' },
+    ],
+    viewColgroup: ['w-10', 'w-[190px]', 'w-[108px]', 'w-[108px]', 'w-[140px]', 'w-[64px]', 'w-[96px]', 'w-[96px]', 'w-[96px]'],
+  },
+  'purchase-return-outbound': {
+    minWidth: '1420px',
+    colgroup: ['w-10', 'w-[190px]', 'w-[108px]', 'w-[140px]', 'w-[64px]', 'w-[96px]', 'w-[96px]', 'w-[72px]', 'w-[96px]', 'w-[96px]', 'w-[96px]', 'w-[96px]'],
+    viewColumns: [
+      { key: 'index', label: '行号', align: 'center' },
+      { key: 'sourceNoticeLine', label: '来源发货通知行' },
+      { key: 'productCode', label: '商品编码' },
+      { key: 'productName', label: '商品名称' },
+      { key: 'unit', label: '基本单位' },
+      { key: 'quantity', label: '实出数量', align: 'right' },
+      { key: 'price', label: '含税单价', align: 'right' },
+      { key: 'taxRate', label: '税率', align: 'right' },
+      { key: 'netPrice', label: '不含税单价', align: 'right' },
+      { key: 'grossAmount', label: '价税合计', align: 'right' },
+      { key: 'taxAmount', label: '税额', align: 'right' },
+      { key: 'netAmount', label: '金额', align: 'right' },
+    ],
+    viewColgroup: ['w-10', 'w-[190px]', 'w-[108px]', 'w-[140px]', 'w-[64px]', 'w-[96px]', 'w-[96px]', 'w-[72px]', 'w-[96px]', 'w-[96px]', 'w-[96px]', 'w-[96px]'],
+  },
+  'sales-return': {
+    minWidth: '1760px',
+    colgroup: ['w-10', 'w-[108px]', 'w-[108px]', 'w-[140px]', 'w-[64px]', 'w-[180px]', 'w-[96px]', 'w-[96px]', 'w-[72px]', 'w-[96px]', 'w-[96px]', 'w-[96px]', 'w-[96px]', 'w-[80px]', 'w-[80px]', 'w-[80px]', 'w-[64px]'],
+    editColumns: [
+      { key: 'index', label: '行号', align: 'center' },
+      { key: 'productCode', label: '商品编码 *', required: true },
+      { key: 'barcode', label: '商品条码', readOnly: true },
+      { key: 'productName', label: '商品名称', readOnly: true },
+      { key: 'unit', label: '基本单位', readOnly: true },
+      { key: 'sourceOutboundLine', label: '来源出库单行', readOnly: true },
+      { key: 'quantity', label: '退货数量 *', align: 'right', required: true },
+      { key: 'price', label: '含税单价 *', align: 'right', required: true },
+      { key: 'taxRate', label: '税率 *', align: 'right', required: true },
+      { key: 'netPrice', label: '不含税单价', align: 'right', readOnly: true },
+      { key: 'grossAmount', label: '价税合计', align: 'right', readOnly: true },
+      { key: 'taxAmount', label: '税额', align: 'right', readOnly: true },
+      { key: 'netAmount', label: '金额', align: 'right', readOnly: true },
+      { key: 'returnedQty', label: '累计实退', align: 'right', readOnly: true },
+      { key: 'inTransitQty', label: '在途通知', align: 'right', readOnly: true },
+      { key: 'pushableQty', label: '可下推', align: 'right', readOnly: true },
+      { key: 'actions', label: '操作', align: 'center' },
+    ],
+    viewColumns: [
+      { key: 'index', label: '行号', align: 'center' },
+      { key: 'productCode', label: '商品编码' },
+      { key: 'barcode', label: '商品条码' },
+      { key: 'productName', label: '商品名称' },
+      { key: 'unit', label: '基本单位' },
+      { key: 'sourceOutboundLine', label: '来源出库单行' },
+      { key: 'quantity', label: '退货数量', align: 'right' },
+      { key: 'price', label: '含税单价', align: 'right' },
+      { key: 'taxRate', label: '税率', align: 'right' },
+      { key: 'netPrice', label: '不含税单价', align: 'right' },
+      { key: 'grossAmount', label: '价税合计', align: 'right' },
+      { key: 'taxAmount', label: '税额', align: 'right' },
+      { key: 'netAmount', label: '金额', align: 'right' },
+      { key: 'returnedQty', label: '累计实退', align: 'right', muted: true },
+      { key: 'inTransitQty', label: '在途通知', align: 'right', muted: true },
+      { key: 'pushableQty', label: '可下推', align: 'right', muted: true },
+    ],
+    viewColgroup: ['w-10', 'w-[108px]', 'w-[108px]', 'w-[140px]', 'w-[64px]', 'w-[180px]', 'w-[96px]', 'w-[96px]', 'w-[72px]', 'w-[96px]', 'w-[96px]', 'w-[96px]', 'w-[96px]', 'w-[80px]', 'w-[80px]', 'w-[80px]'],
+  },
+  'sales-return-inbound': {
+    minWidth: '1420px',
+    colgroup: ['w-10', 'w-[190px]', 'w-[108px]', 'w-[108px]', 'w-[140px]', 'w-[64px]', 'w-[96px]', 'w-[96px]', 'w-[72px]', 'w-[96px]', 'w-[96px]', 'w-[96px]', 'w-[96px]'],
+    viewColumns: [
+      { key: 'index', label: '行号', align: 'center' },
+      { key: 'sourceNoticeLine', label: '来源收货通知行' },
+      { key: 'productCode', label: '商品编码' },
+      { key: 'barcode', label: '商品条码' },
+      { key: 'productName', label: '商品名称' },
+      { key: 'unit', label: '基本单位' },
+      { key: 'quantity', label: '实收数量', align: 'right' },
+      { key: 'price', label: '含税单价', align: 'right' },
+      { key: 'taxRate', label: '税率', align: 'right' },
+      { key: 'netPrice', label: '不含税单价', align: 'right' },
+      { key: 'grossAmount', label: '价税合计', align: 'right' },
+      { key: 'taxAmount', label: '税额', align: 'right' },
+      { key: 'netAmount', label: '金额', align: 'right' },
+    ],
+    viewColgroup: ['w-10', 'w-[190px]', 'w-[108px]', 'w-[108px]', 'w-[140px]', 'w-[64px]', 'w-[96px]', 'w-[96px]', 'w-[72px]', 'w-[96px]', 'w-[96px]', 'w-[96px]', 'w-[96px]'],
+  },
+  'price-adjust': {
+    minWidth: '980px',
+    colgroup: ['w-10', 'w-[120px]', 'w-[120px]', 'w-[150px]', 'w-[72px]', 'w-[110px]', 'w-[88px]', 'w-[110px]', 'w-[72px]'],
+    editColumns: [
+      { key: 'index', label: '行号', align: 'center' },
+      { key: 'productCode', label: '商品编码 *', required: true },
+      { key: 'barcode', label: '商品条码', readOnly: true },
+      { key: 'productName', label: '商品名称', readOnly: true },
+      { key: 'unit', label: '基本单位', readOnly: true },
+      { key: 'price', label: '含税单价 *', align: 'right', required: true, step: '0.0001' },
+      { key: 'taxRate', label: '税率 *', align: 'right', required: true },
+      { key: 'netPrice', label: '不含税单价', align: 'right', readOnly: true },
+      { key: 'actions', label: '操作', align: 'center' },
+    ],
+    viewColumns: [
+      { key: 'index', label: '行号', align: 'center' },
+      { key: 'productCode', label: '商品编码' },
+      { key: 'barcode', label: '商品条码' },
+      { key: 'productName', label: '商品名称' },
+      { key: 'unit', label: '基本单位' },
+      { key: 'price', label: '含税单价', align: 'right' },
+      { key: 'taxRate', label: '税率', align: 'right' },
+      { key: 'netPrice', label: '不含税单价', align: 'right' },
+    ],
+    viewColgroup: ['w-10', 'w-[120px]', 'w-[120px]', 'w-[150px]', 'w-[72px]', 'w-[110px]', 'w-[88px]', 'w-[110px]'],
+  },
   inbound: {
     minWidth: '1050px',
     colgroup: ['w-10', 'w-[205px]', 'w-[160px]', 'w-[74px]', 'w-[110px]', 'w-[110px]', 'w-[110px]', 'w-[130px]', 'w-[150px]', 'w-[72px]'],
@@ -218,6 +390,174 @@ const variants = {
     ],
     viewColgroup: ['w-10', 'w-[205px]', 'w-[160px]', 'w-[74px]', 'w-[110px]', 'w-[110px]', 'w-[110px]', 'w-[130px]', 'w-[150px]'],
   },
+  // —— 库存管理：其他出入库与调拨明细 ——
+  // 这些单据不含价税字段，明细只有商品、基本单位与数量；数量一期为整数。
+  'other-inbound-request': {
+    minWidth: '1080px',
+    colgroup: ['w-10', 'w-[190px]', 'w-[112px]', 'w-[160px]', 'w-[64px]', 'w-[120px]', 'w-[110px]', 'w-[110px]', 'w-[64px]'],
+    editColumns: [
+      { key: 'index', label: '行号', align: 'center' },
+      { key: 'product', label: '商品 *', required: true },
+      { key: 'productCode', label: '商品编码', readOnly: true },
+      { key: 'productName', label: '商品名称', readOnly: true },
+      { key: 'unit', label: '基本单位', readOnly: true },
+      { key: 'quantity', label: '申请入库数量 *', align: 'right', required: true },
+      { key: 'actualQty', label: '实收数量', align: 'right', readOnly: true },
+      { key: 'remainingQty', label: '未收数量', align: 'right', readOnly: true },
+      { key: 'actions', label: '操作', align: 'center' },
+    ],
+    viewColumns: [
+      { key: 'index', label: '行号', align: 'center' },
+      { key: 'product', label: '商品' },
+      { key: 'productCode', label: '商品编码' },
+      { key: 'productName', label: '商品名称' },
+      { key: 'unit', label: '基本单位' },
+      { key: 'quantity', label: '申请入库数量', align: 'right' },
+      { key: 'actualQty', label: '实收数量', align: 'right' },
+      { key: 'remainingQty', label: '未收数量', align: 'right' },
+    ],
+    viewColgroup: ['w-10', 'w-[190px]', 'w-[112px]', 'w-[160px]', 'w-[64px]', 'w-[120px]', 'w-[110px]', 'w-[110px]'],
+  },
+  'other-outbound-request': {
+    minWidth: '1080px',
+    colgroup: ['w-10', 'w-[190px]', 'w-[112px]', 'w-[160px]', 'w-[64px]', 'w-[120px]', 'w-[110px]', 'w-[110px]', 'w-[64px]'],
+    editColumns: [
+      { key: 'index', label: '行号', align: 'center' },
+      { key: 'product', label: '商品 *', required: true },
+      { key: 'productCode', label: '商品编码', readOnly: true },
+      { key: 'productName', label: '商品名称', readOnly: true },
+      { key: 'unit', label: '基本单位', readOnly: true },
+      { key: 'quantity', label: '申请出库数量 *', align: 'right', required: true },
+      { key: 'actualQty', label: '实出数量', align: 'right', readOnly: true },
+      { key: 'remainingQty', label: '未出数量', align: 'right', readOnly: true },
+      { key: 'actions', label: '操作', align: 'center' },
+    ],
+    viewColumns: [
+      { key: 'index', label: '行号', align: 'center' },
+      { key: 'product', label: '商品' },
+      { key: 'productCode', label: '商品编码' },
+      { key: 'productName', label: '商品名称' },
+      { key: 'unit', label: '基本单位' },
+      { key: 'quantity', label: '申请出库数量', align: 'right' },
+      { key: 'actualQty', label: '实出数量', align: 'right' },
+      { key: 'remainingQty', label: '未出数量', align: 'right' },
+    ],
+    viewColgroup: ['w-10', 'w-[190px]', 'w-[112px]', 'w-[160px]', 'w-[64px]', 'w-[120px]', 'w-[110px]', 'w-[110px]'],
+  },
+  'other-inbound': {
+    minWidth: '980px',
+    colgroup: ['w-10', 'w-[170px]', 'w-[190px]', 'w-[112px]', 'w-[160px]', 'w-[64px]', 'w-[130px]'],
+    viewColumns: [
+      { key: 'index', label: '行号', align: 'center' },
+      { key: 'sourceInboundLine', label: '来源申请行' },
+      { key: 'product', label: '商品' },
+      { key: 'productCode', label: '商品编码' },
+      { key: 'productName', label: '商品名称' },
+      { key: 'unit', label: '基本单位' },
+      { key: 'quantity', label: '实际入库数量', align: 'right' },
+    ],
+    viewColgroup: ['w-10', 'w-[170px]', 'w-[190px]', 'w-[112px]', 'w-[160px]', 'w-[64px]', 'w-[130px]'],
+  },
+  'other-outbound': {
+    minWidth: '980px',
+    colgroup: ['w-10', 'w-[170px]', 'w-[190px]', 'w-[112px]', 'w-[160px]', 'w-[64px]', 'w-[130px]'],
+    viewColumns: [
+      { key: 'index', label: '行号', align: 'center' },
+      { key: 'sourceOutboundLine', label: '来源申请行' },
+      { key: 'product', label: '商品' },
+      { key: 'productCode', label: '商品编码' },
+      { key: 'productName', label: '商品名称' },
+      { key: 'unit', label: '基本单位' },
+      { key: 'quantity', label: '实际出库数量', align: 'right' },
+    ],
+    viewColgroup: ['w-10', 'w-[170px]', 'w-[190px]', 'w-[112px]', 'w-[160px]', 'w-[64px]', 'w-[130px]'],
+  },
+  'transfer-order': {
+    minWidth: '1320px',
+    colgroup: ['w-10', 'w-[190px]', 'w-[112px]', 'w-[160px]', 'w-[64px]', 'w-[120px]', 'w-[110px]', 'w-[110px]', 'w-[110px]', 'w-[100px]', 'w-[64px]'],
+    editColumns: [
+      { key: 'index', label: '行号', align: 'center' },
+      { key: 'product', label: '商品 *', required: true },
+      { key: 'productCode', label: '商品编码', readOnly: true },
+      { key: 'productName', label: '商品名称', readOnly: true },
+      { key: 'unit', label: '基本单位', readOnly: true },
+      { key: 'quantity', label: '计划调拨数量 *', align: 'right', required: true },
+      { key: 'actualOutQty', label: '累计实际调出', align: 'right', readOnly: true },
+      { key: 'actualInQty', label: '累计实际调入', align: 'right', readOnly: true },
+      { key: 'remainingQty', label: '未调出数量', align: 'right', readOnly: true },
+      { key: 'inTransitQty', label: '在途数量', align: 'right', readOnly: true },
+      { key: 'actions', label: '操作', align: 'center' },
+    ],
+    viewColumns: [
+      { key: 'index', label: '行号', align: 'center' },
+      { key: 'product', label: '商品' },
+      { key: 'productCode', label: '商品编码' },
+      { key: 'productName', label: '商品名称' },
+      { key: 'unit', label: '基本单位' },
+      { key: 'quantity', label: '计划调拨数量', align: 'right' },
+      { key: 'actualOutQty', label: '累计实际调出', align: 'right' },
+      { key: 'actualInQty', label: '累计实际调入', align: 'right' },
+      { key: 'remainingQty', label: '未调出数量', align: 'right' },
+      { key: 'inTransitQty', label: '在途数量', align: 'right' },
+    ],
+    viewColgroup: ['w-10', 'w-[190px]', 'w-[112px]', 'w-[160px]', 'w-[64px]', 'w-[120px]', 'w-[110px]', 'w-[110px]', 'w-[110px]', 'w-[100px]'],
+  },
+  'transfer-out-notice': {
+    minWidth: '1180px',
+    colgroup: ['w-10', 'w-[180px]', 'w-[190px]', 'w-[112px]', 'w-[160px]', 'w-[64px]', 'w-[120px]', 'w-[110px]', 'w-[110px]'],
+    viewColumns: [
+      { key: 'index', label: '行号', align: 'center' },
+      { key: 'sourceTransferLine', label: '来源调拨单行' },
+      { key: 'product', label: '商品' },
+      { key: 'productCode', label: '商品编码' },
+      { key: 'productName', label: '商品名称' },
+      { key: 'unit', label: '基本单位' },
+      { key: 'quantity', label: '通知调出数量', align: 'right' },
+      { key: 'actualQty', label: '实际调出数量', align: 'right' },
+      { key: 'remainingQty', label: '未发数量', align: 'right' },
+    ],
+    viewColgroup: ['w-10', 'w-[180px]', 'w-[190px]', 'w-[112px]', 'w-[160px]', 'w-[64px]', 'w-[120px]', 'w-[110px]', 'w-[110px]'],
+  },
+  'transfer-in-notice': {
+    minWidth: '1180px',
+    colgroup: ['w-10', 'w-[180px]', 'w-[190px]', 'w-[112px]', 'w-[160px]', 'w-[64px]', 'w-[120px]', 'w-[110px]', 'w-[110px]'],
+    viewColumns: [
+      { key: 'index', label: '行号', align: 'center' },
+      { key: 'sourceTransferLine', label: '来源调拨单行' },
+      { key: 'product', label: '商品' },
+      { key: 'productCode', label: '商品编码' },
+      { key: 'productName', label: '商品名称' },
+      { key: 'unit', label: '基本单位' },
+      { key: 'quantity', label: '通知调入数量', align: 'right' },
+      { key: 'actualQty', label: '实际调入数量', align: 'right' },
+      { key: 'shortageQty', label: '少收数量', align: 'right' },
+    ],
+    viewColgroup: ['w-10', 'w-[180px]', 'w-[190px]', 'w-[112px]', 'w-[160px]', 'w-[64px]', 'w-[120px]', 'w-[110px]', 'w-[110px]'],
+  },
+  'direct-transfer': {
+    minWidth: '1080px',
+    colgroup: ['w-10', 'w-[180px]', 'w-[190px]', 'w-[112px]', 'w-[160px]', 'w-[64px]', 'w-[120px]', 'w-[64px]'],
+    editColumns: [
+      { key: 'index', label: '行号', align: 'center' },
+      { key: 'sourceNoticeLine', label: '来源明细行', readOnly: true },
+      { key: 'product', label: '商品 *', required: true },
+      { key: 'productCode', label: '商品编码', readOnly: true },
+      { key: 'productName', label: '商品名称', readOnly: true },
+      { key: 'unit', label: '基本单位', readOnly: true },
+      { key: 'quantity', label: '实际调拨数量 *', align: 'right', required: true },
+      { key: 'actions', label: '操作', align: 'center' },
+    ],
+    viewColumns: [
+      { key: 'index', label: '行号', align: 'center' },
+      { key: 'sourceNoticeLine', label: '来源明细行' },
+      { key: 'product', label: '商品' },
+      { key: 'productCode', label: '商品编码' },
+      { key: 'productName', label: '商品名称' },
+      { key: 'unit', label: '基本单位' },
+      { key: 'quantity', label: '实际调拨数量', align: 'right' },
+    ],
+    viewColgroup: ['w-10', 'w-[180px]', 'w-[190px]', 'w-[112px]', 'w-[160px]', 'w-[64px]', 'w-[120px]'],
+  },
 };
 
 function alignClassName(align) {
@@ -232,7 +572,10 @@ const emptyEditorOptions = {
   taxRateOptions: [],
 };
 
-function renderEditCell({ column, line, index, onLineChange, onLineRemove, onProductSelect, skuPickerEnabled, editorOptions }) {
+/** 明细行内错误：出错单元格用红色完整边框标出（boxed 控件）。 */
+const cellInvalidClassName = 'border-erp-danger hover:border-erp-danger focus-visible:border-erp-danger';
+
+function renderEditCell({ column, line, index, onLineChange, onLineRemove, onProductSelect, skuPickerEnabled, editorOptions, lineActions, cellInvalid = false }) {
   const rowLabel = `第${index + 1}行`;
   const cellLabel = `${rowLabel}${parseFieldLabel(column.label).text}`;
 
@@ -247,6 +590,8 @@ function renderEditCell({ column, line, index, onLineChange, onLineRemove, onPro
             aria-haspopup="dialog"
             hasValue={Boolean(line.product)}
             variant="boxed"
+            className={cellInvalid ? cellInvalidClassName : undefined}
+            aria-invalid={cellInvalid || undefined}
             onClick={() => onProductSelect?.(line.id)}
           >
             <span className="truncate">{productLabel(line.product, editorOptions.productOptions)}</span>
@@ -262,10 +607,12 @@ function renderEditCell({ column, line, index, onLineChange, onLineRemove, onPro
           placeholder="请选择商品"
           ariaLabel={`${rowLabel}商品`}
           variant="boxed"
+          invalid={cellInvalid}
+          className={cellInvalid ? cellInvalidClassName : undefined}
         />
       );
     case 'spec':
-      return <Input variant="boxed" value={line.spec} onChange={(event) => onLineChange(line.id, 'spec', event.target.value)} placeholder="规格型号" aria-label={cellLabel} />;
+      return <Input variant="boxed" value={line.spec} onChange={(event) => onLineChange(line.id, 'spec', event.target.value)} placeholder="规格型号" aria-label={cellLabel} className={cellInvalid ? cellInvalidClassName : undefined} />;
     case 'unit':
       if (column.readOnly) {
         return <span className="text-erp-text-muted">{line.unit || EMPTY_PLACEHOLDER}</span>;
@@ -277,6 +624,8 @@ function renderEditCell({ column, line, index, onLineChange, onLineRemove, onPro
           onValueChange={(value) => onLineChange(line.id, 'unit', value)}
           ariaLabel={`${rowLabel}单位`}
           variant="boxed"
+          invalid={cellInvalid}
+          className={cellInvalid ? cellInvalidClassName : undefined}
         />
       );
     case 'quantity':
@@ -288,14 +637,24 @@ function renderEditCell({ column, line, index, onLineChange, onLineRemove, onPro
           max={line.orderQuantity || undefined}
           value={line.quantity}
           onChange={(event) => onLineChange(line.id, 'quantity', event.target.value)}
-          className="text-right"
+          className={cn('text-right', cellInvalid && cellInvalidClassName)}
           aria-label={cellLabel}
         />
       );
     case 'orderQuantity':
     case 'received':
     case 'pushableQty':
-      return <span className="text-erp-text-muted">{line[column.key] || 0}</span>;
+    case 'receivedQty':
+    case 'returnedQty':
+    case 'inTransitQty':
+    case 'shippedQty':
+    case 'shortQty':
+      return <span className="text-erp-text-muted">{line[column.key] ?? 0}</span>;
+    case 'sourceInboundLine':
+    case 'sourceReturnLine':
+    case 'sourceOutboundLine':
+    case 'sourceNoticeLine':
+      return <span className="text-erp-text-muted">{line[column.key] || EMPTY_PLACEHOLDER}</span>;
     case 'notifyQty':
       return (
         <Input
@@ -305,7 +664,7 @@ function renderEditCell({ column, line, index, onLineChange, onLineRemove, onPro
           max={line.pushableQty || undefined}
           value={line.notifyQty}
           onChange={(event) => onLineChange(line.id, 'notifyQty', event.target.value)}
-          className="text-right"
+          className={cn('text-right', cellInvalid && cellInvalidClassName)}
           aria-label={cellLabel}
         />
       );
@@ -315,10 +674,10 @@ function renderEditCell({ column, line, index, onLineChange, onLineRemove, onPro
           variant="boxed"
           type="number"
           min="0"
-          step="0.01"
+          step={column.step || '0.0001'}
           value={line.price}
           onChange={(event) => onLineChange(line.id, 'price', event.target.value)}
-          className="text-right"
+          className={cn('text-right', cellInvalid && cellInvalidClassName)}
           aria-label={cellLabel}
         />
       );
@@ -330,6 +689,8 @@ function renderEditCell({ column, line, index, onLineChange, onLineRemove, onPro
           onValueChange={(value) => onLineChange(line.id, 'taxRate', value)}
           ariaLabel={`${rowLabel}税率`}
           variant="boxed"
+          invalid={cellInvalid}
+          className={cellInvalid ? cellInvalidClassName : undefined}
         />
       );
     case 'productCode':
@@ -340,6 +701,8 @@ function renderEditCell({ column, line, index, onLineChange, onLineRemove, onPro
             aria-haspopup="dialog"
             hasValue={Boolean(line.product)}
             variant="boxed"
+            className={cellInvalid ? cellInvalidClassName : undefined}
+            aria-invalid={cellInvalid || undefined}
             onClick={() => onProductSelect?.(line.id)}
           >
             <span className="truncate">{line.productCode || '请选择商品'}</span>
@@ -360,14 +723,26 @@ function renderEditCell({ column, line, index, onLineChange, onLineRemove, onPro
     case 'amount':
       return <span className="font-medium text-erp-text-section">{formatAmount(calculateGrossAmount(line))}</span>;
     case 'netPrice':
-      return <span className="text-erp-text-muted">{formatAmount(calculateNetUnitPrice(line))}</span>;
+      return <span className="text-erp-text-muted">{formatUnitPrice(calculateNetUnitPrice4(line))}</span>;
     case 'remark':
-      return <Input variant="boxed" value={line.remark} onChange={(event) => onLineChange(line.id, 'remark', event.target.value)} placeholder="-" aria-label={cellLabel} />;
+      return <Input variant="boxed" value={line.remark} onChange={(event) => onLineChange(line.id, 'remark', event.target.value)} placeholder="-" aria-label={cellLabel} className={cellInvalid ? cellInvalidClassName : undefined} />;
     case 'actions':
       return (
-        <Button variant="danger" size="icon" aria-label={`删除${rowLabel}`} title="删除明细" onClick={() => onLineRemove(line.id)}>
-          <Trash2 className="h-3.5 w-3.5" strokeWidth={1.8} />
-        </Button>
+        <span className="inline-flex items-center gap-1.5">
+          {(lineActions || []).map((action) => (
+            <button
+              key={action.id}
+              type="button"
+              className="px-1 text-erp-primary hover:underline"
+              onClick={() => action.onClick?.(line)}
+            >
+              {action.label}
+            </button>
+          ))}
+          <Button variant="danger" size="icon" aria-label={`删除${rowLabel}`} title="删除明细" onClick={() => onLineRemove(line.id)}>
+            <Trash2 className="h-3.5 w-3.5" strokeWidth={1.8} />
+          </Button>
+        </span>
       );
     default:
       return line[column.key] ?? EMPTY_PLACEHOLDER;
@@ -386,6 +761,12 @@ function renderViewCell({ column, line, editorOptions }) {
     case 'barcode':
     case 'productName':
       return line[column.key] || EMPTY_PLACEHOLDER;
+    case 'sourceNoticeLine':
+    case 'sourceOutboundLine':
+    case 'sourceInboundLine':
+    case 'sourceReturnLine':
+    case 'sourceTransferLine':
+      return line[column.key] || EMPTY_PLACEHOLDER;
     case 'quantity':
     case 'orderQuantity':
     case 'received':
@@ -393,7 +774,7 @@ function renderViewCell({ column, line, editorOptions }) {
     case 'remainingInbound':
       return line.remainingInbound ?? Math.max(0, Number(line.quantity || 0) - Number(line.received || 0));
     case 'price':
-      return formatAmount(line.price);
+      return formatUnitPrice(line.price);
     case 'taxRate':
       return line.taxRate ? `${line.taxRate}%` : EMPTY_PLACEHOLDER;
     case 'grossAmount':
@@ -405,11 +786,14 @@ function renderViewCell({ column, line, editorOptions }) {
     case 'amount':
       return formatAmount(calculateGrossAmount(line));
     case 'netPrice':
-      return formatAmount(calculateNetUnitPrice(line));
+      return formatUnitPrice(calculateNetUnitPrice4(line));
     case 'notifyQty':
     case 'pushableQty':
     case 'receivedQty':
     case 'shortQty':
+    case 'shippedQty':
+    case 'returnedQty':
+    case 'inTransitQty':
       return line[column.key] ?? 0;
     default:
       return line[column.key] ?? EMPTY_PLACEHOLDER;
@@ -427,12 +811,17 @@ export function LineItemTable({
   enableSkuPicker = false,
   editorOptions = emptyEditorOptions,
   summary,
+  hiddenColumns = [],
+  lineActions,
+  lineErrors = {},
 }) {
   const [skuDialogLineId, setSkuDialogLineId] = useState(null);
   const config = variants[variant];
   const isEdit = mode === 'edit';
-  const columns = isEdit ? config.editColumns : config.viewColumns;
+  const hiddenKeys = new Set(hiddenColumns);
+  const columns = (isEdit ? config.editColumns : config.viewColumns).filter((column) => !hiddenKeys.has(column.key));
   const colgroup = isEdit ? config.colgroup : (config.viewColgroup || config.colgroup.slice(0, -1));
+  const visibleColgroup = colgroup.filter((width, index) => !hiddenKeys.has((isEdit ? config.editColumns : config.viewColumns)[index]?.key));
   const activeSkuLine = lines.find((line) => line.id === skuDialogLineId);
   const skuOptions = enableSkuPicker ? (editorOptions.skuOptions || []) : [];
 
@@ -440,7 +829,7 @@ export function LineItemTable({
     <div className={tableShellClassName}>
       <table className={tableClassName} style={{ minWidth: config.minWidth }}>
         <colgroup>
-          {colgroup.map((width, index) => (
+          {visibleColgroup.map((width, index) => (
             <col key={`${width}-${index}`} className={width} />
           ))}
         </colgroup>
@@ -456,37 +845,53 @@ export function LineItemTable({
           </tr>
         </thead>
         <tbody>
-          {lines.map((line, index) => (
-            <tr key={line.id || `${rowKeyPrefix}-${index}`} className={rowClassName}>
-              {columns.map((column) => {
-                const isActionCell = column.key === 'actions';
-                const readOnlyKeys = new Set(['amount', 'grossAmount', 'taxAmount', 'netAmount', 'netPrice', 'productName', 'barcode']);
-                const isPickerCell = isEdit && column.key === 'productCode' && enableSkuPicker;
-                const isEditableCell = (isEdit && !column.readOnly && !isActionCell && column.key !== 'index' && !readOnlyKeys.has(column.key)) || isPickerCell;
-                const content = isEdit
-                  ? renderEditCell({ column, line, index, onLineChange, onLineRemove, onProductSelect: setSkuDialogLineId, skuPickerEnabled: enableSkuPicker, editorOptions })
-                  : column.key === 'index'
-                    ? index + 1
-                    : renderViewCell({ column, line, editorOptions });
+          {lines.map((line, index) => {
+            const rowErrors = lineErrors[line.id] || {};
+            const rowErrorMessages = Object.values(rowErrors);
+            return (
+              <Fragment key={line.id || `${rowKeyPrefix}-${index}`}>
+                <tr className={rowClassName}>
+                  {columns.map((column) => {
+                    const isActionCell = column.key === 'actions';
+                    const readOnlyKeys = new Set(['amount', 'grossAmount', 'taxAmount', 'netAmount', 'netPrice', 'productName', 'barcode', 'sourceInboundLine', 'sourceReturnLine', 'sourceOutboundLine', 'sourceNoticeLine', 'receivedQty', 'returnedQty', 'inTransitQty', 'shippedQty', 'shortQty', 'pushableQty']);
+                    const isPickerCell = isEdit && column.key === 'productCode' && enableSkuPicker;
+                    const isEditableCell = (isEdit && !column.readOnly && !isActionCell && column.key !== 'index' && !readOnlyKeys.has(column.key)) || isPickerCell;
+                    const content = isEdit
+                      ? renderEditCell({ column, line, index, onLineChange, onLineRemove, onProductSelect: setSkuDialogLineId, skuPickerEnabled: enableSkuPicker, editorOptions, lineActions, cellInvalid: Boolean(rowErrors[column.key]) })
+                      : column.key === 'index'
+                        ? index + 1
+                        : renderViewCell({ column, line, editorOptions });
 
-                return (
-                  <td
-                    key={column.key}
-                    className={cn(
-                      tdClassName,
-                      alignClassName(column.align),
-                      isEditableCell ? cellPaddingClassName : readCellClassName,
-                      column.key === 'product' && !isEdit && 'text-erp-text',
-                      column.muted && 'text-erp-text-muted',
-                      (column.key === 'amount' || column.key === 'grossAmount') && 'font-medium text-erp-text-section',
-                    )}
+                    return (
+                      <td
+                        key={column.key}
+                        className={cn(
+                          tdClassName,
+                          alignClassName(column.align),
+                          isEditableCell ? cellPaddingClassName : readCellClassName,
+                          column.key === 'product' && !isEdit && 'text-erp-text',
+                          column.muted && 'text-erp-text-muted',
+                          (column.key === 'amount' || column.key === 'grossAmount') && 'font-medium text-erp-text-section',
+                        )}
+                      >
+                        {content}
+                      </td>
+                    );
+                  })}
+                </tr>
+                {rowErrorMessages.length > 0 && (
+                  <tr
+                    data-line-error={line.id}
+                    className="border-b border-erp-border-table-row bg-erp-danger-bg/50"
                   >
-                    {content}
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
+                    <td colSpan={columns.length} className="px-2 py-1 text-[12px] leading-4 text-erp-danger" role="alert">
+                      {rowErrorMessages.join('；')}
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            );
+          })}
         </tbody>
         {summary && <DocumentSummaryBar columns={columns} summary={summary} />}
       </table>

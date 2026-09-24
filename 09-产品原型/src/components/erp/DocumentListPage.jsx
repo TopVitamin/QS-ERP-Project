@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { ListPageFrame } from './ListPageFrame.jsx';
 import { useListPageActions } from '../../hooks/useListPageActions.js';
 import { useListPageState } from '../../hooks/useListPageState.js';
@@ -17,7 +17,18 @@ export function DocumentListPage({ onFeedback, onOpenPage, config }) {
     storageKey: config.storageKey,
     columns: config.columns,
     initialSort: config.defaultSort,
+    initialPinnedKeys: config.initialPinnedKeys,
   });
+  // 跨页跳转预填：调用方把要预填的筛选项交给 presetFilters，本页收到后立即生效（如库存查询跳转库存流水）。
+  const presetFiltersKey = config.presetFilters ? JSON.stringify(config.presetFilters) : '';
+  const presetStateRef = useRef(state);
+  presetStateRef.current = state;
+  useEffect(() => {
+    if (!presetFiltersKey) return;
+    Object.entries(JSON.parse(presetFiltersKey)).forEach(([key, value]) => {
+      presetStateRef.current.applyQuickFilter(key, value);
+    });
+  }, [presetFiltersKey]);
   const orderedColumns = useMemo(() => {
     const byKey = new Map(config.columns.map((column) => [column.key, column]));
     const order = [

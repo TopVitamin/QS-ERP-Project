@@ -10,11 +10,37 @@ export function formatAmount(value) {
   return Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+/** 单价按 4 位小数、千分位展示；空值展示 `-`（精度见《6.强盛ERP的编码规则和通用字段规则》Q14）。 */
+export function formatUnitPrice(value) {
+  if (value === '' || value == null) return EMPTY_PLACEHOLDER;
+  const number = Number(value);
+  if (!Number.isFinite(number)) return String(value);
+  return number.toLocaleString('zh-CN', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+}
+
+/** 税率按百分比展示，最多 2 位小数；空值展示 `-`（PCT_4）。 */
+export function formatTaxRate(value) {
+  if (value === '' || value == null) return EMPTY_PLACEHOLDER;
+  const number = Number(value);
+  return Number.isFinite(number) ? `${number}%` : `${value}%`;
+}
+
 export function calculateNetUnitPrice(line) {
   const price = Number(line.price || 0);
   const rate = Number(line.taxRate || 0);
   if (!rate) return price;
   return price / (1 + rate / 100);
+}
+
+/**
+ * 价目与价格调整单口径的不含税单价：含税单价 ÷ (1 + 税率÷100)，四舍五入保留 4 位小数。
+ * 含税单价或税率为空时返回 null（展示为空），不按 0 计算。
+ */
+export function calculateNetUnitPrice4(line = {}) {
+  const { price, taxRate } = line;
+  if (price === '' || price == null) return null;
+  if (taxRate === '' || taxRate == null) return null;
+  return Math.round((Number(price) / (1 + Number(taxRate) / 100)) * 10000) / 10000;
 }
 
 /** 行价税合计（含税金额） */

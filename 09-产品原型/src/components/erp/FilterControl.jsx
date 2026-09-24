@@ -1,7 +1,9 @@
 import { format, isValid, parseISO } from 'date-fns';
+import { Checkbox } from '../ui/checkbox.jsx';
 import { Combobox, MultiSelect } from '../ui/combobox.jsx';
 import { DatePicker } from '../ui/date-picker.jsx';
 import { DateRangePicker } from '../ui/date-range-picker.jsx';
+import { DateTimeRangePicker } from '../ui/datetime-range-picker.jsx';
 import { ClearableInput } from '../ui/input.jsx';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group.jsx';
 import { SelectField } from '../ui/select-field.jsx';
@@ -13,6 +15,30 @@ function getSelectPlaceholder(field) {
 export function FilterControl({ field, value, onChange }) {
   const options = field.options || [];
   const selectPlaceholder = getSelectPlaceholder(field);
+
+  // 勾选框：标签由 ListPageHeader 的 FormField 提供，这里只画控件，保持栅格标签在上的对齐。
+  if (field.type === 'checkbox') {
+    return (
+      <div className="flex h-7 items-center">
+        <Checkbox
+          checked={Boolean(value)}
+          onCheckedChange={(checked) => onChange(checked === true)}
+          aria-label={field.label}
+        />
+      </div>
+    );
+  }
+
+  if (field.type === 'datetime-range') {
+    return (
+      <DateTimeRangePicker
+        value={value && typeof value === 'object' ? value : { from: '', to: '' }}
+        onChange={onChange}
+        placeholder={field.placeholder || '不限'}
+        ariaLabel={field.label}
+      />
+    );
+  }
 
   if (field.type === 'date-range') {
     return (

@@ -306,3 +306,45 @@ export function buildSalesOutboundOperationLogs(row) {
 
   return mergeLogs(entries, row.operationLogs || []);
 }
+
+/** 价格调整单操作日志：从创建、提交、驳回、审核字段推导（详情页 Demo PRD §3.4）。 */
+export function buildPriceAdjustOperationLogs(row) {
+  const entries = [];
+  const sideLabel = row.side === 'sales' ? '销售' : '采购';
+
+  pushEntry(entries, {
+    time: row.createdAt,
+    operator: row.creator,
+    action: '创建',
+    remark: `创建${sideLabel}价格调整单`,
+  });
+
+  if (row.submittedAt) {
+    pushEntry(entries, {
+      time: row.submittedAt,
+      operator: row.submitter || row.creator,
+      action: '提交',
+      remark: '提交审核',
+    });
+  }
+
+  if (row.returnComment) {
+    pushEntry(entries, {
+      time: row.rejectedAt || row.auditTime || row.updatedAt,
+      operator: row.auditor || row.updater,
+      action: '驳回',
+      remark: row.returnComment,
+    });
+  }
+
+  if (row.auditStatus === 'approved' && row.auditTime) {
+    pushEntry(entries, {
+      time: row.auditTime,
+      operator: row.auditor,
+      action: '审核',
+      remark: '审核通过并更新价目表当前价',
+    });
+  }
+
+  return mergeLogs(entries, row.operationLogs || []);
+}

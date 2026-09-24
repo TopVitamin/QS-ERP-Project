@@ -11,14 +11,14 @@ function compareValues(a, b) {
   return String(a ?? '').localeCompare(String(b ?? ''), 'zh-CN', { numeric: true });
 }
 
-export function useListPageState({ initialRows, initialFilters, filterRows, initialVisibility, storageKey, columns = [], initialSort = null }) {
+export function useListPageState({ initialRows, initialFilters, filterRows, initialVisibility, storageKey, columns = [], initialSort = null, initialPinnedKeys = [] }) {
   const [rows, setRows] = useState(() => readMockRows(storageKey, initialRows));
   const skipPersistRef = useRef(false);
   const [draftFilters, setDraftFilters] = useState(initialFilters);
   const [appliedFilters, setAppliedFilters] = useState(initialFilters);
   const [visibility, setVisibility] = useState(initialVisibility);
   const [columnOrder, setColumnOrder] = useState(() => columns.map((column) => column.key));
-  const [pinnedKeys, setPinnedKeys] = useState([]);
+  const [pinnedKeys, setPinnedKeys] = useState(initialPinnedKeys);
   const [selectedIds, setSelectedIds] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSizeState] = useState(20);
@@ -98,7 +98,7 @@ export function useListPageState({ initialRows, initialFilters, filterRows, init
   function resetColumns() {
     setVisibility({ ...initialVisibility });
     setColumnOrder(columns.map((column) => column.key));
-    setPinnedKeys([]);
+    setPinnedKeys([...initialPinnedKeys]);
   }
 
   function togglePin(key) {

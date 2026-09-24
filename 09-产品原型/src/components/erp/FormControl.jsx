@@ -71,9 +71,11 @@ export function FormControl({ field, value, form, onChange, invalid = false }) {
   }
 
   if (field.type === 'select') {
+    // 选项支持传函数：按当前表单值动态给选项（如其他出库申请单的「盘亏」只在出库仓为虚拟在途仓时可选）
+    const options = typeof field.options === 'function' ? field.options(form) : (field.options || []);
     return (
       <SelectField
-        options={field.options || []}
+        options={options}
         value={value || ''}
         onValueChange={onChange}
         placeholder={field.placeholder}
@@ -131,6 +133,7 @@ export function FormControl({ field, value, form, onChange, invalid = false }) {
         value={value || ''}
         onChange={(event) => onChange(event.target.value)}
         placeholder={field.placeholder}
+        maxLength={field.maxLength}
         aria-label={ariaLabel}
         aria-invalid={invalid || undefined}
         className={invalidClassName}
@@ -170,6 +173,7 @@ export function FormFields({ fields, form, onFieldChange, fieldErrors = {} }) {
 
     const error = fieldErrors[field.key];
     const disabled = typeof field.disabled === 'function' ? field.disabled(form) : field.disabled;
+    const hint = typeof field.hint === 'function' ? field.hint(form) : field.hint;
 
     if (field.type === 'cn-address') {
       const savedAddressOptions = typeof field.savedAddressOptions === 'function'
@@ -214,7 +218,7 @@ export function FormFields({ fields, form, onFieldChange, fieldErrors = {} }) {
     }
 
     return (
-      <FormField key={field.key} label={field.label} required={field.required} className={field.className} fieldKey={field.key} error={error}>
+      <FormField key={field.key} label={field.label} required={field.required} className={field.className} fieldKey={field.key} error={error} hint={hint}>
         <FormControl field={field} value={form[field.key]} form={form} onChange={handleChange} invalid={Boolean(error)} />
       </FormField>
     );

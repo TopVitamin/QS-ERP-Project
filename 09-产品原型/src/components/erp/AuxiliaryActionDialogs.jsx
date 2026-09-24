@@ -73,18 +73,18 @@ function AuxiliaryFormDialog({ dialog, onClose, onComplete }) {
   }
 
   const fields = [
-    { key: 'code', label: isCurrency ? '币别代码 *' : '资料编码', type: 'text', placeholder: isCurrency ? '请输入币别代码' : '系统自动生成', disabled: isEdit || !isCurrency },
-    { key: 'name', label: isCurrency ? '币别名称 *' : '资料名称 *', type: 'text', placeholder: '请输入资料名称' },
+    { key: 'code', label: '资料编码', type: 'text', placeholder: isCurrency ? '请输入币别代码' : '系统自动生成', disabled: isEdit || !isCurrency },
+    { key: 'name', label: '资料名称 *', type: 'text', placeholder: isCurrency ? '请输入币别名称' : '请输入资料名称' },
     { key: 'remark', label: '备注', type: 'textarea', placeholder: '请输入补充说明', className: masterDataDialogFullSpanClassName },
   ];
 
-  const viewSections = [
+  const viewSections = row ? [
     {
       title: '基础信息',
       fields: [
         { label: '所属资料类型', value: getTypeLabel(row.type), className: masterDataDialogFullSpanClassName },
-        { label: isCurrency ? '币别代码' : '资料编码', value: row.code },
-        { label: isCurrency ? '币别名称' : '资料名称', value: row.name },
+        { label: '资料编码', value: row.code },
+        { label: '资料名称', value: row.name },
         { label: '备注', value: row.remark || EMPTY_PLACEHOLDER, className: masterDataDialogFullSpanClassName },
       ],
     },
@@ -92,7 +92,7 @@ function AuxiliaryFormDialog({ dialog, onClose, onComplete }) {
       title: '维护信息',
       fields: buildMetaViewFields(row),
     },
-  ];
+  ] : [];
 
   return (
     <MasterDataFormDialog
@@ -177,7 +177,7 @@ function CategoryFormDialog({ dialog, onClose, onComplete }) {
     { key: 'remark', label: '备注', type: 'textarea', placeholder: '请输入分类说明', className: masterDataDialogFullSpanClassName },
   ];
 
-  const viewSections = [
+  const viewSections = row ? [
     {
       title: '分类信息',
       fields: [
@@ -192,7 +192,7 @@ function CategoryFormDialog({ dialog, onClose, onComplete }) {
       title: '维护信息',
       fields: buildMetaViewFields(row),
     },
-  ];
+  ] : [];
 
   return (
     <MasterDataFormDialog

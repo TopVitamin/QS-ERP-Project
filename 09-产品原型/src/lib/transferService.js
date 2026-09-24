@@ -21,8 +21,13 @@ function fieldInstruction(field) {
   return '';
 }
 
+/** 分组导入对象（采购退货单/销售退货单）用「单据序号」模板列；其余对象仍用单表字段 */
+function templateFields(target) {
+  return target.documentImportFields || getImportFields(target);
+}
+
 export async function downloadImportTemplate(target, format) {
-  const fields = getImportFields(target);
+  const fields = templateFields(target);
   const headers = fields.map((field) => field.label);
   const example = fields.map((field) => field.example ?? (field.options ? field.options[0].label : ''));
   const fileName = `${target.label}导入模板`;
@@ -43,7 +48,7 @@ export async function downloadImportTemplate(target, format) {
 }
 
 export function buildImportSampleFile(target) {
-  const fields = getImportFields(target);
+  const fields = templateFields(target);
   const headers = fields.map((field) => field.label);
   const text = `\uFEFF${toDelimitedText({ headers, rows: target.sampleRows || [], format: 'csv' })}`;
   return new File([text], `${target.label}-示例数据.csv`, { type: 'text/csv;charset=utf-8' });
@@ -121,6 +126,60 @@ export function downloadImportFailures(task) {
     item.errors.join('；'),
   ]);
   downloadBlob(buildDelimitedBlob({ headers, rows, format: 'csv' }), `${task.fileName.replace(/\.[^.]+$/, '')}-失败明细.csv`);
+}
+
+/** 分组导入在校验预览阶段下载错误说明（尚未生成任务记录） */
+export function downloadValidationFailures({ fileName, fields, items }) {
+  const failureItems = (items || []).filter((item) => item.action === 'error');
+  const headers = [...fields.map((field) => field.label), '失败原因'];
+  const rows = failureItems.map((item) => [
+    ...fields.map((field) => item.values?.[field.key] ?? ''),
+    (item.errors || []).join('；'),
+  ]);
+  downloadBlob(
+    buildDelimitedBlob({ headers, rows, format: 'csv' }),
+    `${String(fileName || '导入').replace(/\.[^.]+$/, '')}-失败明细.csv`,
+  );
+}
+
+/**
+ * 分组导入的任务记录：成功记生成草稿张数，失败记整批取消与错误行数。
+ * 任务字段与单表导入一致，导入中心可查看并下载失败明细。
+ */
+export function recordDocumentImportTask({ target, fileName, validation, outcome }) {
+  const fields = target.documentImportFields || getImportFields(target);
+  const failureItems = outcome?.failureItems || [];
+  const documents = outcome?.documents || [];
+  const failed = outcome?.status === 'failed' || failureItems.length > 0;
+  const now = formatDateTime();
+  const task = {
+    id: nextTaskNo('IM'),
+    type: 'import',
+    targetId: target.id,
+    targetLabel: target.label,
+    fileName,
+    rowCount: validation?.summary?.total ?? 0,
+    createdCount: failed ? 0 : documents.length,
+    updatedCount: 0,
+    skippedCount: failureItems.length,
+    status: failed ? 'failed' : 'done',
+    operator: currentOperator,
+    createdAt: now,
+    createdAtTs: Date.now(),
+    finishedAt: now,
+    failureFields: fields.map((field) => ({ key: field.key, label: field.label })),
+    failureRows: failureItems.map((item) => ({ rowNumber: item.rowNumber, values: item.values, errors: item.errors })),
+  };
+  createTransferTask(task);
+  pushNotification({
+    title: failed
+      ? `导入失败：${fileName}，校验未通过，本次导入已取消（${task.skippedCount} 行错误）`
+      : `导入完成：${fileName}，生成 ${task.createdCount} 张${target.label}草稿，仍须提交审核`,
+    tag: '导入',
+    category: 'transfer',
+    link: { pageId: 'import-center' },
+  });
+  return task;
 }
 
 export function startExportTask({ target, fileName, format, fields, rows }) {

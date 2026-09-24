@@ -45,8 +45,8 @@ export function FieldLabel({ label, required, className, htmlFor, title, size = 
   );
 }
 
-/** @param {{ label: string, required?: boolean, children: import('react').ReactNode, className?: string, htmlFor?: string, size?: 'compact' | 'comfortable', error?: string, fieldKey?: string }} props */
-export function FormField({ label, required, children, className, htmlFor, size = 'compact', error, fieldKey }) {
+/** @param {{ label: string, required?: boolean, children: import('react').ReactNode, className?: string, htmlFor?: string, size?: 'compact' | 'comfortable', error?: string, hint?: import('react').ReactNode, fieldKey?: string }} props */
+export function FormField({ label, required, children, className, htmlFor, size = 'compact', error, hint, fieldKey }) {
   const tokens = getFieldSizeTokens(size);
 
   return (
@@ -60,6 +60,9 @@ export function FormField({ label, required, children, className, htmlFor, size 
         <p className="text-[12px] leading-4 text-erp-danger" role="alert">
           {error}
         </p>
+      ) : null}
+      {!error && hint ? (
+        <p className="text-[12px] leading-4 text-erp-text-muted">{hint}</p>
       ) : null}
     </div>
   );

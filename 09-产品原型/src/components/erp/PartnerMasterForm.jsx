@@ -63,11 +63,19 @@ export function PartnerMasterForm({
     });
   }
 
+  function updateLineCollection(key, nextLines, previousForm) {
+    const nextForm = { ...previousForm, [key]: nextLines };
+    return config.onLinesChange
+      ? config.onLinesChange(key, nextLines, nextForm, previousForm) || nextForm
+      : nextForm;
+  }
+
   function updateLines(key, lineId, lineKey, value) {
-    setForm((current) => ({
-      ...current,
-      [key]: current[key].map((line) => (line.id === lineId ? { ...line, [lineKey]: value } : line)),
-    }));
+    setForm((current) => updateLineCollection(
+      key,
+      current[key].map((line) => (line.id === lineId ? { ...line, [lineKey]: value } : line)),
+      current,
+    ));
   }
 
   function updateAddressLine(lineId, patch) {
@@ -86,11 +94,13 @@ export function PartnerMasterForm({
   }
 
   function toggleDefault(key, lineId, checked) {
-    if (!checked) {
-      updateLines(key, lineId, 'isDefault', false);
-      return;
-    }
-    setForm((current) => ({ ...current, [key]: toggleDefaultFlag(current[key], lineId) }));
+    setForm((current) => updateLineCollection(
+      key,
+      checked
+        ? toggleDefaultFlag(current[key], lineId)
+        : current[key].map((line) => (line.id === lineId ? { ...line, isDefault: false } : line)),
+      current,
+    ));
   }
 
   function handleCancel() {

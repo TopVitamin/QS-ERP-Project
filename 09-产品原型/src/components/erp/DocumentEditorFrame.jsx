@@ -46,8 +46,8 @@ function StatusBadgeList({ statuses, status }) {
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      {items.map((item) => (
-        <StatusBadge key={item.label} tone={item.tone}>{item.label}</StatusBadge>
+      {items.map((item, index) => (
+        <StatusBadge key={`${index}-${item.label ?? ''}`} tone={item.tone}>{item.label}</StatusBadge>
       ))}
     </div>
   );

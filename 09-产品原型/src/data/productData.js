@@ -12,42 +12,42 @@ import { useStatusLabels } from '../lib/partnerMasterLogic.js';
 export { PRODUCT_STORAGE_KEY };
 
 const categoryByCode = {
-  'SKU-1001': 'cat-keyboard',
-  'SKU-1006': 'cat-keyboard',
-  'SKU-1002': 'cat-mouse',
-  'SKU-1007': 'cat-mouse',
-  'SKU-1003': 'cat-dock',
-  'SKU-1008': 'cat-dock',
-  'SKU-1004': 'cat-monitor',
-  'SKU-1005': 'cat-bag',
-  'SKU-1009': 'cat-stand',
-  'SKU-1010': 'cat-stand',
-  'SKU-1011': 'cat-socket',
-  'SKU-1012': 'cat-socket',
-  'SKU-1013': 'cat-cable',
-  'SKU-1014': 'cat-cable',
-  'SKU-1015': 'cat-stand',
+  'SP0101010001': 'cat-keyboard',
+  'SP0101010002': 'cat-keyboard',
+  'SP0101020001': 'cat-mouse',
+  'SP0101020002': 'cat-mouse',
+  'SP0101030001': 'cat-dock',
+  'SP0101030002': 'cat-dock',
+  'SP0102010001': 'cat-monitor',
+  'SP0103010001': 'cat-bag',
+  'SP0102020001': 'cat-stand',
+  'SP0102020002': 'cat-stand',
+  'SP0103030001': 'cat-socket',
+  'SP0103030002': 'cat-socket',
+  'SP0103020001': 'cat-cable',
+  'SP0103020002': 'cat-cable',
+  'SP0102020003': 'cat-stand',
 };
 
 const brandByCode = {
-  'SKU-1001': '罗技',
-  'SKU-1006': '罗技',
-  'SKU-1002': '罗技',
-  'SKU-1007': '罗技',
-  'SKU-1003': '绿联',
-  'SKU-1008': '绿联',
-  'SKU-1004': '联想',
-  'SKU-1005': '强盛自营',
-  'SKU-1009': '绿联',
-  'SKU-1010': '绿联',
-  'SKU-1011': '绿联',
-  'SKU-1012': '绿联',
-  'SKU-1013': '绿联',
-  'SKU-1014': '绿联',
-  'SKU-1015': '绿联',
+  'SP0101010001': '罗技',
+  'SP0101010002': '罗技',
+  'SP0101020001': '罗技',
+  'SP0101020002': '罗技',
+  'SP0101030001': '绿联',
+  'SP0101030002': '绿联',
+  'SP0102010001': '联想',
+  'SP0103010001': '强盛自营',
+  'SP0102020001': '绿联',
+  'SP0102020002': '绿联',
+  'SP0103030001': '绿联',
+  'SP0103030002': '绿联',
+  'SP0103020001': '绿联',
+  'SP0103020002': '绿联',
+  'SP0102020003': '绿联',
 };
 
-const referencedCodes = new Set(['SKU-1001', 'SKU-1002', 'SKU-1003', 'SKU-1004', 'SKU-1005', 'SKU-1006', 'SKU-1007', 'SKU-1008']);
+const referencedCodes = new Set(['SP0101010001', 'SP0101020001', 'SP0101030001', 'SP0102010001', 'SP0103010001', 'SP0101010002', 'SP0101020002', 'SP0101030002']);
 
 function buildSeedProduct(sku, index) {
   const categoryId = categoryByCode[sku.skuCode] || 'cat-keyboard';

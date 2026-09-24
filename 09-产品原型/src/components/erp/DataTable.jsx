@@ -273,7 +273,7 @@ export function DataTable({
                   const value = row[column.key];
                   const cell = column.render ? column.render(value, row) : (value === '' || value == null ? EMPTY_PLACEHOLDER : value);
                   const tone = column.tone ? column.tone(value, row) : '';
-                  const isLinkCell = column.link && onCellClick;
+                  const isLinkCell = (typeof column.link === 'function' ? column.link(row) : column.link) && onCellClick;
                   const cellText = getCellText(cell);
                   const cellInner = isLinkCell ? (
                     <EllipsisCell

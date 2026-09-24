@@ -1,12 +1,15 @@
-/** 将校验结果统一成 { fieldErrors, message }，供表单页内联标红。 */
+/** 将校验结果统一成 { fieldErrors, lineErrors, message }，供表单页内联标红。 */
 export function normalizeValidationResult(result) {
   if (!result) return null;
-  if (typeof result === 'string') return { fieldErrors: {}, message: result };
+  if (typeof result === 'string') return { fieldErrors: {}, lineErrors: {}, message: result };
   const fieldErrors = result.fieldErrors || {};
+  const lineErrors = result.lineErrors || {};
   const firstFieldMessage = Object.values(fieldErrors)[0];
+  const firstLineMessage = Object.values(lineErrors).flatMap((errors) => Object.values(errors))[0];
   return {
     fieldErrors,
-    message: result.message || firstFieldMessage || null,
+    lineErrors,
+    message: result.message || firstFieldMessage || firstLineMessage || null,
   };
 }
 

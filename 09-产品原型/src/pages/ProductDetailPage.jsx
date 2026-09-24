@@ -4,7 +4,7 @@ import { DetailField, DocumentDetailFrame, EditorCard } from '../components/erp/
 import { ProductActionDialogs } from '../components/erp/ProductActionDialogs.jsx';
 import { PRODUCT_STORAGE_KEY, products } from '../data/productData.js';
 import { erpFieldGridClassName } from '../styles/typography.js';
-import { EMPTY_PLACEHOLDER, formatAmount } from '../lib/format.js';
+import { EMPTY_PLACEHOLDER, formatEmpty, formatTaxRate, formatUnitPrice } from '../lib/format.js';
 import { readMockRows, subscribeMockRows, upsertMockRow, writeMockRows } from '../lib/mockStorage.js';
 import { useStatusLabels } from '../lib/partnerMasterLogic.js';
 import {
@@ -17,7 +17,7 @@ import {
   renderSalesLevel,
 } from '../lib/productLogic.js';
 import { suppliers, SUPPLIER_STORAGE_KEY } from '../data/supplierData.js';
-import { resolveCurrencyCode, resolveCurrencyLabel } from '../data/partnerMasterOptions.js';
+import { resolveCurrencyLabel } from '../data/partnerMasterOptions.js';
 import { cn } from '../lib/utils.js';
 
 const imageSlots = [
@@ -36,10 +36,8 @@ function resolveSupplierLabel(code) {
   return row ? `${row.code} ${row.name}` : code;
 }
 
-function formatPrice(value, currency) {
-  if (value === '' || value == null) return EMPTY_PLACEHOLDER;
-  const amount = formatAmount(value);
-  return currency ? `${currency} ${amount}` : amount;
+function formatPrice(value) {
+  return formatUnitPrice(value);
 }
 
 function DetailSection({ title, fields }) {
@@ -171,8 +169,8 @@ export function ProductDetailPage({ context, onFeedback, onOpenPage }) {
             title="价格信息"
             fields={[
               { key: 'initialSupplier', label: '初始供应商', value: resolveSupplierLabel(row.initialSupplier) },
-              { key: 'initialPurchasePrice', label: '初始含税采购价', value: formatPrice(row.initialPurchasePrice, resolveCurrencyCode(row.currency)) },
-              { key: 'initialSalePrice', label: '初始含税销售价', value: formatPrice(row.initialSalePrice, resolveCurrencyCode(row.currency)) },
+              { key: 'initialPurchasePrice', label: '初始含税采购价', value: formatPrice(row.initialPurchasePrice) },
+              { key: 'initialSalePrice', label: '初始含税销售价', value: formatPrice(row.initialSalePrice) },
               { key: 'currency', label: '币别', value: row.currency ? resolveCurrencyLabel(row.currency) : EMPTY_PLACEHOLDER },
             ]}
           />
@@ -182,37 +180,37 @@ export function ProductDetailPage({ context, onFeedback, onOpenPage }) {
               { key: 'invoiceName', label: '商品开票名称', value: row.invoiceName || EMPTY_PLACEHOLDER },
               { key: 'invoiceSpec', label: '商品开票规格型号', value: row.invoiceSpec || EMPTY_PLACEHOLDER },
               { key: 'taxCode', label: '商品税收分类编码', value: row.taxCode || EMPTY_PLACEHOLDER },
-              { key: 'defaultTaxRate', label: '默认销售税率', value: row.defaultTaxRate ? `${row.defaultTaxRate}%` : EMPTY_PLACEHOLDER },
+              { key: 'defaultTaxRate', label: '默认销售税率', value: formatTaxRate(row.defaultTaxRate) },
             ]}
           />
           <DetailSection
             title="重量与尺寸"
             fields={[
-              { key: 'netWeight', label: '商品净重(kg)', value: row.netWeight || EMPTY_PLACEHOLDER },
-              { key: 'length', label: '商品长度(cm)', value: row.length || EMPTY_PLACEHOLDER },
-              { key: 'width', label: '商品宽度(cm)', value: row.width || EMPTY_PLACEHOLDER },
-              { key: 'height', label: '商品高度(cm)', value: row.height || EMPTY_PLACEHOLDER },
-              { key: 'cartonWeight', label: '外箱毛重(kg)', value: row.cartonWeight || EMPTY_PLACEHOLDER },
-              { key: 'cartonLength', label: '外箱长度(cm)', value: row.cartonLength || EMPTY_PLACEHOLDER },
-              { key: 'cartonWidth', label: '外箱宽度(cm)', value: row.cartonWidth || EMPTY_PLACEHOLDER },
-              { key: 'cartonHeight', label: '外箱高度(cm)', value: row.cartonHeight || EMPTY_PLACEHOLDER },
+              { key: 'netWeight', label: '商品净重(kg)', value: formatEmpty(row.netWeight) },
+              { key: 'length', label: '商品长度(cm)', value: formatEmpty(row.length) },
+              { key: 'width', label: '商品宽度(cm)', value: formatEmpty(row.width) },
+              { key: 'height', label: '商品高度(cm)', value: formatEmpty(row.height) },
+              { key: 'cartonWeight', label: '外箱毛重(kg)', value: formatEmpty(row.cartonWeight) },
+              { key: 'cartonLength', label: '外箱长度(cm)', value: formatEmpty(row.cartonLength) },
+              { key: 'cartonWidth', label: '外箱宽度(cm)', value: formatEmpty(row.cartonWidth) },
+              { key: 'cartonHeight', label: '外箱高度(cm)', value: formatEmpty(row.cartonHeight) },
             ]}
           />
           <DetailSection
             title="包装与单位"
             fields={[
-              { key: 'cartonQty', label: '外箱装箱数量', value: row.cartonQty || EMPTY_PLACEHOLDER },
-              { key: 'auxUnit', label: '辅助计量单位', value: row.auxUnit || EMPTY_PLACEHOLDER },
-              { key: 'unitConversion', label: '单位换算数量', value: row.unitConversion || EMPTY_PLACEHOLDER },
+              { key: 'cartonQty', label: '外箱装箱数量', value: formatEmpty(row.cartonQty) },
+              { key: 'auxUnit', label: '辅助计量单位', value: formatEmpty(row.auxUnit) },
+              { key: 'unitConversion', label: '单位换算数量', value: formatEmpty(row.unitConversion) },
             ]}
           />
           <DetailSection
             title="库存预警"
             fields={[
               { key: 'stockAlertEnabled', label: '是否启用库存预警', value: renderBoolean(row.stockAlertEnabled) },
-              { key: 'minStock', label: '最低库存数量', value: row.minStock || EMPTY_PLACEHOLDER },
-              { key: 'maxStock', label: '最高库存数量', value: row.maxStock || EMPTY_PLACEHOLDER },
-              { key: 'safetyStock', label: '安全库存数量', value: row.safetyStock || EMPTY_PLACEHOLDER },
+              { key: 'minStock', label: '最低库存数量', value: formatEmpty(row.minStock) },
+              { key: 'maxStock', label: '最高库存数量', value: formatEmpty(row.maxStock) },
+              { key: 'safetyStock', label: '安全库存数量', value: formatEmpty(row.safetyStock) },
             ]}
           />
           <DetailSection
@@ -222,8 +220,8 @@ export function ProductDetailPage({ context, onFeedback, onOpenPage }) {
               { key: 'batchManaged', label: '是否批次管理', value: renderBoolean(row.batchManaged) },
               { key: 'serialManaged', label: '是否序列号管理', value: renderBoolean(row.serialManaged) },
               { key: 'shelfLifeManaged', label: '是否保质期管理', value: renderBoolean(row.shelfLifeManaged) },
-              { key: 'shelfLifeDays', label: '保质期天数', value: row.shelfLifeDays ? `${row.shelfLifeDays}天` : EMPTY_PLACEHOLDER },
-              { key: 'nearExpiryDays', label: '临期预警天数', value: row.nearExpiryDays ? `${row.nearExpiryDays}天` : EMPTY_PLACEHOLDER },
+              { key: 'shelfLifeDays', label: '保质期天数', value: row.shelfLifeDays === '' || row.shelfLifeDays == null ? EMPTY_PLACEHOLDER : `${row.shelfLifeDays}天` },
+              { key: 'nearExpiryDays', label: '临期预警天数', value: row.nearExpiryDays === '' || row.nearExpiryDays == null ? EMPTY_PLACEHOLDER : `${row.nearExpiryDays}天` },
             ]}
           />
           <EditorCard title="商品图片">
