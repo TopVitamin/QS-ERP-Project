@@ -3,8 +3,11 @@ import { Check } from 'lucide-react';
 import {
   addressRecordToCnAddress,
   createEmptyCnAddress,
+  createManualCnAddress,
   findCustomerAddressById,
   formatCnRegion,
+  isPresetCustomerAddress,
+  MANUAL_CUSTOMER_ADDRESS_ID,
   getCities,
   getDistricts,
   getProvinces,
@@ -295,6 +298,45 @@ export function CnAddressDetailInput({
       aria-label="详细地址"
       aria-invalid={invalid || undefined}
       disabled={disabled}
+      className={invalidClassName}
+    />
+  );
+}
+
+/** 发货地址：客户地址明细 +「手动填写」；选预设地址时不展示下方省市区控件。 */
+export function CustomerDeliveryAddressSelect({
+  value,
+  onChange,
+  options = [],
+  disabled = false,
+  invalid = false,
+  placeholder = '请选择客户地址',
+}) {
+  const address = normalizeAddressValue(value);
+  const manualOption = { value: MANUAL_CUSTOMER_ADDRESS_ID, label: '手动填写' };
+  const selectOptions = [...options, manualOption];
+  const selectedId = isPresetCustomerAddress(address, options)
+    ? address.savedAddressId
+    : MANUAL_CUSTOMER_ADDRESS_ID;
+  const invalidClassName = invalid ? fieldInvalidClassName : undefined;
+
+  function handleChange(savedAddressId) {
+    if (savedAddressId === MANUAL_CUSTOMER_ADDRESS_ID) {
+      onChange(createManualCnAddress());
+      return;
+    }
+    onChange(addressRecordToCnAddress(findCustomerAddressById(savedAddressId)));
+  }
+
+  return (
+    <SelectField
+      options={selectOptions}
+      value={selectedId}
+      onValueChange={handleChange}
+      placeholder={placeholder}
+      ariaLabel="发货地址"
+      disabled={disabled}
+      invalid={invalid}
       className={invalidClassName}
     />
   );

@@ -30,12 +30,18 @@ function getSourceOrder(context) {
   return null;
 }
 
-function receiptModeField({ required = false, disabled = false } = {}) {
+const VIRTUAL_RECEIPT_TIP = '虚拟入库不会推送通知单到仓库，而是直接生成采购入库单，增加ERP的库存';
+
+function receiptModeField({ required = false, disabled = false, showVirtualTip = false } = {}) {
   return {
     key: 'receiptMode',
     label: required ? '收货处理方式 *' : '收货处理方式',
     type: 'radio',
-    options: toSelectOptions(receiptModeLabels),
+    options: toSelectOptions(receiptModeLabels).map((option) => (
+      showVirtualTip && option.value === 'virtual'
+        ? { ...option, tip: VIRTUAL_RECEIPT_TIP }
+        : option
+    )),
     disabled,
   };
 }
@@ -46,7 +52,7 @@ function buildCreateFields(orderRow) {
     { key: 'sourceOrderNo', label: '来源采购订单', type: 'disabled', getValue: () => orderRow?.orderNo || '' },
     { key: 'supplier', label: '供应商', type: 'disabled', getValue: (form) => resolveOptionLabel(form.supplier, supplierOptions) },
     { key: 'warehouse', label: '收货仓库', type: 'disabled', getValue: (form) => resolveOptionLabel(form.warehouse, getInventoryLogicalWarehouseOptions()) },
-    receiptModeField({ required: true }),
+    receiptModeField({ required: true, showVirtualTip: true }),
     { key: 'remark', label: '备注', type: 'textarea', className: 'col-span-3', placeholder: '请输入备注' },
   ];
 }

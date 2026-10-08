@@ -2,7 +2,7 @@ import { emptyFieldMessage } from './formValidation.js';
 import { getCategoryPath, matchesCategoryFilter, resolveCategorySelection } from '../data/productCategoryData.js';
 import { formatNow } from './partnerMasterLogic.js';
 
-export const PRODUCT_STORAGE_KEY = 'qs-erp:products:v1';
+export const PRODUCT_STORAGE_KEY = 'qs-erp:products:v2';
 
 function hasOptionalPriceValue(value) {
   return value != null && String(value).trim() !== '';

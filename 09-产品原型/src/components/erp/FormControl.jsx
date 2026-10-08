@@ -1,12 +1,21 @@
 import { Fragment } from 'react';
+import { CircleHelp } from 'lucide-react';
 import { formatFormDate, parseFormDate } from '../../lib/formDate.js';
 import { cn } from '../../lib/utils.js';
-import { CnAddressDetailInput, CnRegionPicker, CustomerAddressSelect } from './CnAddressFields.jsx';
+import {
+  CnAddressDetailInput,
+  CnRegionPicker,
+  CustomerAddressSelect,
+  CustomerDeliveryAddressSelect,
+} from './CnAddressFields.jsx';
+import { isPresetCustomerAddress } from '../../lib/cnAddress.js';
 import { fieldInvalidClassName } from '../ui/field.jsx';
 import { DatePicker } from '../ui/date-picker.jsx';
 import { FormField } from '../ui/form-field.jsx';
+import { HintTooltip } from '../ui/tooltip.jsx';
 import { Input } from '../ui/input.jsx';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group.jsx';
+import { DocumentPickerField } from '../ui/document-picker-field.jsx';
 import { SelectField } from '../ui/select-field.jsx';
 import { Switch } from '../ui/switch.jsx';
 import { Textarea } from '../ui/textarea.jsx';
@@ -87,6 +96,24 @@ export function FormControl({ field, value, form, onChange, invalid = false }) {
     );
   }
 
+  if (field.type === 'document-picker') {
+    const disabled = typeof field.disabled === 'function' ? field.disabled(form) : field.disabled;
+    const displayValue = typeof field.getDisplayValue === 'function' ? field.getDisplayValue(form) : undefined;
+    return (
+      <DocumentPickerField
+        value={value || ''}
+        displayValue={displayValue}
+        onPick={() => field.onPick?.(form)}
+        onClear={() => onChange('')}
+        placeholder={field.placeholder}
+        ariaLabel={ariaLabel}
+        disabled={disabled}
+        invalid={invalid}
+        className={invalidClassName}
+      />
+    );
+  }
+
   if (field.type === 'switch') {
     const disabled = typeof field.disabled === 'function' ? field.disabled(form) : field.disabled;
     return (
@@ -121,6 +148,25 @@ export function FormControl({ field, value, form, onChange, invalid = false }) {
           >
             <RadioGroupItem value={option.value} aria-label={option.label} disabled={disabled} />
             <span>{option.label}</span>
+            {option.tip ? (
+              <HintTooltip content={option.tip} side="top">
+                <button
+                  type="button"
+                  className="inline-flex size-3.5 shrink-0 items-center justify-center text-erp-text-muted hover:text-erp-primary"
+                  aria-label={`${option.label}说明`}
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                  }}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                  }}
+                >
+                  <CircleHelp className="size-3.5" strokeWidth={1.75} />
+                </button>
+              </HintTooltip>
+            ) : null}
           </label>
         ))}
       </RadioGroup>
@@ -218,6 +264,71 @@ export function FormFields({ fields, form, onFieldChange, fieldErrors = {} }) {
               placeholder={field.detailPlaceholder || '请输入详细地址'}
             />
           </FormField>
+        </Fragment>
+      );
+    }
+
+    if (field.type === 'customer-address-manual') {
+      const addressOptions = typeof field.addressOptions === 'function'
+        ? field.addressOptions(form)
+        : (field.addressOptions || []);
+      const addressValue = form[field.key];
+      const showManualFields = !isPresetCustomerAddress(addressValue, addressOptions);
+      const detailClassName = field.detailClassName || 'col-span-2';
+      const regionLabel = field.regionLabel || '省/市/区 *';
+      const detailLabel = field.detailLabel || '详细地址';
+
+      return (
+        <Fragment key={field.key}>
+          <FormField
+            label={field.label}
+            required={field.required}
+            className={field.className || 'col-span-2'}
+            fieldKey={field.key}
+            error={showManualFields ? undefined : error}
+          >
+            <CustomerDeliveryAddressSelect
+              value={addressValue}
+              onChange={handleChange}
+              options={addressOptions}
+              disabled={disabled}
+              invalid={Boolean(error) && !showManualFields}
+              placeholder={field.placeholder || '请选择客户地址'}
+            />
+          </FormField>
+          {showManualFields ? (
+            <>
+              <FormField
+                label={regionLabel}
+                required={field.required}
+                className={field.regionClassName}
+                fieldKey={`${field.key}-region`}
+                error={error}
+              >
+                <CnRegionPicker
+                  value={addressValue}
+                  onChange={handleChange}
+                  disabled={disabled}
+                  invalid={Boolean(error)}
+                />
+              </FormField>
+              <FormField
+                label={detailLabel}
+                required={field.required}
+                className={detailClassName}
+                fieldKey={`${field.key}-detail`}
+                error={error}
+              >
+                <CnAddressDetailInput
+                  value={addressValue}
+                  onChange={handleChange}
+                  disabled={disabled}
+                  invalid={Boolean(error)}
+                  placeholder={field.detailPlaceholder || '请输入详细地址'}
+                />
+              </FormField>
+            </>
+          ) : null}
         </Fragment>
       );
     }

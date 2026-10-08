@@ -8,10 +8,11 @@ import { Input } from '../components/ui/input.jsx';
 import { erpFieldGridClassName } from '../styles/typography.js';
 import { readMockRows, upsertMockRow } from '../lib/mockStorage.js';
 import {
+  applyPhysicalDockingFieldChange,
   buildPhysicalStatusBadges,
   createEmptyPhysicalForm,
-  dockingSystemOptions,
   dockingTypeOptions,
+  getDockingSystemOptionsForType,
   operationTypeOptions,
   physicalFormToRow,
   physicalRowToForm,
@@ -52,7 +53,12 @@ function WarehouseForm({ mode, context, onFeedback, onOpenPage }) {
       delete next[key];
       return next;
     });
-    setForm((current) => ({ ...current, [key]: value }));
+    setForm((current) => {
+      if (key === 'dockingType' || key === 'dockingSystem') {
+        return applyPhysicalDockingFieldChange(current, key, value);
+      }
+      return { ...current, [key]: value };
+    });
   }
 
   function handleCancel() {
@@ -91,18 +97,22 @@ function WarehouseForm({ mode, context, onFeedback, onOpenPage }) {
   }
 
   const baseFields = [
-    { key: 'code', label: '实体仓编码', type: 'text', placeholder: '请输入实体仓编码', disabled: !isCreate },
+    { key: 'code', label: '实体仓编码 *', type: 'text', placeholder: '请输入实体仓编码', disabled: !isCreate },
     { key: 'name', label: '实体仓名称 *', type: 'text', placeholder: '请输入实体仓名称' },
     { key: 'operationType', label: '运营类型 *', type: 'select', options: operationTypeOptions, placeholder: '请选择运营类型' },
     { key: 'remark', label: '备注', type: 'textarea', placeholder: '请输入仓库说明', className: 'col-span-3' },
   ];
 
+  const dockingSystemOptions = getDockingSystemOptionsForType(form.dockingType);
   const dockingFields = [
     { key: 'dockingType', label: '对接方式', type: 'select', options: dockingTypeOptions, placeholder: '请选择对接方式' },
     { key: 'dockingSystem', label: '对接系统', type: 'select', options: dockingSystemOptions, placeholder: '请选择对接系统' },
-    { key: 'thirdPartyCode', label: '第三方仓库编码', type: 'text', placeholder: '请输入外部系统提供的仓库编码' },
-    { key: 'thirdPartyOwner', label: '第三方仓库货主', type: 'text', placeholder: '请输入货主标识' },
-    { key: 'authConfig', label: '对接授权配置', type: 'text', placeholder: '由系统集成侧维护', disabled: true, hint: '仅显示授权配置引用；密钥、令牌和协议参数由系统集成侧管理' },
+    ...(form.dockingSystem
+      ? [
+          { key: 'thirdPartyCode', label: '第三方仓库编码', type: 'text', placeholder: '请输入外部系统提供的仓库编码' },
+          { key: 'thirdPartyOwner', label: '第三方仓库货主', type: 'text', placeholder: '请输入货主标识' },
+        ]
+      : []),
   ];
 
   const statusBadges = !isCreate && context?.row ? buildPhysicalStatusBadges(context.row) : [];

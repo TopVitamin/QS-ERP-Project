@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { ListPageFrame } from '../components/erp/ListPageFrame.jsx';
 import { useListPageActions } from '../hooks/useListPageActions.js';
 import { useListPageState } from '../hooks/useListPageState.js';
-import { matchesDateRange, hasActiveFilters } from '../lib/listFilters.js';
+import { hasActiveFilters, matchesDateRange, matchesTextContains } from '../lib/listFilters.js';
 import {
   canApprove,
   canDisable,
@@ -17,18 +17,18 @@ import { buildInitialVisibility } from '../data/warehouseData.js';
 import { readMockRows, subscribeMockRows, writeMockRows } from '../lib/mockStorage.js';
 
 export const physicalInitialFilters = {
-  keyword: '',
-  contact: '',
+  code: '',
+  name: '',
+  thirdPartyCode: '',
   operationType: '',
-  dockingType: '',
-  dockingSystem: '',
   useStatus: '',
   auditStatus: '',
   updatedAt: { from: '', to: '' },
 };
 
 export const logicalInitialFilters = {
-  keyword: '',
+  code: '',
+  name: '',
   physicalWarehouseId: '',
   stockStatus: '',
   useStatus: '',
@@ -45,24 +45,18 @@ export const auditTabItems = [
 ];
 
 export function filterPhysicalRows(row, filters) {
-  const keyword = filters.keyword.trim().toLowerCase();
-  const contact = filters.contact.trim().toLowerCase();
-  const matchesKeyword = !keyword || [row.code, row.name, row.thirdPartyCode].some((value) => String(value || '').toLowerCase().includes(keyword));
-  const matchesContact = !contact || String(row.contact || '').toLowerCase().includes(contact);
-  return matchesKeyword
-    && matchesContact
+  return matchesTextContains(row.code, filters.code)
+    && matchesTextContains(row.name, filters.name)
+    && matchesTextContains(row.thirdPartyCode, filters.thirdPartyCode)
     && (!filters.operationType || row.operationType === filters.operationType)
-    && (!filters.dockingType || row.dockingType === filters.dockingType)
-    && (!filters.dockingSystem || row.dockingSystem === filters.dockingSystem)
     && (!filters.useStatus || row.useStatus === filters.useStatus)
     && (!filters.auditStatus || row.auditStatus === filters.auditStatus)
     && matchesDateRange(row.updatedAt, filters.updatedAt);
 }
 
 export function filterLogicalRows(row, filters) {
-  const keyword = filters.keyword.trim().toLowerCase();
-  const matchesKeyword = !keyword || [row.code, row.name].some((value) => String(value || '').toLowerCase().includes(keyword));
-  return matchesKeyword
+  return matchesTextContains(row.code, filters.code)
+    && matchesTextContains(row.name, filters.name)
     && (!filters.physicalWarehouseId || row.physicalWarehouseId === filters.physicalWarehouseId)
     && (!filters.stockStatus || row.stockStatus === filters.stockStatus)
     && (!filters.useStatus || row.useStatus === filters.useStatus)

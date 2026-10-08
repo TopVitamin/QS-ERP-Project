@@ -56,11 +56,11 @@ export function LogisticsProductListPage({ onFeedback, onOpenPage }) {
   const productColumns = useMemo(() => createProductColumns(carrierRows), [carrierRows]);
 
   const filterFields = [
-    { key: 'keyword', label: '关键词', type: 'search', placeholder: '请输入产品编码或名称' },
+    { key: 'code', label: '服务产品编码', type: 'search', placeholder: '请输入服务产品编码' },
+    { key: 'name', label: '服务产品名称', type: 'search', placeholder: '请输入服务产品名称' },
     { key: 'carrierId', label: '所属物流商', type: 'select', options: buildCarrierFilterOptions(carrierRows) },
     { key: 'transportType', label: '运输类型', type: 'select', options: [{ value: '', label: '全部类型' }, ...transportTypeOptions] },
     { key: 'useStatus', label: '使用状态', type: 'select', options: [{ value: '', label: '全部状态' }, ...toSelectOptions(useStatusLabels)] },
-    { key: 'updatedAt', label: '最后更新时间', type: 'date-range' },
   ];
 
   function openDialog(payload) {

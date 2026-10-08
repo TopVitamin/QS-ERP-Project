@@ -207,6 +207,19 @@ export function getSelectableSourceInboundOptions() {
     .map((row) => ({ value: row.inboundNo, label: row.inboundNo }));
 }
 
+/** 溯源选单候选：已审核采购入库单 + 每行剩余可退额度 */
+export function buildSourceInboundCandidates({ excludeReturnId } = {}) {
+  return loadSourceInbounds()
+    .filter((row) => row.auditStatus === 'approved')
+    .map((inbound) => ({
+      ...inbound,
+      lines: (inbound.lines || []).map((line) => ({
+        ...line,
+        remainingQuota: computeInboundLineRemaining(line.id, { excludeReturnId }) ?? 0,
+      })),
+    }));
+}
+
 export function loadSourceInboundByNo(inboundNo) {
   if (!inboundNo) return null;
   return loadSourceInbounds().find((row) => row.inboundNo === inboundNo) || null;
@@ -271,21 +284,28 @@ export function validateReturnSourceQuota(row) {
 
 /** 来源联动：按原入库明细带出商品、基本单位、来源入库单行、数量与价格（Demo PRD §5） */
 export function buildReturnLinesFromSourceInbound(inboundRow) {
-  return refreshReturnLines((inboundRow?.lines || []).map((line, index) => ({
-    id: createReturnLineId(),
-    sourceInboundLineId: line.id,
-    sourceInboundLine: `${inboundRow.inboundNo} 行${index + 1}`,
-    product: line.product,
-    productCode: line.productCode,
-    barcode: line.barcode,
-    productName: line.productName,
-    unit: line.unit,
-    quantity: line.quantity,
-    price: line.price,
-    taxRate: line.taxRate,
-    receivedQty: 0,
-    inTransitQty: 0,
-  })));
+  const rows = (inboundRow?.lines || []).map((line, index) => {
+    const quantity = line.remainingQuota != null
+      ? Math.min(Number(line.quantity || 0), Number(line.remainingQuota))
+      : Number(line.quantity || 0);
+    if (quantity <= 0) return null;
+    return {
+      id: createReturnLineId(),
+      sourceInboundLineId: line.id,
+      sourceInboundLine: `${inboundRow.inboundNo} 行${index + 1}`,
+      product: line.product,
+      productCode: line.productCode,
+      barcode: line.barcode,
+      productName: line.productName,
+      unit: line.unit,
+      quantity,
+      price: line.price,
+      taxRate: line.taxRate,
+      receivedQty: 0,
+      inTransitQty: 0,
+    };
+  }).filter(Boolean);
+  return refreshReturnLines(rows);
 }
 
 /** 清空来源：断开来源入库单行，保留已录商品、数量与价格，转无来源口径 */

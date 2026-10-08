@@ -13,6 +13,13 @@ export function statusMultiSelectField(key, label, labelsMap, placeholder = '全
 
 export { matchesMultiSelect };
 
+/** 单字段包含匹配；查询为空时不限制。 */
+export function matchesTextContains(fieldValue, query) {
+  const term = String(query ?? '').trim();
+  if (!term) return true;
+  return String(fieldValue ?? '').toLowerCase().includes(term.toLowerCase());
+}
+
 export function matchesDateRange(value, range) {
   if (!range?.from && !range?.to) return true;
   const dateValue = String(value || '').slice(0, 10);

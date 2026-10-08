@@ -5,6 +5,7 @@ import { computeLinesTotals, formatAmount } from '../lib/format.js';
 import {
   addressRecordToCnAddress,
   createEmptyCnAddress,
+  createManualCnAddress,
   getCustomerAddressOptions,
   getDefaultCustomerAddress,
 } from '../lib/cnAddress.js';
@@ -18,6 +19,7 @@ import {
   findZeroPriceLines,
   normalizeOrderRow,
   SALES_ORDER_STORAGE_KEY,
+  loadOrderById,
   persistOrder,
   refreshOrderLines,
   sumShippedQty,
@@ -106,9 +108,12 @@ function buildSalesOrderFormFields() {
       if (defaultCurrency) onFieldChange('currency', defaultCurrency);
       onFieldChange('lines', clearLinePrices(form.lines));
       const defaultAddress = getDefaultCustomerAddress(value);
-      onFieldChange('deliveryAddress', addressRecordToCnAddress(defaultAddress));
+      onFieldChange(
+        'deliveryAddress',
+        defaultAddress ? addressRecordToCnAddress(defaultAddress) : createManualCnAddress(),
+      );
       onFieldChange('shipMethod', 'logistics');
-      onFieldChange('logisticsProduct', defaultAddress ? 'LSP000001' : '');
+      onFieldChange('logisticsProduct', 'LSP000001');
     },
   },
   {
@@ -142,7 +147,11 @@ function buildSalesOrderFormFields() {
         return;
       }
       if (!form.deliveryAddress?.provinceCode && form.customer) {
-        onFieldChange('deliveryAddress', addressRecordToCnAddress(getDefaultCustomerAddress(form.customer)));
+        const defaultAddress = getDefaultCustomerAddress(form.customer);
+        onFieldChange(
+          'deliveryAddress',
+          defaultAddress ? addressRecordToCnAddress(defaultAddress) : createManualCnAddress(),
+        );
       }
       if (!form.logisticsProduct) onFieldChange('logisticsProduct', 'LSP000001');
     },
@@ -157,10 +166,13 @@ function buildSalesOrderFormFields() {
   },
   {
     key: 'deliveryAddress',
-    label: '省/市/区 *',
-    type: 'cn-address',
+    label: '发货地址 *',
+    type: 'customer-address-manual',
     section: 'delivery',
-    savedAddressOptions: (form) => getCustomerAddressOptions(form.customer),
+    className: 'col-span-2',
+    addressOptions: (form) => getCustomerAddressOptions(form.customer),
+    disabled: (form) => !form.customer,
+    placeholder: '请选择客户地址',
     visible: (form) => form.shipMethod !== 'pickup',
   },
   ];
@@ -259,7 +271,7 @@ export function SalesOrderEditPage(props) {
   return <SalesOrderFormPage {...props} mode="edit" />;
 }
 
-export function SalesOrderFormPage({ mode = 'create', onFeedback, ...props }) {
+export function SalesOrderFormPage({ mode = 'create', onFeedback, onOpenPage, ...props }) {
   const [dialog, setDialog] = useState(null);
 
   function handleSubmitRequest({ form, save, applyValidationResult }) {
@@ -298,12 +310,20 @@ export function SalesOrderFormPage({ mode = 'create', onFeedback, ...props }) {
 
   const config = {
     ...buildOrderFormConfig({ onSubmitRequest: handleSubmitRequest }),
-    navigateOnSave: mode === 'create',
+    navigateOnSave: false,
+    persistRow: (row, meta) => {
+      const saved = persistOrder(row);
+      // 提交后变为待审核，不可再进编辑页，跳转详情办理审核/撤回（对齐其他入库申请单等单据）。
+      if (meta?.shouldSubmit) {
+        onOpenPage?.('sales-order-detail', { row: loadOrderById(saved.id) || saved });
+      }
+      return saved;
+    },
   };
 
   return (
     <>
-      <DocumentFormPage {...props} mode={mode} onFeedback={onFeedback} config={config} />
+      <DocumentFormPage {...props} mode={mode} onFeedback={onFeedback} onOpenPage={onOpenPage} config={config} />
       <SalesOrderActionDialogs
         dialog={dialog}
         onClose={() => setDialog(null)}

@@ -125,6 +125,18 @@ export const skuOptions = [
   { value: 'SP0103020001', label: '超五类网线', skuCode: 'SP0103020001', productName: '超五类网线', spec: '蓝色 / 3米', barcode: '6901001013', unit: '条', availableStock: 210, referencePrice: 18 },
   { value: 'SP0103020002', label: '超五类网线', skuCode: 'SP0103020002', productName: '超五类网线', spec: '蓝色 / 5米', barcode: '6901001014', unit: '条', availableStock: 160, referencePrice: 25 },
   { value: 'SP0102020003', label: '笔记本电脑支架', skuCode: 'SP0102020003', productName: '笔记本电脑支架', spec: '银色 / 折叠款', barcode: '6901001015', unit: '个', availableStock: 42, referencePrice: 129 },
+  { value: 'SP0101010003', label: '机械键盘 MK470', skuCode: 'SP0101010003', productName: '机械键盘 MK470', spec: '黑色 / 无线套装', barcode: '6901001016', unit: '个', availableStock: 96, referencePrice: 449 },
+  { value: 'SP0101010004', label: '数字小键盘 K380 Tenkey', skuCode: 'SP0101010004', productName: '数字小键盘 K380 Tenkey', spec: '深灰 / 蓝牙', barcode: '6901001017', unit: '个', availableStock: 38, referencePrice: 199 },
+  { value: 'SP0101020003', label: '轨迹球鼠标 M575', skuCode: 'SP0101020003', productName: '轨迹球鼠标 M575', spec: '石墨黑 / 无线', barcode: '6901001018', unit: '个', availableStock: 44, referencePrice: 329 },
+  { value: 'SP0101020004', label: '有线鼠标 B100', skuCode: 'SP0101020004', productName: '有线鼠标 B100', spec: '黑色 / USB', barcode: '6901001019', unit: '个', availableStock: 320, referencePrice: 39 },
+  { value: 'SP0101030003', label: 'Type-C转HDMI扩展坞', skuCode: 'SP0101030003', productName: 'Type-C转HDMI扩展坞', spec: '深空灰 / 4K60Hz', barcode: '6901001020', unit: '件', availableStock: 62, referencePrice: 129 },
+  { value: 'SP0102010002', label: '24英寸办公显示器', skuCode: 'SP0102010002', productName: '24英寸办公显示器', spec: '黑色 / 1080P', barcode: '6901001021', unit: '台', availableStock: 18, referencePrice: 899 },
+  { value: 'SP0102010003', label: '便携显示器 15.6', skuCode: 'SP0102010003', productName: '便携显示器 15.6', spec: '银色 / 1080P', barcode: '6901001022', unit: '台', availableStock: 14, referencePrice: 699 },
+  { value: 'SP0103010002', label: '商务电脑内胆包 14', skuCode: 'SP0103010002', productName: '商务电脑内胆包 14', spec: '深蓝 / 防震', barcode: '6901001023', unit: '个', availableStock: 88, referencePrice: 79 },
+  { value: 'SP0103010003', label: '硬壳收纳包', skuCode: 'SP0103010003', productName: '硬壳收纳包', spec: '黑色 / 15.6英寸', barcode: '6901001024', unit: '个', availableStock: 52, referencePrice: 119 },
+  { value: 'SP0103020003', label: 'HDMI 2.0高清线', skuCode: 'SP0103020003', productName: 'HDMI 2.0高清线', spec: '黑色 / 2米', barcode: '6901001025', unit: '条', availableStock: 280, referencePrice: 35 },
+  { value: 'SP0103020004', label: 'USB-A转USB-C数据线', skuCode: 'SP0103020004', productName: 'USB-A转USB-C数据线', spec: '白色 / 1米', barcode: '6901001026', unit: '条', availableStock: 410, referencePrice: 29 },
+  { value: 'SP0102020004', label: '显示器增高架', skuCode: 'SP0102020004', productName: '显示器增高架', spec: '竹木 / 带抽屉', barcode: '6901001027', unit: '个', availableStock: 33, referencePrice: 159 },
 ];
 
 export const productOptions = skuOptions.map(({ value, label }) => ({ value, label }));

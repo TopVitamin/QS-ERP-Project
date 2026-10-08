@@ -135,7 +135,7 @@ export function InventoryStockQueryPage(props) {
   const config = {
     title: '库存查询',
     rows,
-    storageKey: 'qs-erp:inventory-stock:v1',
+    storageKey: 'qs-erp:inventory-stock:v2',
     initialFilters,
     filterRows,
     initialVisibility,

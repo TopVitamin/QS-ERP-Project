@@ -134,6 +134,7 @@ export function enrichRequestLine(line = {}) {
   return {
     ...line,
     productCode: line.productCode || sku?.skuCode || '',
+    barcode: line.barcode || sku?.barcode || '',
     productName: line.productName || sku?.productName || '',
     unit: line.unit || sku?.unit || '个',
     quantity,
@@ -257,6 +258,7 @@ export function createRequestLine(overrides = {}) {
     id: `other-inbound-request-line-${Date.now()}-${requestLineSequence}`,
     product: '',
     productCode: '',
+    barcode: '',
     productName: '',
     unit: '',
     quantity: '',
@@ -271,6 +273,7 @@ export function createRequestLineFromSku(sku, template) {
   return createRequestLine({
     product: sku?.value || '',
     productCode: sku?.skuCode || '',
+    barcode: sku?.barcode || '',
     productName: sku?.productName || '',
     unit: sku?.unit === '-' ? (template?.unit || '个') : (sku?.unit || template?.unit || '个'),
     quantity: sameSku ? template.quantity : 1,

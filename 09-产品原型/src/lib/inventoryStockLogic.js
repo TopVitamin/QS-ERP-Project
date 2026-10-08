@@ -26,7 +26,7 @@ import {
 } from '../data/warehouseData.js';
 import { readMockRows, upsertMockRow, writeMockRows } from './mockStorage.js';
 
-export const STOCK_STORAGE_KEY = 'qs-erp:inventory-stock:v1';
+export const STOCK_STORAGE_KEY = 'qs-erp:inventory-stock:v2';
 export const STOCK_RESERVATION_STORAGE_KEY = 'qs-erp:inventory-reservations:v1';
 export const STOCK_FLOW_STORAGE_KEY = 'qs-erp:inventory-flows:v1';
 export const STOCK_COMPARE_STORAGE_KEY = 'qs-erp:inventory-compare:v1';

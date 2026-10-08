@@ -53,6 +53,55 @@ export const dockingSystemOptions = [
   { value: '领星', label: '领星' },
 ];
 
+/** 对接方式与对接系统约束，与《主数据准备》自营直连 WMS、电商经 SaaS 中转一致 */
+export const dockingSystemsByType = {
+  直连: ['仓库作业系统'],
+  SaaS中转: ['聚水潭', '领星'],
+};
+
+export function inferDockingTypeFromSystem(dockingSystem) {
+  if (dockingSystem === '仓库作业系统') return '直连';
+  if (dockingSystem === '聚水潭' || dockingSystem === '领星') return 'SaaS中转';
+  return '';
+}
+
+export function getDockingSystemOptionsForType(dockingType) {
+  if (!dockingType) return dockingSystemOptions;
+  const allowed = dockingSystemsByType[dockingType];
+  if (!allowed?.length) return dockingSystemOptions;
+  return dockingSystemOptions.filter((option) => allowed.includes(option.value));
+}
+
+export function isDockingSystemAllowed(dockingType, dockingSystem) {
+  if (!dockingSystem) return true;
+  if (!dockingType) return true;
+  const allowed = dockingSystemsByType[dockingType];
+  return Boolean(allowed?.includes(dockingSystem));
+}
+
+export function applyPhysicalDockingFieldChange(form, key, value) {
+  const next = { ...form, [key]: value };
+
+  if (key === 'dockingType') {
+    if (!isDockingSystemAllowed(value, next.dockingSystem)) {
+      next.dockingSystem = '';
+      next.thirdPartyCode = '';
+      next.thirdPartyOwner = '';
+    }
+  }
+
+  if (key === 'dockingSystem') {
+    const inferred = inferDockingTypeFromSystem(value);
+    if (inferred) next.dockingType = inferred;
+    if (!value || value !== form.dockingSystem) {
+      next.thirdPartyCode = '';
+      next.thirdPartyOwner = '';
+    }
+  }
+
+  return next;
+}
+
 export const stockStatusOptions = Object.entries(stockStatusLabels).map(([value, label]) => ({ value, label }));
 
 export function canEditPhysical(row) {
@@ -240,7 +289,6 @@ export function createEmptyPhysicalForm() {
     dockingSystem: '',
     thirdPartyCode: '',
     thirdPartyOwner: '',
-    authConfig: '',
   };
 }
 
@@ -258,7 +306,6 @@ export function physicalRowToForm(row) {
     dockingSystem: row.dockingSystem || '',
     thirdPartyCode: row.thirdPartyCode || '',
     thirdPartyOwner: row.thirdPartyOwner || '',
-    authConfig: row.authConfig || '',
   };
 }
 

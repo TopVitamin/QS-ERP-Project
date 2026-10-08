@@ -33,12 +33,18 @@ function getSourceOrder(context) {
   return null;
 }
 
-function deliveryModeField({ required = false, disabled = false } = {}) {
+const VIRTUAL_DELIVERY_TIP = '虚拟出库不会推送通知单到仓库，而是直接生成销售出库单，扣减ERP的库存';
+
+function deliveryModeField({ required = false, disabled = false, showVirtualTip = false } = {}) {
   return {
     key: 'deliveryMode',
     label: required ? '发货处理方式 *' : '发货处理方式',
     type: 'radio',
-    options: toSelectOptions(deliveryModeLabels),
+    options: toSelectOptions(deliveryModeLabels).map((option) => (
+      showVirtualTip && option.value === 'virtual'
+        ? { ...option, tip: VIRTUAL_DELIVERY_TIP }
+        : option
+    )),
     disabled,
   };
 }
@@ -50,7 +56,7 @@ function buildCreateFields(orderRow, form) {
     { key: 'sourceOrderNo', label: '来源销售订单', type: 'disabled', getValue: () => orderRow?.orderNo || '' },
     { key: 'customer', label: '客户', type: 'disabled', getValue: (f) => resolveOptionLabel(f.customer, customerOptions) },
     { key: 'warehouse', label: '发货仓库', type: 'disabled', getValue: (f) => resolveOptionLabel(f.warehouse, getInventoryLogicalWarehouseOptions()) },
-    deliveryModeField({ required: true }),
+    deliveryModeField({ required: true, showVirtualTip: true }),
     {
       key: 'shipMethod',
       label: '发货方式 *',

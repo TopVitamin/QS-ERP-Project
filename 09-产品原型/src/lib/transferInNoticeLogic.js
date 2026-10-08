@@ -79,6 +79,7 @@ export function enrichTransferInNoticeLine(line, index = 0) {
     ...line,
     lineNo: Number(line.lineNo || index + 1),
     productCode: line.productCode || sku.skuCode || '',
+    barcode: line.barcode || sku.barcode || '',
     productName: line.productName || sku.productName || '',
     unit: line.unit || sku.unit || '',
     quantity,

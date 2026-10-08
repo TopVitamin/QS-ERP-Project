@@ -7,7 +7,7 @@ import { PRODUCT_STORAGE_KEY, productColumns, products } from '../data/productDa
 import { flattenCategoryOptions } from '../data/productCategoryData.js';
 import { getTransferTarget } from '../lib/transferTargets.js';
 import { readMockRows, subscribeMockRows, writeMockRows } from '../lib/mockStorage.js';
-import { matchesDateRange } from '../lib/listFilters.js';
+import { matchesDateRange, matchesTextContains } from '../lib/listFilters.js';
 import { toSelectOptions } from '../lib/options.js';
 import { useStatusLabels } from '../lib/partnerMasterLogic.js';
 import {
@@ -16,43 +16,45 @@ import {
   canDisableProduct,
   canEnableProduct,
   getDeleteBlockReason,
-  lifecycleStatusOptions,
   matchesCategoryFilter,
-  salesLevelOptions,
 } from '../lib/productLogic.js';
 import { getSelectableAuxiliaryOptions } from '../data/auxiliaryData.js';
 
 const brandOptions = getSelectableAuxiliaryOptions('brand');
 
 const initialFilters = {
-  keyword: '',
+  productCode: '',
+  productName: '',
+  barcode: '',
   category: '',
   brand: '',
-  salesLevel: '',
-  lifecycleStatus: '',
   useStatus: '',
   updatedAt: { from: '', to: '' },
 };
 
 const filterFields = [
-  { key: 'keyword', label: '关键词', type: 'search', placeholder: '请输入编码、名称、简称、助记码、型号或条码' },
+  { key: 'productCode', label: '商品编码', type: 'search', placeholder: '请输入商品编码' },
+  { key: 'productName', label: '商品名称', type: 'search', placeholder: '请输入商品名称' },
+  { key: 'barcode', label: '商品条码', type: 'search', placeholder: '请输入商品条码' },
   { key: 'category', label: '商品分类', type: 'searchable-select', options: flattenCategoryOptions(), placeholder: '请选择商品分类' },
   { key: 'brand', label: '品牌', type: 'select', options: [{ value: '', label: '全部品牌' }, ...brandOptions] },
-  { key: 'salesLevel', label: '商品销售等级', type: 'select', options: [{ value: '', label: '全部等级' }, ...salesLevelOptions] },
-  { key: 'lifecycleStatus', label: '商品生命周期状态', type: 'select', options: [{ value: '', label: '全部生命周期状态' }, ...lifecycleStatusOptions] },
   { key: 'useStatus', label: '使用状态', type: 'select', options: [{ value: '', label: '全部使用状态' }, ...toSelectOptions(useStatusLabels)] },
   { key: 'updatedAt', label: '最后更新时间', type: 'date-range' },
 ];
 
+function matchesProductBarcode(row, query) {
+  const term = String(query ?? '').trim();
+  if (!term) return true;
+  const lower = term.toLowerCase();
+  return (row.barcodes || []).some((value) => String(value || '').toLowerCase().includes(lower));
+}
+
 function filterRows(row, filters) {
-  const keyword = filters.keyword.trim().toLowerCase();
-  const keywordFields = [row.code, row.name, row.shortName, row.mnemonic, row.model, ...(row.barcodes || [])];
-  const matchesKeyword = !keyword || keywordFields.some((value) => String(value || '').toLowerCase().includes(keyword));
-  return matchesKeyword
+  return matchesTextContains(row.code, filters.productCode)
+    && matchesTextContains(row.name, filters.productName)
+    && matchesProductBarcode(row, filters.barcode)
     && matchesCategoryFilter(row, filters.category)
     && (!filters.brand || row.brand === filters.brand)
-    && (!filters.salesLevel || row.salesLevel === filters.salesLevel)
-    && (!filters.lifecycleStatus || row.lifecycleStatus === filters.lifecycleStatus)
     && (!filters.useStatus || row.useStatus === filters.useStatus)
     && matchesDateRange(row.updatedAt, filters.updatedAt);
 }

@@ -1,6 +1,9 @@
 import cnAddressRegions from '../data/cnAddressRegions.js';
 import { customerAddressOptions } from '../data/masterData.js';
 
+/** 销售订单等场景：本单临时填写地址（非客户地址明细 id）。 */
+export const MANUAL_CUSTOMER_ADDRESS_ID = '__manual__';
+
 export function createEmptyCnAddress() {
   return {
     provinceCode: '',
@@ -9,6 +12,23 @@ export function createEmptyCnAddress() {
     detailAddress: '',
     savedAddressId: '',
   };
+}
+
+export function createManualCnAddress() {
+  return {
+    ...createEmptyCnAddress(),
+    savedAddressId: MANUAL_CUSTOMER_ADDRESS_ID,
+  };
+}
+
+/** 当前值是否对应客户地址明细选项（非本单手动填写）。 */
+export function isPresetCustomerAddress(address, customerAddressOptions = []) {
+  const normalized = normalizeAddressValue(address);
+  const savedAddressId = normalized.savedAddressId;
+  if (!savedAddressId || savedAddressId === MANUAL_CUSTOMER_ADDRESS_ID) {
+    return false;
+  }
+  return customerAddressOptions.some((option) => option.value === savedAddressId);
 }
 
 export function getProvinces() {
@@ -92,13 +112,19 @@ export function formatCnRegion(address) {
   return [province, city, district].filter(Boolean).join('/');
 }
 
-export function formatCnAddress(address) {
+/** 完整发货地址展示：省/市/区 + 空格 + 详细地址（下拉选项与详情共用）。 */
+export function formatDeliveryAddressDisplay(address) {
   const normalized = normalizeAddressValue(address);
-  if (!normalized.provinceCode && !normalized.detailAddress) return '';
+  const region = formatCnRegion(normalized);
+  const detail = String(normalized.detailAddress || '').trim();
+  if (!region && !detail) return '';
+  if (!region) return detail;
+  if (!detail) return region;
+  return `${region} ${detail}`;
+}
 
-  const { province, city, district } = getRegionNames(normalized);
-
-  return [province, city, district, normalized.detailAddress].filter(Boolean).join('');
+export function formatCnAddress(address) {
+  return formatDeliveryAddressDisplay(address);
 }
 
 export function findCustomerAddressById(value) {

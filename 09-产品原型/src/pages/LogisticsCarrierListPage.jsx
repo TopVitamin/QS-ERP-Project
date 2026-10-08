@@ -47,9 +47,9 @@ export function LogisticsCarrierListPage({ onFeedback, onOpenPage }) {
   }, []);
 
   const filterFields = [
-    { key: 'keyword', label: '关键词', type: 'search', placeholder: '请输入编码、名称、联系人或电话' },
+    { key: 'code', label: '物流商编码', type: 'search', placeholder: '请输入物流商编码' },
+    { key: 'name', label: '物流商名称', type: 'search', placeholder: '请输入物流商名称' },
     { key: 'useStatus', label: '使用状态', type: 'select', options: [{ value: '', label: '全部状态' }, ...toSelectOptions(useStatusLabels)] },
-    { key: 'updatedAt', label: '最后更新时间', type: 'date-range' },
   ];
 
   function openDialog(payload) {

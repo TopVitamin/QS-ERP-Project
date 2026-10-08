@@ -44,7 +44,8 @@ const auxiliaryInitialFilters = {
 };
 
 const categoryInitialFilters = {
-  keyword: '',
+  code: '',
+  name: '',
   level: '',
   useStatus: '',
   updatedAt: { from: '', to: '' },
@@ -225,7 +226,8 @@ function AuxiliaryCategoryPanel({ categories, onFeedback, onOpenPage, onOpenDial
   }, [filteredRows, ensureAncestorsExpanded]);
 
   const filterFields = [
-    { key: 'keyword', label: '关键词', type: 'search', placeholder: '请输入分类编码或名称' },
+    { key: 'code', label: '分类编码', type: 'search', placeholder: '请输入分类编码' },
+    { key: 'name', label: '分类名称', type: 'search', placeholder: '请输入分类名称' },
     { key: 'level', label: '分类级别', type: 'select', options: [{ value: '', label: '全部级别' }, ...Object.entries(levelLabels).map(([value, label]) => ({ value, label }))] },
     { key: 'useStatus', label: '使用状态', type: 'select', options: [{ value: '', label: '全部状态' }, ...toSelectOptions(useStatusLabels)] },
     { key: 'updatedAt', label: '最后更新时间', type: 'date-range' },

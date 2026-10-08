@@ -96,8 +96,8 @@ function LogicalWarehouseFormDialog({ dialog, onClose, onComplete }) {
 
   const badges = row ? buildLogicalStatusBadges(row) : [];
   const fields = [
-    { key: 'code', label: '逻辑仓编码', type: 'text', placeholder: '请输入逻辑仓编码', disabled: isEdit },
-    { key: 'name', label: '逻辑仓名称', type: 'text', placeholder: '请输入逻辑仓名称' },
+    { key: 'code', label: '逻辑仓编码 *', type: 'text', placeholder: '请输入逻辑仓编码', disabled: isEdit },
+    { key: 'name', label: '逻辑仓名称 *', type: 'text', placeholder: '请输入逻辑仓名称' },
     { key: 'physicalWarehouseId', label: '所属实体仓 *', type: 'select', options: eligiblePhysicalOptions, placeholder: '请选择所属实体仓' },
     { key: 'stockStatus', label: '库存状态 *', type: 'select', options: stockStatusOptions, placeholder: '请选择库存状态' },
     { key: 'remark', label: '备注', type: 'textarea', placeholder: '请输入逻辑仓说明', className: masterDataDialogFullSpanClassName },

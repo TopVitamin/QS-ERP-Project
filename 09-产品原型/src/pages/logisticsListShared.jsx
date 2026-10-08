@@ -2,39 +2,35 @@ import { useMemo } from 'react';
 import { ListPageFrame } from '../components/erp/ListPageFrame.jsx';
 import { useListPageActions } from '../hooks/useListPageActions.js';
 import { useListPageState } from '../hooks/useListPageState.js';
-import { matchesDateRange, hasActiveFilters } from '../lib/listFilters.js';
+import { hasActiveFilters, matchesDateRange, matchesTextContains } from '../lib/listFilters.js';
 import { buildInitialVisibility } from '../data/logisticsData.js';
 
 export const carrierInitialFilters = {
-  keyword: '',
+  code: '',
+  name: '',
   useStatus: '',
-  updatedAt: { from: '', to: '' },
 };
 
 export const productInitialFilters = {
-  keyword: '',
+  code: '',
+  name: '',
   carrierId: '',
   transportType: '',
   useStatus: '',
-  updatedAt: { from: '', to: '' },
 };
 
 export function filterCarrierRows(row, filters) {
-  const keyword = filters.keyword.trim().toLowerCase();
-  const matchesKeyword = !keyword || [row.code, row.name, row.contact, row.phone].some((value) => String(value || '').toLowerCase().includes(keyword));
-  return matchesKeyword
-    && (!filters.useStatus || row.useStatus === filters.useStatus)
-    && matchesDateRange(row.updatedAt, filters.updatedAt);
+  return matchesTextContains(row.code, filters.code)
+    && matchesTextContains(row.name, filters.name)
+    && (!filters.useStatus || row.useStatus === filters.useStatus);
 }
 
 export function filterProductRows(row, filters) {
-  const keyword = filters.keyword.trim().toLowerCase();
-  const matchesKeyword = !keyword || [row.code, row.name].some((value) => String(value || '').toLowerCase().includes(keyword));
-  return matchesKeyword
+  return matchesTextContains(row.code, filters.code)
+    && matchesTextContains(row.name, filters.name)
     && (!filters.carrierId || row.carrierId === filters.carrierId)
     && (!filters.transportType || row.transportType === filters.transportType)
-    && (!filters.useStatus || row.useStatus === filters.useStatus)
-    && matchesDateRange(row.updatedAt, filters.updatedAt);
+    && (!filters.useStatus || row.useStatus === filters.useStatus);
 }
 
 export function LogisticsObjectList({

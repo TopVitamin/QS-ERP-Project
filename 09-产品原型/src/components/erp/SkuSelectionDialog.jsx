@@ -39,7 +39,7 @@ export function SkuSelectionDialog({
   selectedValues = [],
   onConfirm,
   title = '选择商品 / SKU',
-  pageSize = 8,
+  pageSize = 10,
   showReferencePrice = true,
 }) {
   const normalizedOptions = useMemo(

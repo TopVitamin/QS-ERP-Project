@@ -1,11 +1,12 @@
 import { useMemo, useRef, useState } from 'react';
 import { DocumentFormPage } from '../components/erp/DocumentFormPage.jsx';
+import { ReturnSourceDocumentPickerDialog } from '../components/erp/ReturnSourceDocumentPickerDialog.jsx';
 import { SalesReturnActionDialogs } from '../components/erp/SalesReturnActionDialogs.jsx';
 import { SimpleDialog } from '../components/ui/dialog.jsx';
 import { Button } from '../components/ui/button.jsx';
 import { currencyOptions, logicalWarehouseOptions } from '../data/masterData.js';
 import { getCustomerLevel, getSelectableCustomerOptions } from '../data/customerData.js';
-import { computeLinesTotals, EMPTY_PLACEHOLDER, formatAmount } from '../lib/format.js';
+import { computeLinesTotals, formatAmount } from '../lib/format.js';
 import { currencySymbol } from '../lib/money.js';
 import { nextDocumentNo } from '../lib/documentNo.js';
 import { findCurrentSalesPrice, getProductDefaultTaxRate } from '../lib/priceLogic.js';
@@ -27,12 +28,6 @@ import {
   validateSalesReturnForSave,
   validateSalesReturnForSubmit,
 } from '../lib/salesReturnLogic.js';
-
-const sourceTableClassName = 'w-full table-fixed border-collapse text-left text-[12px]';
-const sourceHeadClassName = 'h-7 border-b border-erp-border-table-header bg-erp-surface-table-head text-erp-text-section';
-const sourceThClassName = 'border-r border-erp-border-table-column px-2 font-normal last:border-r-0';
-const sourceRowClassName = 'h-8 border-b border-erp-border-table-row last:border-b-0';
-const sourceTdClassName = 'border-r border-erp-border-table-column px-2 align-middle last:border-r-0';
 
 let returnLineSequence = 0;
 
@@ -152,21 +147,21 @@ function toReturnRow(form, { context, shouldSubmit } = {}) {
   return next;
 }
 
-function buildSalesReturnFormFields({ onSourceChange, candidates, captureForm }) {
+function buildSalesReturnFormFields({ onSourceChange, onSourcePick, captureForm }) {
   const customerSelectOptions = getSelectableCustomerOptions();
   return [
     { key: 'returnNo', label: '单号', type: 'disabled', section: 'header', getValue: (form) => form.returnNo || '保存后自动生成' },
     {
       key: 'sourceOutboundNo',
       label: '来源销售出库单',
-      type: 'select',
+      type: 'document-picker',
       placeholder: '请选择销售出库单（可选）',
-      options: candidates.map((outbound) => ({ value: outbound.outboundNo, label: outbound.outboundNo })),
       section: 'header',
       visible: (form) => {
         captureForm(form);
         return true;
       },
+      onPick: onSourcePick,
       onValueChange: (value, form, onFieldChange) => onSourceChange(value, form, onFieldChange),
     },
     {
@@ -263,116 +258,6 @@ function buildReturnFormConfig({ onSubmitRequest, formFields }) {
   };
 }
 
-/** 选择来源销售出库单：候选单列表 → 明细与剩余可退额度 → 确认带出（Q09） */
-function SourceOutboundPickerDialog({ state, candidates, onCancel, onSelect, onConfirm, onFeedback }) {
-  const outbound = candidates.find((item) => item.id === state.outboundId) || null;
-  const step = state.step === 'detail' && outbound ? 'detail' : 'list';
-
-  return (
-    <SimpleDialog
-      open
-      onOpenChange={(open) => { if (!open) onCancel?.(); }}
-      size="xl"
-      title="选择来源销售出库单"
-      description={step === 'list'
-        ? '第一步：选择已审核的销售出库单。'
-        : `第二步：查看 ${outbound.outboundNo} 明细与剩余可退额度，确认后带出商品、数量、价格、税率与来源出库单行，收货仓库同步锁定。`}
-      footer={step === 'list' ? (
-        <Button variant="outline" size="compact" onClick={onCancel}>取消</Button>
-      ) : (
-        <>
-          <Button variant="outline" size="compact" className="mr-auto" onClick={() => onSelect?.(outbound, { step: 'list' })}>
-            返回候选单
-          </Button>
-          <Button variant="outline" size="compact" onClick={onCancel}>取消</Button>
-          <Button variant="primary" size="compact" onClick={() => onConfirm?.(outbound)}>确认带出</Button>
-        </>
-      )}
-    >
-      <div className="mt-3 space-y-3">
-        <div className="overflow-hidden rounded border border-erp-border-table-row">
-          <div className="table-scroll overflow-x-auto">
-            {step === 'list' ? (
-              <table className={sourceTableClassName} style={{ minWidth: '760px' }}>
-                <colgroup>
-                  <col className="w-[200px]" />
-                  <col className="w-[180px]" />
-                  <col className="w-[120px]" />
-                  <col className="w-[140px]" />
-                  <col className="w-[100px]" />
-                </colgroup>
-                <thead className={sourceHeadClassName}>
-                  <tr>
-                    <th className={sourceThClassName}>单号</th>
-                    <th className={sourceThClassName}>出库仓库</th>
-                    <th className={sourceThClassName}>业务日期</th>
-                    <th className={`${sourceThClassName} text-right`}>价税合计</th>
-                    <th className={sourceThClassName} />
-                  </tr>
-                </thead>
-                <tbody>
-                  {candidates.map((item) => (
-                    <tr key={item.id} className={sourceRowClassName}>
-                      <td className={sourceTdClassName}>{item.outboundNo}</td>
-                      <td className={sourceTdClassName}>{item.warehouse || EMPTY_PLACEHOLDER}</td>
-                      <td className={sourceTdClassName}>{item.businessDate || EMPTY_PLACEHOLDER}</td>
-                      <td className={`${sourceTdClassName} text-right`}>{formatAmount(item.amount ?? 0)}</td>
-                      <td className={`${sourceTdClassName} text-center`}>
-                        <button
-                          type="button"
-                          className="px-1 text-erp-primary hover:underline"
-                          onClick={() => onSelect?.(item, { step: 'detail' })}
-                        >
-                          选择
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {!candidates.length && (
-                    <tr>
-                      <td colSpan="5" className="h-24 text-center text-[12px] text-erp-text-muted">暂无可选的已审核销售出库单</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            ) : (
-              <table className={sourceTableClassName} style={{ minWidth: '760px' }}>
-                <colgroup>
-                  <col className="w-[140px]" />
-                  <col className="w-[200px]" />
-                  <col className="w-[130px]" />
-                  <col className="w-[150px]" />
-                </colgroup>
-                <thead className={sourceHeadClassName}>
-                  <tr>
-                    <th className={sourceThClassName}>商品编码</th>
-                    <th className={sourceThClassName}>商品名称</th>
-                    <th className={`${sourceThClassName} text-right`}>实际出库数量</th>
-                    <th className={`${sourceThClassName} text-right`}>剩余可退额度</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {outbound.lines.map((line) => (
-                    <tr key={line.id} className={sourceRowClassName}>
-                      <td className={sourceTdClassName}>{line.productCode || EMPTY_PLACEHOLDER}</td>
-                      <td className={sourceTdClassName}>{line.productName || EMPTY_PLACEHOLDER}</td>
-                      <td className={`${sourceTdClassName} text-right`}>{line.quantity ?? 0}</td>
-                      <td className={`${sourceTdClassName} text-right ${line.remainingQuota > 0 ? '' : 'text-erp-text-muted'}`}>
-                        {line.remainingQuota}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
-        <p className="text-[12px] text-erp-text-muted">剩余可退额度 = 原实际出库数量 − 其他已审核退货已占用数量。</p>
-      </div>
-    </SimpleDialog>
-  );
-}
-
 export function SalesReturnCreatePage(props) {
   return <SalesReturnFormPage {...props} mode="create" />;
 }
@@ -387,7 +272,10 @@ export function SalesReturnFormPage({ mode = 'create', onFeedback, ...props }) {
   const [pickerKey, setPickerKey] = useState(0);
   const formRef = useRef(null);
   const updateFieldRef = useRef(null);
-  const candidates = useMemo(() => buildSourceOutboundCandidates(), [sourceDialog, pickerKey]);
+  const candidates = useMemo(
+    () => buildSourceOutboundCandidates(readMockRows(SALES_RETURN_STORAGE_KEY, salesReturns)),
+    [sourceDialog, pickerKey],
+  );
 
   function captureForm(form) {
     formRef.current = form;
@@ -395,7 +283,7 @@ export function SalesReturnFormPage({ mode = 'create', onFeedback, ...props }) {
 
   function openSourcePicker(outboundNo, step = 'list') {
     const outbound = candidates.find((item) => item.outboundNo === outboundNo);
-    setSourceDialog({ mode: 'pick', step, outboundId: outbound?.id || '' });
+    setSourceDialog({ mode: 'pick', step, documentId: outbound?.id || '' });
   }
 
   function handleSourceFieldChange(value, form, onFieldChange) {
@@ -405,17 +293,26 @@ export function SalesReturnFormPage({ mode = 'create', onFeedback, ...props }) {
     if (!value) {
       if (!current) return;
       setSourceDialog({ mode: 'confirm-clear' });
+    }
+  }
+
+  function handleSourcePick() {
+    const form = formRef.current;
+    if (!form) return;
+    if (form.sourceOutboundNo) {
+      openSourcePicker(form.sourceOutboundNo, 'detail');
       return;
     }
-    if (value === form.sourceOutboundNo) {
-      openSourcePicker(value, 'detail');
+    setSourceDialog({ mode: 'pick', step: 'list', documentId: '' });
+  }
+
+  function requestApplySourceOutbound(outbound) {
+    const current = formRef.current?.sourceOutboundId;
+    if (current && current !== outbound.id) {
+      setSourceDialog({ mode: 'confirm-change', document: outbound });
       return;
     }
-    if (current) {
-      setSourceDialog({ mode: 'confirm-change', outboundNo: value });
-      return;
-    }
-    openSourcePicker(value);
+    applySourceOutbound(outbound);
   }
 
   function applySourceOutbound(outbound) {
@@ -485,8 +382,8 @@ export function SalesReturnFormPage({ mode = 'create', onFeedback, ...props }) {
   }
 
   const formFields = () => buildSalesReturnFormFields({
-    candidates,
     captureForm,
+    onSourcePick: handleSourcePick,
     onSourceChange: (value, form, onFieldChange) => handleSourceFieldChange(value, form, onFieldChange),
   });
 
@@ -500,13 +397,29 @@ export function SalesReturnFormPage({ mode = 'create', onFeedback, ...props }) {
     <>
       <DocumentFormPage {...props} mode={mode} onFeedback={onFeedback} config={config} />
       {sourceDialog?.mode === 'pick' && (
-        <SourceOutboundPickerDialog
-          state={sourceDialog}
+        <ReturnSourceDocumentPickerDialog
+          title="选择来源销售出库单"
+          listDescription="第一步：筛选并选择已审核的销售出库单。"
+          detailDescriptionPrefix="第二步：查看"
+          quotaHint="剩余可退额度 = 原实际出库数量 − 其他已审核退货已占用数量。"
+          partnerLabel="客户"
+          partnerOptions={getSelectableCustomerOptions()}
+          warehouseOptions={logicalWarehouseOptions}
+          warehouseLabel="出库仓库"
           candidates={candidates}
-          onFeedback={onFeedback}
+          state={sourceDialog}
+          getDocumentNo={(row) => row.outboundNo}
+          getPartner={(row) => row.customer}
+          getWarehouse={(row) => row.warehouse}
+          getBusinessDate={(row) => row.businessDate}
+          getAmount={(row) => row.amount}
           onCancel={() => setSourceDialog(null)}
-          onSelect={(outbound, nextState) => setSourceDialog({ mode: 'pick', step: nextState?.step || 'detail', outboundId: outbound.id })}
-          onConfirm={applySourceOutbound}
+          onSelect={(outbound, nextState) => setSourceDialog({
+            mode: 'pick',
+            step: nextState?.step || 'detail',
+            documentId: outbound.id,
+          })}
+          onConfirm={requestApplySourceOutbound}
         />
       )}
       {sourceDialog?.mode === 'confirm-change' && (
@@ -521,7 +434,7 @@ export function SalesReturnFormPage({ mode = 'create', onFeedback, ...props }) {
               <Button
                 variant="primary"
                 size="compact"
-                onClick={() => openSourcePicker(sourceDialog.outboundNo)}
+                onClick={() => applySourceOutbound(sourceDialog.document)}
               >
                 确认更换
               </Button>

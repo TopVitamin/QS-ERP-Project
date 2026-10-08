@@ -56,9 +56,8 @@ function buildDetailFields(row) {
     { key: 'remark', label: '备注', value: row.remark || EMPTY_PLACEHOLDER, className: 'col-span-3' },
     { key: 'dockingType', label: '对接方式', value: row.dockingType || EMPTY_PLACEHOLDER },
     { key: 'dockingSystem', label: '对接系统', value: row.dockingSystem || EMPTY_PLACEHOLDER },
-    { key: 'thirdPartyCode', label: '第三方仓库编码', value: row.thirdPartyCode || EMPTY_PLACEHOLDER },
-    { key: 'thirdPartyOwner', label: '第三方仓库货主', value: row.thirdPartyOwner || EMPTY_PLACEHOLDER },
-    { key: 'authConfig', label: '对接授权配置', value: row.authConfig || EMPTY_PLACEHOLDER },
+    { key: 'thirdPartyCode', label: '第三方仓库编码', value: row.dockingSystem ? (row.thirdPartyCode || EMPTY_PLACEHOLDER) : EMPTY_PLACEHOLDER },
+    { key: 'thirdPartyOwner', label: '第三方仓库货主', value: row.dockingSystem ? (row.thirdPartyOwner || EMPTY_PLACEHOLDER) : EMPTY_PLACEHOLDER },
     { key: 'auditStatus', label: '审核状态', value: physicalAuditLabels[row.auditStatus] || EMPTY_PLACEHOLDER },
     { key: 'useStatus', label: '使用状态', value: useStatusLabels[row.useStatus] || EMPTY_PLACEHOLDER },
     { key: 'auditor', label: '审核人', value: row.auditor || EMPTY_PLACEHOLDER },
@@ -230,9 +229,9 @@ export function WarehouseDetailPage({ context, onFeedback, onOpenPage }) {
   const fields = buildDetailFields(row);
   const baseFields = fields.slice(0, 4);
   const addressFields = buildAddressContactFields(row);
-  const dockingFields = fields.slice(4, 9);
-  const statusFields = fields.slice(9, 13);
-  const metaFields = fields.slice(13);
+  const dockingFields = fields.slice(4, 8);
+  const statusFields = fields.slice(8, 12);
+  const metaFields = fields.slice(12);
 
   return (
     <>

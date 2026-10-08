@@ -96,6 +96,7 @@ export function createOtherOutboundRequestLine(overrides = {}) {
     id: `other-outbound-request-line-${Date.now()}-${requestLineSequence++}`,
     product: '',
     productCode: '',
+    barcode: '',
     productName: '',
     unit: '个',
     quantity: '',
@@ -108,6 +109,7 @@ export function createOtherOutboundRequestLineFromSku(sku, template) {
   return createOtherOutboundRequestLine({
     product: sku?.value || '',
     productCode: sku?.skuCode || '',
+    barcode: sku?.barcode || '',
     productName: sku?.productName || '',
     unit: sku?.unit && sku.unit !== '-' ? sku.unit : template?.unit || '个',
     quantity: sameSku ? template?.quantity ?? '' : '',
@@ -126,6 +128,7 @@ export function enrichOutboundRequestLine(line) {
   return {
     ...line,
     productCode: line.productCode || sku.skuCode || '',
+    barcode: line.barcode || sku.barcode || '',
     productName: line.productName || sku.productName || '',
     unit: line.unit || sku.unit || '个',
     quantity,

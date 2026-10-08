@@ -56,6 +56,7 @@ export function enrichOtherInboundLine(line = {}) {
   return {
     ...line,
     productCode: line.productCode || sku?.skuCode || '',
+    barcode: line.barcode || sku?.barcode || '',
     productName: line.productName || sku?.productName || '',
     unit: line.unit || sku?.unit || '个',
     quantity,

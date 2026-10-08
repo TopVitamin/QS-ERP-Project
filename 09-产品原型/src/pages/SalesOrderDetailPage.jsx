@@ -48,7 +48,6 @@ const orderDetailConfig = {
         { key: 'amount', label: '价税合计', value: `${currencySymbol(row.currency)} ${formatAmount(row.amount)}` },
         { key: 'taxAmount', label: '税额', value: `${currencySymbol(row.currency)} ${formatAmount(row.taxAmount)}` },
         { key: 'netAmount', label: '金额', value: `${currencySymbol(row.currency)} ${formatAmount(row.netAmount)}` },
-        { key: 'spacer', label: ' ', value: ' ' },
         { key: 'remark', label: '备注', value: detail.remark, className: 'col-span-3' },
       ],
     },
@@ -62,8 +61,8 @@ const orderDetailConfig = {
         ];
         if ((detail.shipMethod || 'logistics') === 'logistics') {
           fields.push(
-            { key: 'logisticsProduct', label: '物流服务产品', value: formatSnapshotCodeName(detail.logisticsProduct, detail.logisticsProductNameSnapshot) },
             { key: 'deliveryAddress', label: '发货地址', value: resolveAddressLabel(detail.deliveryAddress), className: 'col-span-2' },
+            { key: 'logisticsProduct', label: '物流服务产品', value: formatSnapshotCodeName(detail.logisticsProduct, detail.logisticsProductNameSnapshot) },
           );
         }
         return fields;

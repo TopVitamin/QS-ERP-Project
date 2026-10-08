@@ -31,6 +31,33 @@ export const stockRowSeeds = [
   { id: 'stock-012', logicalWarehouse: 'LWH000009', product: 'SP0101030001', instantQty: 0, reservedQty: 0, frozenQty: 0, updatedAt: '2026-09-22 09:30:00' },
   { id: 'stock-013', logicalWarehouse: 'LWH000004', product: 'SP0102010001', instantQty: 6, reservedQty: 0, frozenQty: 0, updatedAt: '2026-09-13 08:40:00' },
   { id: 'stock-014', logicalWarehouse: 'LWH000002', product: 'SP0103020001', instantQty: 30, reservedQty: 6, frozenQty: 0, updatedAt: '2026-09-22 16:20:00' },
+  // 既有 SKU 在主力逻辑仓补量（深圳 / 上海 / 北京）
+  { id: 'stock-016', logicalWarehouse: 'LWH000001', product: 'SP0101010002', instantQty: 55, reservedQty: 0, frozenQty: 0, updatedAt: '2026-09-24 09:10:00' },
+  { id: 'stock-017', logicalWarehouse: 'LWH000001', product: 'SP0101020002', instantQty: 88, reservedQty: 0, frozenQty: 0, updatedAt: '2026-09-24 09:12:00' },
+  { id: 'stock-018', logicalWarehouse: 'LWH000002', product: 'SP0101030002', instantQty: 45, reservedQty: 0, frozenQty: 0, updatedAt: '2026-09-24 09:15:00' },
+  { id: 'stock-019', logicalWarehouse: 'LWH000001', product: 'SP0102020002', instantQty: 25, reservedQty: 0, frozenQty: 0, updatedAt: '2026-09-24 09:18:00' },
+  { id: 'stock-020', logicalWarehouse: 'LWH000003', product: 'SP0102020003', instantQty: 35, reservedQty: 0, frozenQty: 0, updatedAt: '2026-09-24 09:20:00' },
+  { id: 'stock-021', logicalWarehouse: 'LWH000001', product: 'SP0103030001', instantQty: 90, reservedQty: 0, frozenQty: 0, updatedAt: '2026-09-24 09:22:00' },
+  { id: 'stock-022', logicalWarehouse: 'LWH000002', product: 'SP0103030002', instantQty: 70, reservedQty: 0, frozenQty: 0, updatedAt: '2026-09-24 09:25:00' },
+  { id: 'stock-023', logicalWarehouse: 'LWH000003', product: 'SP0103020002', instantQty: 120, reservedQty: 0, frozenQty: 0, updatedAt: '2026-09-24 09:28:00' },
+  { id: 'stock-024', logicalWarehouse: 'LWH000002', product: 'SP0102010001', instantQty: 12, reservedQty: 0, frozenQty: 0, updatedAt: '2026-09-24 09:30:00' },
+  { id: 'stock-025', logicalWarehouse: 'LWH000003', product: 'SP0103010001', instantQty: 40, reservedQty: 0, frozenQty: 0, updatedAt: '2026-09-24 09:32:00' },
+  // 新增 SKU 初始库存
+  { id: 'stock-026', logicalWarehouse: 'LWH000001', product: 'SP0101010003', instantQty: 72, reservedQty: 8, frozenQty: 0, updatedAt: '2026-09-24 10:00:00' },
+  { id: 'stock-027', logicalWarehouse: 'LWH000002', product: 'SP0101010003', instantQty: 24, reservedQty: 0, frozenQty: 0, updatedAt: '2026-09-24 10:02:00' },
+  { id: 'stock-028', logicalWarehouse: 'LWH000001', product: 'SP0101010004', instantQty: 38, reservedQty: 0, frozenQty: 0, updatedAt: '2026-09-24 10:05:00' },
+  { id: 'stock-029', logicalWarehouse: 'LWH000001', product: 'SP0101020003', instantQty: 44, reservedQty: 0, frozenQty: 0, updatedAt: '2026-09-24 10:08:00' },
+  { id: 'stock-030', logicalWarehouse: 'LWH000002', product: 'SP0101020004', instantQty: 200, reservedQty: 0, frozenQty: 0, updatedAt: '2026-09-24 10:10:00' },
+  { id: 'stock-031', logicalWarehouse: 'LWH000003', product: 'SP0101020004', instantQty: 120, reservedQty: 0, frozenQty: 0, updatedAt: '2026-09-24 10:12:00' },
+  { id: 'stock-032', logicalWarehouse: 'LWH000001', product: 'SP0101030003', instantQty: 62, reservedQty: 0, frozenQty: 0, updatedAt: '2026-09-24 10:15:00' },
+  { id: 'stock-033', logicalWarehouse: 'LWH000002', product: 'SP0102010002', instantQty: 10, reservedQty: 2, frozenQty: 0, updatedAt: '2026-09-24 10:18:00' },
+  { id: 'stock-034', logicalWarehouse: 'LWH000003', product: 'SP0102010003', instantQty: 14, reservedQty: 0, frozenQty: 0, updatedAt: '2026-09-24 10:20:00' },
+  { id: 'stock-035', logicalWarehouse: 'LWH000001', product: 'SP0103010002', instantQty: 88, reservedQty: 0, frozenQty: 0, updatedAt: '2026-09-24 10:22:00' },
+  { id: 'stock-036', logicalWarehouse: 'LWH000002', product: 'SP0103010003', instantQty: 52, reservedQty: 0, frozenQty: 0, updatedAt: '2026-09-24 10:25:00' },
+  { id: 'stock-037', logicalWarehouse: 'LWH000001', product: 'SP0103020003', instantQty: 180, reservedQty: 0, frozenQty: 0, updatedAt: '2026-09-24 10:28:00' },
+  { id: 'stock-038', logicalWarehouse: 'LWH000002', product: 'SP0103020004', instantQty: 260, reservedQty: 0, frozenQty: 0, updatedAt: '2026-09-24 10:30:00' },
+  { id: 'stock-039', logicalWarehouse: 'LWH000003', product: 'SP0103020004', instantQty: 150, reservedQty: 0, frozenQty: 0, updatedAt: '2026-09-24 10:32:00' },
+  { id: 'stock-040', logicalWarehouse: 'LWH000001', product: 'SP0102020004', instantQty: 33, reservedQty: 0, frozenQty: 0, updatedAt: '2026-09-24 10:35:00' },
 ];
 
 /**

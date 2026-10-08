@@ -244,7 +244,7 @@ const seedPhysicalWarehouses = [
       city: '杜塞尔多夫',
       detailAddress: '3PL 仓库',
     },
-    contact: '待填写',
+    contact: '',
     phone: '',
     dockingType: 'SaaS中转',
     dockingSystem: '领星',
@@ -273,7 +273,7 @@ const seedPhysicalWarehouses = [
       city: '葵涌',
       detailAddress: '货柜码头中转仓',
     },
-    contact: '待填写',
+    contact: '',
     phone: '',
     dockingType: 'SaaS中转',
     dockingSystem: '领星',
@@ -469,22 +469,29 @@ function renderUseStatus(value) {
   return useStatusLabels[value] || EMPTY_PLACEHOLDER;
 }
 
+/** 列表空值统一 `-`；历史 Mock 中的「待填写」按空处理 */
+function renderWarehouseListCell(value) {
+  const text = String(value ?? '').trim();
+  if (!text || text === '待填写') return EMPTY_PLACEHOLDER;
+  return text;
+}
+
 export const physicalWarehouseColumns = [
   { key: 'code', label: '实体仓编码', defaultWidth: 150, minWidth: 130, maxWidth: 220, ellipsis: true, link: true },
   { key: 'name', label: '实体仓名称', defaultWidth: 190, minWidth: 140, maxWidth: 260, ellipsis: true },
-  { key: 'operationType', label: '运营类型', defaultWidth: 100, minWidth: 88, maxWidth: 150, ellipsis: true },
-  { key: 'contact', label: '联系人', defaultWidth: 100, minWidth: 88, maxWidth: 150, ellipsis: true },
-  { key: 'dockingType', label: '对接方式', defaultWidth: 110, minWidth: 96, maxWidth: 160, ellipsis: true },
-  { key: 'dockingSystem', label: '对接系统', defaultWidth: 140, minWidth: 110, maxWidth: 200, ellipsis: true },
-  { key: 'thirdPartyCode', label: '第三方仓库编码', defaultWidth: 160, minWidth: 130, maxWidth: 220, ellipsis: true },
+  { key: 'operationType', label: '运营类型', defaultWidth: 100, minWidth: 88, maxWidth: 150, ellipsis: true, render: renderWarehouseListCell },
+  { key: 'contact', label: '联系人', defaultWidth: 100, minWidth: 88, maxWidth: 150, ellipsis: true, render: renderWarehouseListCell },
+  { key: 'dockingType', label: '对接方式', defaultWidth: 110, minWidth: 96, maxWidth: 160, ellipsis: true, render: renderWarehouseListCell },
+  { key: 'dockingSystem', label: '对接系统', defaultWidth: 140, minWidth: 110, maxWidth: 200, ellipsis: true, render: renderWarehouseListCell },
+  { key: 'thirdPartyCode', label: '第三方仓库编码', defaultWidth: 160, minWidth: 130, maxWidth: 220, ellipsis: true, render: renderWarehouseListCell },
   { key: 'auditStatus', label: '审核状态', defaultWidth: 100, minWidth: 88, maxWidth: 150, ellipsis: true, render: renderAuditStatus, tone: (value) => physicalAuditTones[value] || '' },
   { key: 'useStatus', label: '使用状态', defaultWidth: 100, minWidth: 88, maxWidth: 150, ellipsis: true, render: renderUseStatus, tone: (value) => (value === 'disabled' ? 'text-erp-text-muted' : 'text-erp-success') },
   { key: 'updatedAt', label: '最后更新时间', defaultWidth: 150, minWidth: 130, maxWidth: 200, ellipsis: true, sortable: true },
-  { key: 'address', label: '仓库地址', defaultWidth: 260, minWidth: 160, maxWidth: 360, ellipsis: true, defaultVisible: false, render: (_, row) => formatWarehouseAddress(row.warehouseAddress || row.address) || EMPTY_PLACEHOLDER },
-  { key: 'phone', label: '联系电话', defaultWidth: 150, minWidth: 120, maxWidth: 200, ellipsis: true, defaultVisible: false },
-  { key: 'thirdPartyOwner', label: '第三方仓库货主', defaultWidth: 150, minWidth: 120, maxWidth: 200, ellipsis: true, defaultVisible: false },
-  { key: 'auditor', label: '审核人', defaultWidth: 120, minWidth: 100, maxWidth: 160, ellipsis: true, defaultVisible: false },
-  { key: 'updater', label: '最后更新人', defaultWidth: 120, minWidth: 100, maxWidth: 160, ellipsis: true, defaultVisible: false },
+  { key: 'address', label: '仓库地址', defaultWidth: 260, minWidth: 160, maxWidth: 360, ellipsis: true, defaultVisible: false, render: (_, row) => renderWarehouseListCell(formatWarehouseAddress(row.warehouseAddress || row.address)) },
+  { key: 'phone', label: '联系电话', defaultWidth: 150, minWidth: 120, maxWidth: 200, ellipsis: true, defaultVisible: false, render: renderWarehouseListCell },
+  { key: 'thirdPartyOwner', label: '第三方仓库货主', defaultWidth: 150, minWidth: 120, maxWidth: 200, ellipsis: true, defaultVisible: false, render: renderWarehouseListCell },
+  { key: 'auditor', label: '审核人', defaultWidth: 120, minWidth: 100, maxWidth: 160, ellipsis: true, defaultVisible: false, render: renderWarehouseListCell },
+  { key: 'updater', label: '最后更新人', defaultWidth: 120, minWidth: 100, maxWidth: 160, ellipsis: true, defaultVisible: false, render: renderWarehouseListCell },
 ];
 
 export function createLogicalWarehouseColumns(physicalRows = physicalWarehouses) {

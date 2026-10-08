@@ -1,3 +1,4 @@
+import { matchesTextContains } from './listFilters.js';
 import { emptyFieldMessage } from './formValidation.js';
 import { formatNow } from './partnerMasterLogic.js';
 
@@ -231,16 +232,17 @@ export function buildParentOptions(categories, row) {
 }
 
 export function filterCategoryTreeRows(rows, filters) {
-  const keyword = filters.keyword.trim().toLowerCase();
   const matchedIds = new Set();
+  const hasTextFilter = Boolean(String(filters.code ?? '').trim() || String(filters.name ?? '').trim());
 
   function rowMatches(row) {
-    const matchesKeyword = !keyword || [row.code, row.name].some((value) => String(value || '').toLowerCase().includes(keyword));
+    const matchesCode = matchesTextContains(row.code, filters.code);
+    const matchesName = matchesTextContains(row.name, filters.name);
     const matchesLevel = !filters.level || String(row.level) === String(filters.level);
     const matchesStatus = !filters.useStatus || row.useStatus === filters.useStatus;
     const matchesUpdatedAt = !filters.updatedAt?.from && !filters.updatedAt?.to
       || matchesDateRange(row.updatedAt, filters.updatedAt);
-    return matchesKeyword && matchesLevel && matchesStatus && matchesUpdatedAt;
+    return matchesCode && matchesName && matchesLevel && matchesStatus && matchesUpdatedAt;
   }
 
   for (const row of rows) {
@@ -248,7 +250,7 @@ export function filterCategoryTreeRows(rows, filters) {
   }
 
   const visibleIds = new Set(matchedIds);
-  if (keyword || filters.level || filters.useStatus || filters.updatedAt?.from || filters.updatedAt?.to) {
+  if (hasTextFilter || filters.level || filters.useStatus || filters.updatedAt?.from || filters.updatedAt?.to) {
     for (const id of matchedIds) {
       let parentId = rows.find((item) => item.id === id)?.parentId;
       while (parentId) {

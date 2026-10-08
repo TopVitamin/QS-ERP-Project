@@ -51,12 +51,11 @@ export function WarehousePhysicalListPage({ onFeedback, onOpenPage }) {
   }, []);
 
   const filterFields = [
-    { key: 'keyword', label: '关键词', type: 'search', placeholder: '请输入编码、名称或第三方仓库编码' },
+    { key: 'code', label: '实体仓编码', type: 'search', placeholder: '请输入实体仓编码' },
+    { key: 'name', label: '实体仓名称', type: 'search', placeholder: '请输入实体仓名称' },
     { key: 'operationType', label: '运营类型', type: 'select', options: [{ value: '', label: '全部类型' }, { value: '自营', label: '自营' }, { value: '第三方', label: '第三方' }] },
-    { key: 'contact', label: '联系人', type: 'search', placeholder: '请输入联系人' },
-    { key: 'dockingType', label: '对接方式', type: 'select', options: [{ value: '', label: '全部方式' }, { value: '直连', label: '直连' }, { value: 'SaaS中转', label: 'SaaS中转' }] },
-    { key: 'dockingSystem', label: '对接系统', type: 'select', options: [{ value: '', label: '全部系统' }, { value: '仓库作业系统', label: '仓库作业系统' }, { value: '聚水潭', label: '聚水潭' }, { value: '领星', label: '领星' }] },
     { key: 'useStatus', label: '使用状态', type: 'select', options: [{ value: '', label: '全部状态' }, ...toSelectOptions(useStatusLabels)] },
+    { key: 'thirdPartyCode', label: '第三方仓库编码', type: 'search', placeholder: '请输入第三方仓库编码' },
     { key: 'updatedAt', label: '最后更新时间', type: 'date-range' },
   ];
 

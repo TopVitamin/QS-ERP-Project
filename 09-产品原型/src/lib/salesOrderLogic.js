@@ -5,7 +5,7 @@ import { hasInvalidTaxRate, hasNegativePrice } from './validation.js';
 import { isCnAddressComplete } from './cnAddress.js';
 import { readMockRows, upsertMockRow, writeMockRows } from './mockStorage.js';
 import { getAvailableStock, getReservationRemaining, postStockEntries, reserveStockEntries } from './inventoryStockLogic.js';
-import { captureSalesDocumentNames, loadRowsWithNameSnapshots } from './documentNameSnapshots.js';
+import { captureSalesDocumentNames, formatSnapshotCodeName, loadRowsWithNameSnapshots } from './documentNameSnapshots.js';
 
 export const SALES_ORDER_STORAGE_KEY = 'qs-erp:sales-orders:v1';
 export const DELIVERY_NOTICE_STORAGE_KEY = 'qs-erp:sales-delivery-notices:v1';
@@ -134,17 +134,51 @@ export function getCancelBlockReason(row) {
   return null;
 }
 
-export function checkInventoryForApprove(row) {
-  if (!row.warehouse) return false;
+/** 审核前按「发货逻辑仓+商品」汇总需求量，返回可用不足的 SKU 列表（R07）。 */
+export function findInventoryShortagesForApprove(row) {
+  if (!row.warehouse) return [];
   const requested = new Map();
+  const lineMeta = new Map();
   for (const line of row.lines || []) {
-    const key = line.product;
-    requested.set(key, (requested.get(key) || 0) + Number(line.quantity || 0));
+    const product = line.product;
+    if (!product) continue;
+    requested.set(product, (requested.get(product) || 0) + Number(line.quantity || 0));
+    if (!lineMeta.has(product)) lineMeta.set(product, line);
   }
+
+  const shortages = [];
   for (const [product, quantity] of requested) {
-    if (quantity > getAvailableStock(row.warehouse, product)) return false;
+    const available = getAvailableStock(row.warehouse, product);
+    if (quantity > available) {
+      const meta = lineMeta.get(product) || {};
+      shortages.push({
+        product,
+        productCode: meta.productCode || product,
+        productName: meta.productName || '',
+        required: quantity,
+        available,
+        shortage: quantity - available,
+      });
+    }
   }
-  return true;
+  return shortages;
+}
+
+export function formatApproveInventoryShortageError(row, shortages = []) {
+  if (!shortages.length) return '发货逻辑仓可用库存不足，审核失败';
+  const warehouseLabel = formatSnapshotCodeName(row.warehouse, row.warehouseNameSnapshot) || row.warehouse || '发货仓库';
+  const detailLines = shortages.map((item) => {
+    const namePart = item.productName ? ` ${item.productName}` : '';
+    return `${item.productCode}${namePart}：需要 ${item.required}，可用 ${item.available}，缺 ${item.shortage}`;
+  });
+  const maxItems = 3;
+  const shown = detailLines.slice(0, maxItems).join('；');
+  const more = detailLines.length > maxItems ? `；另有 ${detailLines.length - maxItems} 个商品库存不足` : '';
+  return `${warehouseLabel}可用库存不足，审核失败：${shown}${more}`;
+}
+
+export function checkInventoryForApprove(row) {
+  return findInventoryShortagesForApprove(row).length === 0;
 }
 
 function releaseOrderReservations(row, { keepNotified = false } = {}) {
@@ -184,7 +218,7 @@ export function validateOrderRequiredFields(form) {
   if (!form.shipMethod) fieldErrors.shipMethod = emptyFieldMessage('发货方式');
   if (form.shipMethod === 'logistics') {
     if (!isCnAddressComplete(form.deliveryAddress)) {
-      fieldErrors.deliveryAddress = '请选择完整的省市区和详细地址';
+      fieldErrors.deliveryAddress = '请填写或选择完整的发货地址（省市区与详细地址）';
     }
     if (!form.logisticsProduct) fieldErrors.logisticsProduct = emptyFieldMessage('物流服务产品');
   }
@@ -296,8 +330,11 @@ export function applySubmit(row) {
 }
 
 export function applyApprove(row) {
+  const shortages = findInventoryShortagesForApprove(row);
+  if (shortages.length) {
+    return { error: formatApproveInventoryShortageError(row, shortages) };
+  }
   try {
-    if (!checkInventoryForApprove(row)) return { error: '发货逻辑仓可用库存不足，审核失败' };
     reserveStockEntries((row.lines || []).map((line) => ({
       logicalWarehouse: row.warehouse,
       product: line.product,

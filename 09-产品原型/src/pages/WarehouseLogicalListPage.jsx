@@ -55,7 +55,8 @@ export function WarehouseLogicalListPage({ onFeedback, onOpenPage }) {
   const columns = createLogicalWarehouseColumns(physicalRows);
 
   const filterFields = [
-    { key: 'keyword', label: '关键词', type: 'search', placeholder: '请输入逻辑仓编码或名称' },
+    { key: 'code', label: '逻辑仓编码', type: 'search', placeholder: '请输入逻辑仓编码' },
+    { key: 'name', label: '逻辑仓名称', type: 'search', placeholder: '请输入逻辑仓名称' },
     { key: 'physicalWarehouseId', label: '所属实体仓', type: 'select', options: [{ value: '', label: '全部实体仓' }, ...physicalRows.map(getPhysicalWarehouseOption)] },
     { key: 'stockStatus', label: '库存状态', type: 'select', options: [{ value: '', label: '全部库存状态' }, ...stockStatusOptions] },
     { key: 'useStatus', label: '使用状态', type: 'select', options: [{ value: '', label: '全部使用状态' }, ...toSelectOptions(useStatusLabels)] },
