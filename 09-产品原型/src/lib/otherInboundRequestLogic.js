@@ -11,12 +11,15 @@ import { skuOptions } from '../data/masterData.js';
 import { nextDocumentNo } from './documentNo.js';
 import { readMockRows, upsertMockRow, writeMockRows } from './mockStorage.js';
 import { emptyFieldMessage } from './formValidation.js';
-import { nowStamp } from './inventoryStockLogic.js';
+import { nowDateStamp, nowStamp } from './format.js';
 import { getInventoryLogicalWarehouseOptions, resolveLogicalWarehouseRow } from '../data/warehouseData.js';
 import {
   generateOtherInboundFromRequest,
+  loadAllOtherInbounds,
   loadOtherInboundByRequestId,
   otherInboundBusinessTypes,
+  persistOtherInbound,
+  OTHER_INBOUND_STORAGE_KEY,
 } from './otherInboundLogic.js';
 
 export const OTHER_INBOUND_REQUEST_STORAGE_KEY = 'qs-erp:other-inbound-requests:v1';
@@ -118,6 +121,30 @@ export function canMockWarehouseCancelRequest(row) {
   return row?.status === 'cancelling';
 }
 
+/**
+ * 人工确认（F09／R20）：只适用于已交给仓库的申请——已审核（已推送、发送结果不确定）、
+ * 待收货、取消中；草稿、待审核先提交审核，推送失败先重试或取消（主PRD §6.4）。
+ * 详情页入口，列表行不提供（Demo PRD §2）。
+ */
+export function canManualConfirmRequest(row) {
+  return row?.status === 'approved' || row?.status === 'pending_receive' || row?.status === 'cancelling';
+}
+
+/** 人工确认类型文案（弹窗与Mock §3.9；类型与填写内容随操作日志保留）。 */
+export const manualConfirmTypeLabels = {
+  accept: '确认接单',
+  finish: '确认执行结束',
+  cancel_result: '确认取消结果',
+};
+
+/** 确认类型按当前状态给出可选项：已审核—确认接单；待收货—确认执行结束；取消中—确认取消结果。 */
+export function resolveManualConfirmType(row) {
+  if (row?.status === 'approved') return 'accept';
+  if (row?.status === 'pending_receive') return 'finish';
+  if (row?.status === 'cancelling') return 'cancel_result';
+  return '';
+}
+
 export function buildStatusMismatchMessage(row, action) {
   const label = otherInboundRequestStatusLabels[row?.status] || row?.status || '-';
   return `当前单据状态为${label}，不可执行${action}`;
@@ -176,6 +203,10 @@ export function normalizeRequestRow(row = {}) {
     auditor: row.auditor || '',
     auditTime: row.auditTime || '',
     withdrawComment: row.withdrawComment || '',
+    confirmBy: row.confirmBy || '',
+    confirmAt: row.confirmAt || '',
+    confirmContent: row.confirmContent || '',
+    manualConfirmLogs: row.manualConfirmLogs || [],
     inboundId: row.inboundId || '',
     inboundNo: row.inboundNo || '',
     lines,
@@ -223,7 +254,7 @@ export function getRequestWarehouseOptions() {
 
 export function generateOtherInboundRequestNo(date) {
   const existingNos = loadAllOtherInboundRequests([]).map((row) => row.requestNo);
-  return nextDocumentNo('QTRKSQ', date || new Date().toISOString().slice(0, 10), existingNos);
+  return nextDocumentNo('QTRKSQ', date || nowDateStamp(), existingNos);
 }
 
 export function buildRequestFormFromRow(row) {
@@ -474,6 +505,204 @@ export function applyRetryPushRequest(row) {
   return loadOtherInboundRequestById(next.id) || next;
 }
 
+// —— 人工确认（F09／R20；详情页入口，弹窗与Mock §3.9） ——
+
+function buildManualConfirmLogEntry({ time, operator, remark }) {
+  return { id: `manual-confirm-${time}`, time, operator, action: '人工确认', remark };
+}
+
+/** 录入数量按整数解析；空值按 0 处理，由调用方按 0～申请数量校验。 */
+function parseConfirmActual(raw) {
+  const text = String(raw ?? '').trim();
+  if (text === '') return 0;
+  const value = Number(text);
+  return Number.isFinite(value) && Number.isInteger(value) ? value : NaN;
+}
+
+/**
+ * 人工确认执行结束形成的其他入库单：按正式口径走草稿→待审核（R20、AC16）。
+ * 原型按「待审核 + 演示数据」落库：不直接记账、不推送财务ERP，审核通过后才增加库存并推送；
+ * 原型不提供该结果单的审核入口，边界见弹窗与Mock §3.9。
+ */
+function createManualConfirmInbound(request, lines, actuals, { operator, time }) {
+  const existing = loadOtherInboundByRequestId(request.id, request.requestNo);
+  if (existing) return existing;
+
+  const activeLines = lines
+    .map((line, index) => ({ line, index, actualQty: actuals[index] }))
+    .filter((item) => item.actualQty > 0);
+  if (!activeLines.length) throw new Error('实收合计为 0，请勾选零收或填写实收数量');
+
+  const inboundNo = nextDocumentNo(
+    'QTRK',
+    String(time).slice(0, 10),
+    loadAllOtherInbounds([]).map((row) => row.inboundNo),
+  );
+  const inbound = persistOtherInbound({
+    id: `other-inbound-${Date.now()}`,
+    inboundNo,
+    sourceType: 'request',
+    sourceRequestId: request.id,
+    sourceRequestNo: request.requestNo,
+    sourceSystem: '',
+    sourceNo: '',
+    warehouse: request.warehouse,
+    businessType: request.businessType,
+    auditStatus: 'pending',
+    financeErpPushStatus: 'un_pushed',
+    actualInboundTime: time,
+    pushTime: '',
+    pushFailReason: '',
+    remark: '人工确认执行结束形成（演示数据，待审核）',
+    auditor: '',
+    auditTime: '',
+    creator: operator,
+    createdAt: time,
+    updater: operator,
+    updatedAt: time,
+    demoMock: true,
+    lines: activeLines.map((item) => ({
+      id: `other-inbound-line-${Date.now()}-${item.index + 1}`,
+      sourceRequestLineId: item.line.id,
+      sourceInboundLine: `${request.requestNo} 第${item.index + 1}行`,
+      product: item.line.product,
+      quantity: item.actualQty,
+    })),
+  });
+
+  // 待审核单尚未审核：清掉规范化里的审核时间兜底，审核人保持为空
+  const pending = { ...inbound, auditor: '', auditTime: '' };
+  upsertMockRow(OTHER_INBOUND_STORAGE_KEY, pending);
+  return pending;
+}
+
+/**
+ * 人工确认（R20）：确认接单／确认执行结束（含零收）／确认取消结果。
+ * - 确认接单：已审核→待收货，库存不变；
+ * - 确认执行结束：回写实收与未收，并形成其他入库单（草稿→待审核；原型按待审核落库并标注演示数据，不直接记账）；
+ * - 零收：已取消、不生成结果单；
+ * - 确认取消结果：仓库同意→已取消；拒绝→恢复待收货。
+ * 记录人工确认人／时间／内容，确认类型与填写内容随操作日志保留；不能无来源新建其他入库单。
+ */
+export function applyManualConfirmRequest(row, payload = {}) {
+  const latest = loadOtherInboundRequestById(row?.id) || row;
+  if (!latest || !canManualConfirmRequest(latest)) {
+    throw new Error(buildStatusMismatchMessage(latest || row, '人工确认'));
+  }
+
+  const confirmType = payload.confirmType || resolveManualConfirmType(latest);
+  const operator = payload.operator || '当前用户';
+  const stamp = nowStamp();
+  const appendLog = (remark) => [
+    ...(latest.manualConfirmLogs || []),
+    buildManualConfirmLogEntry({ time: stamp, operator, remark }),
+  ];
+
+  if (confirmType === 'accept') {
+    const content = '确认接单：已核实仓库实际接收本单';
+    return persistOtherInboundRequest({
+      ...latest,
+      status: 'pending_receive',
+      confirmBy: operator,
+      confirmAt: stamp,
+      confirmContent: content,
+      manualConfirmLogs: appendLog(content),
+      updater: operator,
+      updatedAt: stamp,
+    });
+  }
+
+  if (confirmType === 'finish') {
+    const lines = refreshRequestLines(latest.lines || []);
+    const zeroReceive = Boolean(payload.zeroReceive);
+    const actuals = lines.map((line, index) => {
+      const quantity = Number(line.quantity || 0);
+      const actualQty = zeroReceive ? 0 : parseConfirmActual(payload.lineReceipts?.[index]);
+      if (!zeroReceive) {
+        if (!Number.isInteger(actualQty)) throw new Error(`第${index + 1}行实收数量须为整数`);
+        if (actualQty < 0) throw new Error(`第${index + 1}行实收数量不能小于 0`);
+        if (actualQty > quantity) {
+          throw new Error(`第${index + 1}行实收数量超过申请数量（申请 ${quantity}），本次确认被拒绝`);
+        }
+      }
+      return actualQty;
+    });
+
+    const totalRequestQty = lines.reduce((sum, line) => sum + Number(line.quantity || 0), 0);
+    const totalActual = actuals.reduce((sum, value) => sum + value, 0);
+    if (!zeroReceive && totalActual <= 0) {
+      throw new Error('执行结束实收合计为 0：请填写实收数量，或勾选零收（整单按取消结束）');
+    }
+
+    if (zeroReceive) {
+      const content = `确认零收：整单按取消结束（申请 ${totalRequestQty}）`;
+      return persistOtherInboundRequest({
+        ...latest,
+        status: 'cancelled',
+        cancelReason: '人工确认零收：整单按取消结束',
+        cancelTime: stamp,
+        cancelOperator: operator,
+        confirmBy: operator,
+        confirmAt: stamp,
+        confirmContent: content,
+        manualConfirmLogs: appendLog(content),
+        lines: lines.map((line) => ({ ...line, actualQty: 0 })),
+        updater: operator,
+        updatedAt: stamp,
+      });
+    }
+
+    const inbound = createManualConfirmInbound(latest, lines, actuals, { operator, time: stamp });
+    const content = `确认执行结束：实收 ${actuals.join('、')}（申请 ${lines.map((line) => Number(line.quantity || 0)).join('、')}）`;
+    return persistOtherInboundRequest({
+      ...latest,
+      status: 'received',
+      lines: lines.map((line, index) => ({ ...line, actualQty: actuals[index] })),
+      inboundId: inbound.id,
+      inboundNo: inbound.inboundNo,
+      lastReceiveTime: stamp,
+      confirmBy: operator,
+      confirmAt: stamp,
+      confirmContent: content,
+      manualConfirmLogs: appendLog(`${content}，已形成演示用其他入库单 ${inbound.inboundNo}（待审核）`),
+      updater: operator,
+      updatedAt: stamp,
+    });
+  }
+
+  if (confirmType === 'cancel_result') {
+    const agreed = payload.cancelResult !== 'reject';
+    const content = agreed ? '确认取消结果：仓库同意取消' : '确认取消结果：仓库拒绝取消，恢复等待实际结果';
+    if (agreed) {
+      return persistOtherInboundRequest({
+        ...latest,
+        status: 'cancelled',
+        cancelTime: stamp,
+        cancelOperator: operator,
+        confirmBy: operator,
+        confirmAt: stamp,
+        confirmContent: content,
+        manualConfirmLogs: appendLog(content),
+        updater: operator,
+        updatedAt: stamp,
+      });
+    }
+    return persistOtherInboundRequest({
+      ...latest,
+      status: 'pending_receive',
+      cancelReason: '',
+      confirmBy: operator,
+      confirmAt: stamp,
+      confirmContent: content,
+      manualConfirmLogs: appendLog(content),
+      updater: operator,
+      updatedAt: stamp,
+    });
+  }
+
+  throw new Error(buildStatusMismatchMessage(latest, '人工确认'));
+}
+
 /**
  * 审核后自动推送仓库（R10）。
  * `pushState` 只是推送记录里的发送过程标记，不改变「单据状态」字段（§6.1）；
@@ -586,10 +815,19 @@ export function buildOtherInboundRequestOperationLogs(row) {
   if (row.status === 'push_failed' && row.pushFailReason) {
     push(row.updatedAt, '系统', '推送仓库', `推送失败：${row.pushFailReason}`);
   }
-  if (row.lastReceiveTime) {
+  const manualConfirmLogs = Array.isArray(row.manualConfirmLogs) ? row.manualConfirmLogs : [];
+  const confirmedReceive = manualConfirmLogs.some((log) => (
+    String(log.remark || '').startsWith('确认执行结束') || String(log.remark || '').startsWith('确认零收')
+  ));
+  if (row.lastReceiveTime && !confirmedReceive) {
     push(row.lastReceiveTime, '系统', '回传收货', row.inboundNo ? `仓库回传实收，生成 ${row.inboundNo}` : '仓库回传实收');
   }
   if (row.cancelTime) push(row.cancelTime, row.cancelOperator, '取消', row.cancelReason);
+  if (manualConfirmLogs.length) {
+    manualConfirmLogs.forEach((log) => push(log.time, log.operator, log.action || '人工确认', log.remark));
+  } else if (row.confirmAt) {
+    push(row.confirmAt, row.confirmBy, '人工确认', row.confirmContent);
+  }
 
   return entries.sort((left, right) => String(right.time).localeCompare(String(left.time)));
 }

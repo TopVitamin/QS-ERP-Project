@@ -3,7 +3,7 @@ import { skuOptions } from '../data/masterData.js';
 import { getSelectableSupplierOptions } from '../data/supplierData.js';
 import { getSelectableLogicalWarehouseOptions } from '../data/warehouseData.js';
 import { nextDocumentNo } from './documentNo.js';
-import { computeLinesTotals, EMPTY_PLACEHOLDER } from './format.js';
+import { computeLinesTotals, EMPTY_PLACEHOLDER, nowStamp } from './format.js';
 import { emptyFieldMessage } from './formValidation.js';
 import { loadAllInbounds } from './inboundLogic.js';
 import { readMockRows, writeMockRows } from './mockStorage.js';
@@ -88,10 +88,6 @@ export function loadAllReturnOutbounds() {
   return readMockRows(RETURN_OUTBOUND_STORAGE_KEY, returnOutboundSeedRows);
 }
 
-export function nowStamp() {
-  return new Date().toISOString().slice(0, 19).replace('T', ' ');
-}
-
 let returnLineSequence = 0;
 
 export function createReturnLineId() {
@@ -128,7 +124,7 @@ export function refreshReturnLines(lines = []) {
 }
 
 export function sumReturnLineQty(lines = [], field) {
-  return (lines || []).reduce((sum, line) => sum + Number(line[field] || 0), 0);
+  return lines.reduce((sum, line) => sum + Number(line[field] || 0), 0);
 }
 
 export function normalizeReturnRow(row) {
@@ -766,5 +762,5 @@ export function buildPurchaseReturnOperationLogs(row) {
     });
   }
 
-  return mergeLogEntries(entries, row.operationLogs || []);
+  return mergeLogEntries(entries, row.operationLogs);
 }

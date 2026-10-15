@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { DocumentDetailPage } from '../components/erp/DocumentDetailPage.jsx';
-import { buildCreateMetaFields } from '../components/erp/DocumentMetaTabsCard.jsx';
+import {
+  buildOperationInfoTabs,
+} from '../components/erp/DocumentMetaTabsCard.jsx';
 import { RelatedDocumentsCard } from '../components/erp/RelatedDocumentsCard.jsx';
 import { buildDeliveryNoticeOperationLogs } from '../lib/operationLog.js';
 import { buildDeliveryNoticeRelatedDocumentSections } from '../lib/salesDeliveryNoticeRelatedDocs.js';
@@ -8,7 +10,7 @@ import {
   SalesDeliveryNoticeActionDialogs,
   SalesDeliveryNoticeDetailHeaderActions,
 } from '../components/erp/SalesDeliveryNoticeActionDialogs.jsx';
-import { useSalesDeliveryNoticeRow } from '../hooks/useSalesDeliveryNoticeRow.js';
+import { useDocumentRow } from '../hooks/useDocumentRow.js';
 import { resolveAddressLabel } from '../lib/cnAddress.js';
 import { resolveOptionLabel } from '../lib/codeName.js';
 import { formatSnapshotCodeName } from '../lib/documentNameSnapshots.js';
@@ -16,7 +18,7 @@ import { EMPTY_PLACEHOLDER } from '../lib/format.js';
 import { customerOptions, logisticsProductOptions } from '../data/masterData.js';
 import { getInventoryLogicalWarehouseOptions } from '../data/warehouseData.js';
 import { getDeliveryNoticeStatusBadges } from '../data/salesDeliveryNoticeData.js';
-import { formatDeliveryMode, formatShipMethod, loadNoticeById, refreshNoticeLines } from '../lib/salesDeliveryNoticeLogic.js';
+import { DELIVERY_NOTICE_STORAGE_KEY, formatDeliveryMode, formatShipMethod, loadNoticeById, manualConfirmTypesForStatus, refreshNoticeLines } from '../lib/salesDeliveryNoticeLogic.js';
 import { salesOrders } from '../data/salesOrderData.js';
 import { loadOrderById } from '../lib/salesOrderLogic.js';
 
@@ -56,7 +58,12 @@ function buildNoticeInfoFields({ detail, row, onOpenPage }) {
     { key: 'deliveryMode', label: '发货处理方式', value: formatDeliveryMode(detail) },
     { key: 'pushTime', label: '推送时间', value: row.pushTime || EMPTY_PLACEHOLDER },
     { key: 'finalShipTime', label: '最终发货确认时间', value: row.finalShipTime || EMPTY_PLACEHOLDER },
+    { key: 'confirmBy', label: '人工确认人', value: row.confirmBy || EMPTY_PLACEHOLDER },
+    { key: 'confirmAt', label: '人工确认时间', value: row.confirmAt || EMPTY_PLACEHOLDER },
   ];
+  if (row.confirmContent) {
+    fields.push({ key: 'confirmContent', label: '人工确认内容', value: row.confirmContent, className: 'col-span-3' });
+  }
   if (row.trackingNo) {
     fields.push({ key: 'trackingNo', label: '运单号', value: row.trackingNo });
   }
@@ -106,19 +113,7 @@ const noticeDetailConfig = {
       title: '操作信息',
       variant: 'meta-tabs',
       defaultTab: 'create',
-      tabs: ({ row }) => [
-        {
-          key: 'create',
-          label: '制单信息',
-          fields: buildCreateMetaFields(row),
-        },
-        {
-          key: 'log',
-          label: '操作日志',
-          variant: 'log',
-          logEntries: () => buildDeliveryNoticeOperationLogs(row),
-        },
-      ],
+      tabs: ({ row }) => buildOperationInfoTabs({ row, buildLogs: buildDeliveryNoticeOperationLogs }),
     },
   ],
   summary: { quantityLabel: '通知数量', amountLabel: '实出数量' },
@@ -130,7 +125,7 @@ const noticeDetailConfig = {
 };
 
 export function SalesDeliveryNoticeDetailPage({ onFeedback, onOpenPage, context }) {
-  const row = useSalesDeliveryNoticeRow(context);
+  const row = useDocumentRow(context, { storageKey: DELIVERY_NOTICE_STORAGE_KEY, loadById: loadNoticeById });
   const [dialog, setDialog] = useState(null);
 
   function handleDialogComplete(result) {
@@ -159,6 +154,11 @@ export function SalesDeliveryNoticeDetailPage({ onFeedback, onOpenPage, context 
         onAction={(id, currentRow) => {
           if (id === 'edit') {
             onOpenPage?.('sales-delivery-notice-edit', { row: currentRow });
+            return;
+          }
+          if (id === 'manual-confirm') {
+            const [confirmType] = manualConfirmTypesForStatus(currentRow.status);
+            setDialog({ type: 'manual-confirm', confirmType, row: currentRow });
             return;
           }
           setDialog({ type: id, row: currentRow });

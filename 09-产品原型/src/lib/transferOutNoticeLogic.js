@@ -14,8 +14,14 @@
  */
 import { skuOptions } from '../data/masterData.js';
 import { nextDocumentNo } from './documentNo.js';
-import { generateDirectTransferFromOutNotice } from './directTransferLogic.js';
-import { nowStamp } from './inventoryStockLogic.js';
+import {
+  generateDirectTransferFromOutNotice,
+  generateDirectTransferNo,
+  loadDirectTransfersByNoticeId,
+  persistDirectTransfer,
+  TRANSIT_WAREHOUSE_CODE,
+} from './directTransferLogic.js';
+import { nowStamp } from './format.js';
 import { readMockRows, upsertMockRow, writeMockRows } from './mockStorage.js';
 import {
   applyApproveTransferOrder,
@@ -121,6 +127,10 @@ export function normalizeTransferOutNoticeRow(row) {
     totalQuantity: sumTransferOutNoticeQty(lines),
     totalActualQty: sumTransferOutNoticeActualQty(lines),
     totalRemainingQty: sumTransferOutNoticeRemainingQty(lines),
+    confirmBy: row.confirmBy || '',
+    confirmAt: row.confirmAt || '',
+    confirmContent: row.confirmContent || '',
+    manualConfirmLogs: row.manualConfirmLogs || [],
     updatedAt: row.updatedAt || nowStamp(),
     updater: row.updater || '系统',
   };
@@ -178,6 +188,34 @@ export function canApplyCancelNotice(row) {
 
 export function canMockShip(row) {
   return row?.status === 'pending_ship';
+}
+
+/**
+ * 人工确认（F09／R09）：只适用于已交给仓库的通知——推送中（发送结果不确定）、待发货、取消中；
+ * 待推送先推送、推送失败先重试，不能用人工确认代替（主PRD §6.4）。详情页入口，列表行不提供。
+ */
+export function canManualConfirm(row) {
+  return row?.status === 'pushing' || row?.status === 'pending_ship' || row?.status === 'cancelling';
+}
+
+/** 人工确认类型文案（弹窗与Mock §4；类型与填写内容随操作日志保留）。 */
+export const manualConfirmTypeLabels = {
+  accept: '确认接单',
+  finish: '确认执行结束',
+  cancel_result: '确认取消结果',
+};
+
+/** 确认类型按当前状态给出可选项：推送中—确认接单；待发货—确认执行结束；取消中—确认取消结果。 */
+export function resolveManualConfirmType(row) {
+  if (row?.status === 'pushing') return 'accept';
+  if (row?.status === 'pending_ship') return 'finish';
+  if (row?.status === 'cancelling') return 'cancel_result';
+  return '';
+}
+
+export function buildManualConfirmStatusMessage(row) {
+  const label = transferOutNoticeStatusLabels[row?.status] || row?.status || '-';
+  return `当前单据状态为${label}，不可执行人工确认`;
 }
 
 // —— 生成与自动推送 ——
@@ -305,6 +343,221 @@ export function applyCancelOutNotice(row, cancelReason) {
     updater: '当前用户',
     updatedAt: nowStamp(),
   });
+}
+
+// —— 人工确认（F09／R09；详情页入口，弹窗与Mock §4） ——
+
+function buildManualConfirmLogEntry({ time, operator, remark }) {
+  return { id: `manual-confirm-${time}`, time, operator, action: '人工确认', remark };
+}
+
+/** 录入数量按整数解析；空值按 0 处理，由调用方按 0～通知数量校验。 */
+function parseConfirmActual(raw) {
+  const text = String(raw ?? '').trim();
+  if (text === '') return 0;
+  const value = Number(text);
+  return Number.isFinite(value) && Number.isInteger(value) ? value : NaN;
+}
+
+/**
+ * 人工确认执行结束形成的调出端直接调拨单：按正式口径走草稿→待审核（R09、AC15）。
+ * 原型按「待审核 + 演示数据」落库：不直接记账、不消耗或释放预占；
+ * 审核通过后才调出仓减、在途加，消耗实出预占、释放未发预占，并按实际调出量生成调入通知单
+ * （原型不提供该结果单的审核入口，故演示不直接生成调入通知单）。
+ */
+function createManualConfirmOutTransfer(notice, lines, actuals, { operator, time }) {
+  const existing = loadDirectTransfersByNoticeId(notice.id, notice.noticeNo)
+    .find((item) => item.sourceType === 'step_out');
+  if (existing) return existing;
+
+  const activeLines = lines
+    .map((line, index) => ({ line, index, actualQty: actuals[index] }))
+    .filter((item) => item.actualQty > 0);
+  if (!activeLines.length) return null;
+
+  const stamp = String(time);
+  return persistDirectTransfer({
+    id: `direct-transfer-out-${notice.id}`,
+    transferNo: generateDirectTransferNo(stamp.slice(0, 10)),
+    sourceType: 'step_out',
+    sourceOrderId: notice.sourceOrderId,
+    sourceOrderNo: notice.sourceOrderNo,
+    sourceNoticeId: notice.id,
+    sourceNoticeNo: notice.noticeNo,
+    sourceSystem: '',
+    sourceNo: '',
+    fromWarehouse: notice.outWarehouse,
+    toWarehouse: TRANSIT_WAREHOUSE_CODE,
+    actualTransferTime: stamp,
+    businessDate: stamp.slice(0, 10),
+    remark: '人工确认执行结束形成（演示数据，待审核）',
+    auditStatus: 'pending',
+    financeErpPushStatus: 'un_pushed',
+    pushTime: '',
+    pushFailReason: '',
+    auditor: '',
+    auditTime: '',
+    returnComment: '',
+    returnedAt: '',
+    returnOperator: '',
+    creator: operator,
+    createdAt: stamp,
+    updater: operator,
+    updatedAt: stamp,
+    isMock: true,
+    lines: activeLines.map((item, index) => ({
+      id: `${notice.id}-out-line-${index + 1}`,
+      lineNo: index + 1,
+      sourceNoticeLineId: item.line.id,
+      sourceNoticeLine: `${notice.noticeNo} 行${item.line.lineNo || item.index + 1}`,
+      sourceOrderLineId: item.line.sourceOrderLineId,
+      sourceOrderLineNo: item.line.sourceOrderLineNo,
+      product: item.line.product,
+      productCode: item.line.productCode,
+      productName: item.line.productName,
+      unit: item.line.unit,
+      quantity: item.actualQty,
+    })),
+  });
+}
+
+/**
+ * 人工确认（R09）：确认接单／确认执行结束（含零调出）／确认取消结果。
+ * - 确认接单：推送中→待发货，不生成结果单；
+ * - 确认执行结束：回写实际调出与未发，并形成调出端直接调拨单（草稿→待审核；原型按待审核落库并标注演示数据）；
+ * - 零调出：来源主单按零出取消、本通知单已取消，不生成后续单据；
+ * - 确认取消结果：仓库同意→已取消并释放未执行预占；拒绝→待发货。
+ * 记录人工确认人／时间／内容；不能无来源建通知单，不能把零调出当成已发货。
+ */
+export function applyManualConfirmOutNotice(row, payload = {}) {
+  const notice = loadTransferOutNoticeById(row?.id) || row;
+  if (!notice || !canManualConfirm(notice)) {
+    throw new Error(buildManualConfirmStatusMessage(notice || row));
+  }
+
+  const confirmType = payload.confirmType || resolveManualConfirmType(notice);
+  const operator = payload.operator || '当前用户';
+  const stamp = nowStamp();
+  const appendLog = (remark) => [
+    ...(notice.manualConfirmLogs || []),
+    buildManualConfirmLogEntry({ time: stamp, operator, remark }),
+  ];
+
+  if (confirmType === 'accept') {
+    const content = '确认接单：已核实仓库实际接收本通知';
+    return persistTransferOutNotice({
+      ...notice,
+      status: 'pending_ship',
+      confirmBy: operator,
+      confirmAt: stamp,
+      confirmContent: content,
+      manualConfirmLogs: appendLog(content),
+      updater: operator,
+      updatedAt: stamp,
+    });
+  }
+
+  if (confirmType === 'finish') {
+    const lines = refreshTransferOutNoticeLines(notice.lines || []);
+    const zeroOut = Boolean(payload.zeroOut);
+    const actuals = lines.map((line, index) => {
+      const quantity = Number(line.quantity || 0);
+      const actualQty = zeroOut ? 0 : parseConfirmActual(payload.lineActuals?.[index]);
+      if (!zeroOut) {
+        if (!Number.isInteger(actualQty)) throw new Error(`第${index + 1}行实际调出数量须为整数`);
+        if (actualQty < 0) throw new Error(`第${index + 1}行实际调出数量不能小于 0`);
+        if (actualQty > quantity) {
+          throw new Error(`第${index + 1}行实际调出数量超过通知调出数量（通知 ${quantity}），本次确认被拒绝`);
+        }
+      }
+      return actualQty;
+    });
+
+    const totalQuantity = lines.reduce((sum, line) => sum + Number(line.quantity || 0), 0);
+    const totalActual = actuals.reduce((sum, value) => sum + value, 0);
+    if (!zeroOut && totalActual <= 0) {
+      throw new Error('执行结束实际调出合计为 0：请填写实际调出数量，或勾选零调出（来源主单按零出取消）');
+    }
+
+    if (zeroOut) {
+      const content = `确认零调出：来源主单按零出取消（通知 ${totalQuantity}）`;
+      const cancelledNotice = persistTransferOutNotice({
+        ...notice,
+        status: 'cancelled',
+        cancelReason: '人工确认零调出：仓库确认整单未执行',
+        cancelOperator: '',
+        cancelTime: stamp,
+        confirmBy: operator,
+        confirmAt: stamp,
+        confirmContent: content,
+        manualConfirmLogs: appendLog(content),
+        lines: lines.map((line) => ({ ...line, actualQty: 0 })),
+        updater: operator,
+        updatedAt: stamp,
+      });
+      const order = loadTransferOrderById(notice.sourceOrderId);
+      if (order) applyTransferOrderZeroOutCancel(order, { reason: '仓库确认零调出', time: stamp });
+      return cancelledNotice;
+    }
+
+    const outTransfer = createManualConfirmOutTransfer(notice, lines, actuals, { operator, time: stamp });
+    const shippedLines = lines.map((line, index) => ({ ...line, actualQty: actuals[index] }));
+    const content = `确认执行结束：实际调出 ${actuals.join('、')}（通知 ${lines.map((line) => Number(line.quantity || 0)).join('、')}）`;
+    const shippedNotice = persistTransferOutNotice({
+      ...notice,
+      status: 'shipped',
+      finalShipTime: stamp,
+      lines: shippedLines,
+      confirmBy: operator,
+      confirmAt: stamp,
+      confirmContent: content,
+      manualConfirmLogs: appendLog(`${content}，已形成演示用调出端直接调拨单 ${outTransfer?.transferNo || ''}（待审核）`),
+      updater: operator,
+      updatedAt: stamp,
+    });
+    const order = loadTransferOrderById(notice.sourceOrderId);
+    if (order) applyTransferOutWriteBack(order.id, shippedLines, { time: stamp });
+    return loadTransferOutNoticeById(shippedNotice.id) || shippedNotice;
+  }
+
+  if (confirmType === 'cancel_result') {
+    const agreed = payload.cancelResult !== 'reject';
+    const content = agreed ? '确认取消结果：仓库同意取消' : '确认取消结果：仓库拒绝取消，恢复等待实际调出';
+    if (!agreed) {
+      return persistTransferOutNotice({
+        ...notice,
+        status: 'pending_ship',
+        cancelReason: '',
+        confirmBy: operator,
+        confirmAt: stamp,
+        confirmContent: content,
+        manualConfirmLogs: appendLog(content),
+        updater: operator,
+        updatedAt: stamp,
+      });
+    }
+    const order = loadTransferOrderById(notice.sourceOrderId);
+    if (order) {
+      const releaseLines = order.lines.filter((line) => (
+        (notice.lines || []).some((noticeLine) => Number(noticeLine.sourceOrderLineNo || noticeLine.lineNo) === Number(line.lineNo))
+      ));
+      releaseTransferOrderReservations(order, { lines: releaseLines.length ? releaseLines : undefined });
+    }
+    return persistTransferOutNotice({
+      ...notice,
+      status: 'cancelled',
+      cancelTime: stamp,
+      cancelOperator: operator,
+      confirmBy: operator,
+      confirmAt: stamp,
+      confirmContent: content,
+      manualConfirmLogs: appendLog(content),
+      updater: operator,
+      updatedAt: stamp,
+    });
+  }
+
+  throw new Error(buildManualConfirmStatusMessage(notice));
 }
 
 // —— Demo Mock：模拟调出仓回传（F08-A）——
@@ -448,6 +701,10 @@ export function buildTransferOutNoticeSeed(orderRow, plan = {}) {
 
 export function buildTransferOutNoticeOperationLogs(row) {
   const entries = [];
+  const manualConfirmLogs = Array.isArray(row.manualConfirmLogs) ? row.manualConfirmLogs : [];
+  const confirmedFinish = manualConfirmLogs.some((log) => (
+    String(log.remark || '').startsWith('确认执行结束') || String(log.remark || '').startsWith('确认零调出')
+  ));
   pushTransferLogEntry(entries, {
     time: row.createdAt,
     operator: '系统',
@@ -462,7 +719,7 @@ export function buildTransferOutNoticeOperationLogs(row) {
       remark: row.pushFailReason ? `推送失败：${row.pushFailReason}` : '推送调出仓成功',
     });
   }
-  if (row.finalShipTime) {
+  if (row.finalShipTime && !confirmedFinish) {
     pushTransferLogEntry(entries, {
       time: row.finalShipTime,
       operator: '系统',
@@ -478,5 +735,19 @@ export function buildTransferOutNoticeOperationLogs(row) {
       remark: row.cancelReason,
     });
   }
-  return mergeTransferLogs(entries, row.operationLogs || []);
+  manualConfirmLogs.forEach((log) => pushTransferLogEntry(entries, {
+    time: log.time,
+    operator: log.operator,
+    action: log.action || '人工确认',
+    remark: log.remark,
+  }));
+  if (!manualConfirmLogs.length && row.confirmAt) {
+    pushTransferLogEntry(entries, {
+      time: row.confirmAt,
+      operator: row.confirmBy,
+      action: '人工确认',
+      remark: row.confirmContent,
+    });
+  }
+  return mergeTransferLogs(entries, row.operationLogs);
 }

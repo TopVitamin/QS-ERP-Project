@@ -17,6 +17,7 @@ import { PurchaseReceiptNoticeCreatePage, PurchaseReceiptNoticeEditPage } from '
 import { PurchaseReceiptNoticeDetailPage } from '../pages/PurchaseReceiptNoticeDetailPage.jsx';
 import { PurchaseReceiptNoticeListPage } from '../pages/PurchaseReceiptNoticeListPage.jsx';
 import { ExportCenterPage, ImportCenterPage } from '../pages/TransferCenterPage.jsx';
+import { SettingsUsersPage } from '../pages/SettingsUsersPage.jsx';
 import { CustomerCreatePage, CustomerEditPage } from '../pages/CustomerFormPage.jsx';
 import { CustomerDetailPage } from '../pages/CustomerDetailPage.jsx';
 import { CustomerListPage } from '../pages/CustomerListPage.jsx';
@@ -42,6 +43,12 @@ import { SalesDeliveryNoticeDetailPage } from '../pages/SalesDeliveryNoticeDetai
 import { SalesDeliveryNoticeListPage } from '../pages/SalesDeliveryNoticeListPage.jsx';
 import { SalesOutboundDetailPage } from '../pages/SalesOutboundDetailPage.jsx';
 import { SalesOutboundListPage } from '../pages/SalesOutboundListPage.jsx';
+import { SalesCrossBorderOrderDetailPage } from '../pages/SalesCrossBorderOrderDetailPage.jsx';
+import { SalesCrossBorderOrderListPage } from '../pages/SalesCrossBorderOrderListPage.jsx';
+import { SalesDomesticOrderDetailPage } from '../pages/SalesDomesticOrderDetailPage.jsx';
+import { SalesDomesticOrderListPage } from '../pages/SalesDomesticOrderListPage.jsx';
+import { SalesShopifyOrderDetailPage } from '../pages/SalesShopifyOrderDetailPage.jsx';
+import { SalesShopifyOrderListPage } from '../pages/SalesShopifyOrderListPage.jsx';
 import { SalesReturnCreatePage, SalesReturnEditPage } from '../pages/SalesReturnFormPage.jsx';
 import { SalesReturnDetailPage } from '../pages/SalesReturnDetailPage.jsx';
 import { SalesReturnInboundDetailPage } from '../pages/SalesReturnInboundDetailPage.jsx';
@@ -580,6 +587,12 @@ export const PAGE_REGISTRY = {
     navId: 'settings',
     component: ProfilePage,
   },
+  'settings-users': {
+    id: 'settings-users',
+    title: '用户与权限',
+    navId: 'settings',
+    component: SettingsUsersPage,
+  },
   'sales-order': {
     id: 'sales-order',
     title: '销售订单列表',
@@ -639,6 +652,42 @@ export const PAGE_REGISTRY = {
     title: '销售出库单详情',
     navId: 'sales',
     component: SalesOutboundDetailPage,
+  },
+  'sales-domestic-order': {
+    id: 'sales-domestic-order',
+    title: '国内电商订单列表',
+    navId: 'sales',
+    component: SalesDomesticOrderListPage,
+  },
+  'sales-domestic-order-detail': {
+    id: 'sales-domestic-order-detail',
+    title: '国内电商订单详情',
+    navId: 'sales',
+    component: SalesDomesticOrderDetailPage,
+  },
+  'sales-crossborder-order': {
+    id: 'sales-crossborder-order',
+    title: '跨境电商订单列表',
+    navId: 'sales',
+    component: SalesCrossBorderOrderListPage,
+  },
+  'sales-crossborder-order-detail': {
+    id: 'sales-crossborder-order-detail',
+    title: '跨境电商订单详情',
+    navId: 'sales',
+    component: SalesCrossBorderOrderDetailPage,
+  },
+  'sales-shopify-order': {
+    id: 'sales-shopify-order',
+    title: '独立站订单列表',
+    navId: 'sales',
+    component: SalesShopifyOrderListPage,
+  },
+  'sales-shopify-order-detail': {
+    id: 'sales-shopify-order-detail',
+    title: '独立站订单详情',
+    navId: 'sales',
+    component: SalesShopifyOrderDetailPage,
   },
   'sales-return': {
     id: 'sales-return',

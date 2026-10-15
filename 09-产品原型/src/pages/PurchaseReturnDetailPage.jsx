@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { DocumentDetailPage } from '../components/erp/DocumentDetailPage.jsx';
-import { buildCreateMetaFields } from '../components/erp/DocumentMetaTabsCard.jsx';
+import {
+  buildOperationInfoTabs,
+} from '../components/erp/DocumentMetaTabsCard.jsx';
 import { RelatedDocumentsCard } from '../components/erp/RelatedDocumentsCard.jsx';
 import {
   PurchaseReturnActionDialogs,
@@ -9,7 +11,7 @@ import {
 import { resolveOptionLabel } from '../lib/codeName.js';
 import { EMPTY_PLACEHOLDER, formatAmount } from '../lib/format.js';
 import { currencySymbol } from '../lib/money.js';
-import { subscribeMockRows } from '../lib/mockStorage.js';
+import { useDocumentRow } from '../hooks/useDocumentRow.js';
 import { currencyOptions, logicalWarehouseOptions, supplierOptions } from '../data/masterData.js';
 import { inboundOrders } from '../data/inboundData.js';
 import { loadInboundById } from '../lib/inboundLogic.js';
@@ -28,27 +30,6 @@ import {
  * 采购退货单详情（F05、F06）。
  * 分区：单据信息 → 商品明细 → 关联单据（仅已审核）→ 终止信息（仅已关闭/已取消）→ 审核信息 → 操作信息。
  */
-
-function useReturnRow(context) {
-  const contextRow = context?.row;
-  const [row, setRow] = useState(contextRow || null);
-
-  useEffect(() => {
-    if (!contextRow?.id) {
-      setRow(contextRow || null);
-      return undefined;
-    }
-
-    function syncRow() {
-      setRow(loadReturnById(contextRow.id) || contextRow);
-    }
-
-    syncRow();
-    return subscribeMockRows(PURCHASE_RETURN_STORAGE_KEY, syncRow);
-  }, [contextRow]);
-
-  return row;
-}
 
 function getReturnDetail(row) {
   if (!row) return { lines: [] };
@@ -142,19 +123,7 @@ const returnDetailConfig = {
       title: '操作信息',
       variant: 'meta-tabs',
       defaultTab: 'create',
-      tabs: ({ row }) => [
-        {
-          key: 'create',
-          label: '制单信息',
-          fields: buildCreateMetaFields(row),
-        },
-        {
-          key: 'log',
-          label: '操作日志',
-          variant: 'log',
-          logEntries: () => buildPurchaseReturnOperationLogs(row),
-        },
-      ],
+      tabs: ({ row }) => buildOperationInfoTabs({ row, buildLogs: buildPurchaseReturnOperationLogs }),
     },
   ],
   summary: { quantityLabel: '退货数量', amountLabel: '价税合计' },
@@ -170,7 +139,7 @@ const returnDetailConfig = {
 };
 
 export function PurchaseReturnDetailPage({ onFeedback, onOpenPage, context }) {
-  const row = useReturnRow(context);
+  const row = useDocumentRow(context, { storageKey: PURCHASE_RETURN_STORAGE_KEY, loadById: loadReturnById });
   const [dialog, setDialog] = useState(null);
 
   function handleDialogComplete(result) {

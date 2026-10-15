@@ -1,7 +1,10 @@
 import { DocumentDetailPage } from '../components/erp/DocumentDetailPage.jsx';
-import { buildCreateMetaFields } from '../components/erp/DocumentMetaTabsCard.jsx';
+import {
+  buildOperationInfoTabs,
+} from '../components/erp/DocumentMetaTabsCard.jsx';
 import { buildInboundOperationLogs } from '../lib/operationLog.js';
-import { usePurchaseInboundRow } from '../hooks/usePurchaseInboundRow.js';
+import { useDocumentRow } from '../hooks/useDocumentRow.js';
+import { INBOUND_STORAGE_KEY, loadInboundById } from '../lib/inboundLogic.js';
 import { resolveOptionLabel } from '../lib/codeName.js';
 import { formatSnapshotCodeName } from '../lib/documentNameSnapshots.js';
 import { EMPTY_PLACEHOLDER, formatAmount } from '../lib/format.js';
@@ -57,6 +60,11 @@ function buildInboundInfoFields({ detail, row, onOpenPage }) {
     { key: 'supplier', label: '供应商', value: formatSnapshotCodeName(detail.supplier, detail.supplierNameSnapshot) },
     { key: 'warehouse', label: '入库仓库', value: formatSnapshotCodeName(detail.warehouse, detail.warehouseNameSnapshot) },
     { key: 'currency', label: '币别', value: resolveOptionLabel(detail.currency, currencyOptions) },
+    // 渠道回传来源标识：电商仓经聚水潭／领星回传、自营仓直连回传时按回传写入；虚拟入库等不适用，展示 `-`
+    // （《采购入库单前端Demo版PRD_详情页》§3.1、§4「来源标识」）。
+    { key: 'sourceSystem', label: '来源系统', value: detail.sourceSystem || EMPTY_PLACEHOLDER },
+    { key: 'sourceNo', label: '来源单号', value: detail.sourceNo || EMPTY_PLACEHOLDER },
+    { key: 'executionId', label: '执行标识', value: detail.executionId || EMPTY_PLACEHOLDER },
     { key: 'amount', label: '价税合计', value: `${currencySymbol(row.currency)} ${formatAmount(row.amount ?? 0)}` },
     { key: 'taxAmount', label: '税额', value: `${currencySymbol(row.currency)} ${formatAmount(row.taxAmount ?? 0)}` },
     { key: 'netAmount', label: '金额', value: `${currencySymbol(row.currency)} ${formatAmount(row.netAmount ?? 0)}` },
@@ -92,19 +100,7 @@ const inboundDetailConfig = {
       title: '操作信息',
       variant: 'meta-tabs',
       defaultTab: 'create',
-      tabs: ({ row }) => [
-        {
-          key: 'create',
-          label: '制单信息',
-          fields: buildCreateMetaFields(row),
-        },
-        {
-          key: 'log',
-          label: '操作日志',
-          variant: 'log',
-          logEntries: () => buildInboundOperationLogs(row),
-        },
-      ],
+      tabs: ({ row }) => buildOperationInfoTabs({ row, buildLogs: buildInboundOperationLogs }),
     },
   ],
   summary: { quantityLabel: '实际入库数量', amountLabel: '价税合计' },
@@ -120,6 +116,6 @@ const inboundDetailConfig = {
 };
 
 export function PurchaseInboundDetailPage({ onOpenPage, context }) {
-  const row = usePurchaseInboundRow(context);
+  const row = useDocumentRow(context, { storageKey: INBOUND_STORAGE_KEY, loadById: loadInboundById });
   return <DocumentDetailPage context={{ row }} onOpenPage={onOpenPage} config={inboundDetailConfig} />;
 }

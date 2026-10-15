@@ -13,10 +13,10 @@
 import { skuOptions } from '../data/masterData.js';
 import { isTransitLogicalWarehouse } from '../data/warehouseData.js';
 import { nextDocumentNo } from './documentNo.js';
+import { nowStamp } from './format.js';
 import {
   getAvailableStock,
   getStockRow,
-  nowStamp,
   persistStockRow,
   postStockEntries,
 } from './inventoryStockLogic.js';
@@ -194,13 +194,8 @@ export function canWithdrawDirectTransfer(row) {
   return canApproveDirectTransfer(row);
 }
 
-/**
- * 推送财务ERP失败后在系统集成中心针对原单重推（R09）；本模块列表与详情不提供重推按钮，
- * 这里显式返回 false，避免后续误加结果单重推入口。
- */
-export function canRetryPushDirectTransfer() {
-  return false;
-}
+// 推送财务ERP失败后在系统集成中心针对原单重推（R09）；本模块列表与详情不提供重推按钮，
+// 后续也不要给结果单加重推入口。
 
 // —— 校验（文案按《直接调拨单前端Demo版PRD_新增编辑页》§4）——
 
@@ -262,7 +257,7 @@ function postTransferEntries(entries, meta) {
   try {
     return postStockEntries(entries, meta);
   } catch (error) {
-    if (/库存不足|负库存|预占/.test(String(error?.message || ''))) {
+    if (/库存不足|负库存|预占/.test(String(error.message))) {
       throw new Error('库存不足，不允许负库存');
     }
     throw error;
@@ -942,5 +937,5 @@ export function buildDirectTransferOperationLogs(row) {
         : (financeErpPushStatusLabels[row.financeErpPushStatus] || '推送财务ERP'),
     });
   }
-  return mergeTransferLogs(entries, row.operationLogs || []);
+  return mergeTransferLogs(entries, row.operationLogs);
 }

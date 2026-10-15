@@ -32,19 +32,21 @@ function buildSeedInbound({ noticeId, ...overrides }) {
   });
 }
 
-/** 路径二（外部ToC）明细行：商品与固定示例价格取 masterData 的 SKU；来源收货通知行留空 */
-function tocLine({ id, product, quantity, price, taxRate = '13' }) {
+/** 路径二（国内电商订单／跨境电商订单）明细行：商品与固定示例价格取 masterData 的 SKU；来源收货通知行留空 */
+function channelOrderLine({ id, product, quantity, price, taxRate = '13' }) {
   return enrichSalesReturnInboundLine({ id, product, quantity, price, taxRate });
 }
 
 /**
- * 路径二（外部ToC）种子：渠道退货结果按来源拆分接收，不关联通知与销售退货单（主PRD R04、AC10）。
- * 同一外部原始订单可拆成多张入库单（1:N，不自行合并），业务日期取实际收货时间的日期部分。
+ * 路径二（国内电商订单／跨境电商订单）种子：渠道退货结果按来源拆分接收，不关联通知与销售退货单（主PRD R04、AC10）。
+ * 同一来源订单可拆成多张入库单（1:N，不自行合并），业务日期取实际收货时间的日期部分；
+ * 来源字段按「分两张」：来源国内电商订单、来源跨境电商订单互斥，二者至多一个有值。
  */
-function buildSeedExternalTocInbound({
+function buildSeedChannelOrderInbound({
   id,
   inboundNo,
-  externalOrderNo,
+  kind,
+  sourceOrderNo,
   customer,
   warehouse,
   actualReceiveTime,
@@ -55,11 +57,13 @@ function buildSeedExternalTocInbound({
   remark = '',
   lines,
 }) {
+  const isCrossborder = kind === 'crossborder';
   return normalizeSalesReturnInboundRow({
     id,
     inboundNo,
-    sourceType: 'toc',
-    externalOrderNo,
+    sourceType: isCrossborder ? 'crossborder_order' : 'domestic_order',
+    sourceDomesticOrderNo: isCrossborder ? '' : sourceOrderNo,
+    sourceCrossborderOrderNo: isCrossborder ? sourceOrderNo : '',
     customer,
     warehouse,
     currency: '人民币',
@@ -83,7 +87,7 @@ function buildSeedExternalTocInbound({
 /**
  * 演示种子 10 张（列表页 Demo PRD §8.1），创建即为已审核，推送状态覆盖四种：
  * 路径一（销退收货通知）：通知 2 实收 3、通知 3 虚拟入库实收 5、通知 9 少收 4（推送失败）。
- * 路径二（外部ToC）：外部原始订单 3 张按来源拆成 7 张入库单；覆盖推送成功、推送失败、未推送、推送中。
+ * 路径二（国内电商／跨境电商订单）：来源订单 3 张按来源拆成 7 张入库单；覆盖推送成功、推送失败、未推送、推送中。
  */
 const seedInbounds = [
   buildSeedInbound({
@@ -108,82 +112,89 @@ const seedInbounds = [
     pushFailReason: '接口超时，财务ERP未确认接收',
     updatedAt: '2026-09-19 15:22:00',
   }),
-  buildSeedExternalTocInbound({
+  buildSeedChannelOrderInbound({
     id: 'sales-return-inbound-toc-1',
     inboundNo: 'XTRK-20260921-0001',
-    externalOrderNo: 'TOC-20260921-8891',
+    kind: 'domestic',
+    sourceOrderNo: 'GNDS-20260918-0001',
     customer: 'CUS000005',
     warehouse: 'LWH000002',
     actualReceiveTime: '2026-09-21 10:12:00',
     financeErpPushStatus: 'push_success',
     pushTime: '2026-09-21 10:13:00',
-    lines: [tocLine({ id: 'sales-return-inbound-toc-1-line-1', product: 'SP0101020001', quantity: 2, price: 169 })],
+    lines: [channelOrderLine({ id: 'sales-return-inbound-toc-1-line-1', product: 'SP0101020001', quantity: 2, price: 169 })],
   }),
-  buildSeedExternalTocInbound({
+  buildSeedChannelOrderInbound({
     id: 'sales-return-inbound-toc-2',
     inboundNo: 'XTRK-20260921-0002',
-    externalOrderNo: 'TOC-20260921-8891',
+    kind: 'domestic',
+    sourceOrderNo: 'GNDS-20260918-0001',
     customer: 'CUS000005',
     warehouse: 'LWH000002',
     actualReceiveTime: '2026-09-21 10:18:00',
     financeErpPushStatus: 'push_failed',
     pushTime: '2026-09-21 10:20:00',
     pushFailReason: '接口超时，财务ERP未确认接收',
-    lines: [tocLine({ id: 'sales-return-inbound-toc-2-line-1', product: 'SP0103010001', quantity: 1, price: 189 })],
+    lines: [channelOrderLine({ id: 'sales-return-inbound-toc-2-line-1', product: 'SP0103010001', quantity: 1, price: 189 })],
   }),
-  buildSeedExternalTocInbound({
+  buildSeedChannelOrderInbound({
     id: 'sales-return-inbound-toc-3',
     inboundNo: 'XTRK-20260921-0003',
-    externalOrderNo: 'TOC-20260921-8891',
+    kind: 'domestic',
+    sourceOrderNo: 'GNDS-20260918-0001',
     customer: 'CUS000005',
     warehouse: 'LWH000002',
     actualReceiveTime: '2026-09-21 10:25:00',
     financeErpPushStatus: 'un_pushed',
-    lines: [tocLine({ id: 'sales-return-inbound-toc-3-line-1', product: 'SP0103030001', quantity: 3, price: 99 })],
+    lines: [channelOrderLine({ id: 'sales-return-inbound-toc-3-line-1', product: 'SP0103030001', quantity: 3, price: 99 })],
   }),
-  buildSeedExternalTocInbound({
+  buildSeedChannelOrderInbound({
     id: 'sales-return-inbound-toc-4',
     inboundNo: 'XTRK-20260920-0001',
-    externalOrderNo: 'TOC-20260920-7712',
+    kind: 'domestic',
+    sourceOrderNo: 'GNDS-20260919-0001',
     customer: 'CUS000005',
     warehouse: 'LWH000002',
     actualReceiveTime: '2026-09-20 21:05:00',
     financeErpPushStatus: 'pushing',
     pushTime: '2026-09-20 21:06:00',
-    lines: [tocLine({ id: 'sales-return-inbound-toc-4-line-1', product: 'SP0102010001', quantity: 1, price: 1299 })],
+    lines: [channelOrderLine({ id: 'sales-return-inbound-toc-4-line-1', product: 'SP0102010001', quantity: 1, price: 1299 })],
   }),
-  buildSeedExternalTocInbound({
+  buildSeedChannelOrderInbound({
     id: 'sales-return-inbound-toc-5',
     inboundNo: 'XTRK-20260920-0002',
-    externalOrderNo: 'TOC-20260920-7712',
+    kind: 'domestic',
+    sourceOrderNo: 'GNDS-20260919-0001',
     customer: 'CUS000005',
     warehouse: 'LWH000002',
     actualReceiveTime: '2026-09-20 21:20:00',
     financeErpPushStatus: 'push_success',
     pushTime: '2026-09-20 21:21:00',
-    lines: [tocLine({ id: 'sales-return-inbound-toc-5-line-1', product: 'SP0103020001', quantity: 4, price: 18 })],
+    lines: [channelOrderLine({ id: 'sales-return-inbound-toc-5-line-1', product: 'SP0103020001', quantity: 4, price: 18 })],
   }),
-  buildSeedExternalTocInbound({
+  buildSeedChannelOrderInbound({
     id: 'sales-return-inbound-toc-6',
     inboundNo: 'XTRK-20260919-0002',
-    externalOrderNo: 'TOC-20260919-6603',
+    kind: 'crossborder',
+    sourceOrderNo: 'KJDS-20260918-0001',
     customer: 'CUS000005',
     warehouse: 'LWH000003',
     actualReceiveTime: '2026-09-19 14:40:00',
     financeErpPushStatus: 'push_success',
     pushTime: '2026-09-19 14:41:00',
-    lines: [tocLine({ id: 'sales-return-inbound-toc-6-line-1', product: 'SP0101010001', quantity: 2, price: 120 })],
+    lines: [channelOrderLine({ id: 'sales-return-inbound-toc-6-line-1', product: 'SP0101010001', quantity: 2, price: 120 })],
   }),
-  buildSeedExternalTocInbound({
+  buildSeedChannelOrderInbound({
     id: 'sales-return-inbound-toc-7',
     inboundNo: 'XTRK-20260919-0003',
-    externalOrderNo: 'TOC-20260919-6603',
+    kind: 'crossborder',
+    sourceOrderNo: 'KJDS-20260918-0001',
     customer: 'CUS000005',
     warehouse: 'LWH000003',
     actualReceiveTime: '2026-09-19 15:10:00',
     financeErpPushStatus: 'push_success',
     pushTime: '2026-09-19 15:11:00',
-    lines: [tocLine({ id: 'sales-return-inbound-toc-7-line-1', product: 'SP0101020002', quantity: 1, price: 165 })],
+    lines: [channelOrderLine({ id: 'sales-return-inbound-toc-7-line-1', product: 'SP0101020002', quantity: 1, price: 165 })],
   }),
 ].filter(Boolean);
 
@@ -272,14 +283,15 @@ export function buildSourceReturnFilterOptions(rows = []) {
   return [{ value: '', label: '全部来源销售退货单' }, ...map.values()];
 }
 
-/** 外部原始订单仅路径二单据有值（TSV：外部ToC路径展示与筛选） */
-export function buildExternalOrderFilterOptions(rows = []) {
+/** 来源国内电商订单／来源跨境电商订单筛选项：仅路径二单据有值（TSV：可筛选=是、列表展示=否） */
+export function buildSourceOrderFilterOptions(rows = [], field, placeholder) {
   const map = new Map();
   rows.forEach((row) => {
-    if (!row.externalOrderNo) return;
-    map.set(row.externalOrderNo, { value: row.externalOrderNo, label: row.externalOrderNo });
+    const value = row[field];
+    if (!value) return;
+    map.set(value, { value, label: value });
   });
-  return [{ value: '', label: '全部外部原始订单' }, ...map.values()];
+  return [{ value: '', label: placeholder }, ...map.values()];
 }
 
 export function buildProductFilterOptions() {

@@ -12,12 +12,12 @@ import { upsertMockRow, readMockRows, writeMockRows } from './mockStorage.js';
 import { generateOutboundFromNotice } from './salesOutboundLogic.js';
 import { getReservationRemaining, postStockEntries } from './inventoryStockLogic.js';
 import { captureSalesDocumentNames, loadRowsWithNameSnapshots } from './documentNameSnapshots.js';
+import { nowDateStamp, nowStamp } from './format.js';
 import {
   enrichOrderLine,
   loadOrderById,
   DELIVERY_NOTICE_STORAGE_KEY,
   maybeAutoCloseOrder,
-  nowStamp,
   persistOrder,
   refreshOrderLines,
 } from './salesOrderLogic.js';
@@ -107,6 +107,112 @@ export function canRetryPush(row) {
 
 export function canMockShip(row) {
   return row.status === 'pending_ship';
+}
+
+// —— 人工确认（F09/R16；《销售发货通知单前端Demo版PRD_弹窗与Mock》§6）——
+
+export const manualConfirmTypeLabels = {
+  accept: '确认接单',
+  finish: '确认执行结束',
+  cancel_result: '确认取消结果',
+};
+
+/** 人工确认可选类型：按当前状态限定（推送中＝确认接单；待发货＝确认执行结束；取消中＝确认取消结果）。 */
+export function manualConfirmTypesForStatus(status) {
+  if (status === 'pushing') return ['accept'];
+  if (status === 'pending_ship') return ['finish'];
+  if (status === 'cancelling') return ['cancel_result'];
+  return [];
+}
+
+export function canManualConfirm(row) {
+  return manualConfirmTypesForStatus(row?.status).length > 0;
+}
+
+/** 人工确认留痕与操作日志：每次确认记录人工确认人／时间／内容，明细进操作日志（§6.2）。 */
+function appendManualConfirmTrace(row, { stamp, content, operator = '当前用户' }) {
+  return {
+    ...row,
+    confirmBy: operator,
+    confirmAt: stamp,
+    confirmContent: content,
+    operationLogs: [
+      ...(row.operationLogs || []),
+      {
+        id: `人工确认-${stamp}`,
+        time: stamp,
+        operator,
+        action: '人工确认',
+        remark: `${content}（演示数据）`,
+      },
+    ],
+  };
+}
+
+/**
+ * 人工确认提交（R16、§6.3）：
+ * 确认接单 推送中→待发货；确认执行结束 待发货→已发货并生成销售出库单；零出 待发货→已取消；确认取消结果 取消中→已取消／待发货。
+ * 边界：仅用于已交给仓库、接口拿不到结果的通知；不替代事先选择的虚拟出库，不能无来源新建销售出库单（INT-FR06）。
+ */
+export function applyManualConfirm(row, payload = {}) {
+  const type = payload.confirmType;
+  if (!manualConfirmTypesForStatus(row?.status).includes(type)) {
+    throw new Error('当前状态不可人工确认');
+  }
+  if (type === 'accept') return applyManualConfirmAccept(row);
+  if (type === 'cancel_result') return applyManualConfirmCancelResult(row, payload);
+  return applyManualConfirmFinish(row, payload);
+}
+
+/** 确认接单：视同仓库已接收，转待发货，不生成结果单。 */
+function applyManualConfirmAccept(row) {
+  const stamp = nowStamp();
+  const content = `${manualConfirmTypeLabels.accept}（视同仓库已接收）`;
+  return persistNotice(appendManualConfirmTrace({ ...row, status: 'pending_ship' }, { stamp, content }));
+}
+
+/** 确认执行结束：回写实出／缺出并生成销售出库单；零出按取消结束、不生成出库单（§6.3）。 */
+function applyManualConfirmFinish(row, { lineShipments = [], zeroShip = false }) {
+  const stamp = nowStamp();
+
+  if (zeroShip) {
+    const content = `${manualConfirmTypeLabels.finish}（整单零出，按取消结束）`;
+    const cancelled = applyCancelNotice({ ...row, cancelReason: '仓库零出' }, '仓库零出');
+    return persistNotice(appendManualConfirmTrace(cancelled, { stamp, content }));
+  }
+
+  const nextLines = row.lines.map((line, index) => enrichNoticeLine({
+    ...line,
+    shippedQty: clampMockLineShip(lineShipments[index] ?? line.shippedQty ?? 0, line.notifyQty),
+  }));
+  const shippedTotal = sumNoticeShippedQty(nextLines);
+  if (shippedTotal <= 0) throw new Error('请填写至少一行实出数量');
+  const shortTotal = sumNoticeShortQty(nextLines);
+
+  const orderRow = loadOrderById(row.sourceOrderId);
+  if (!orderRow) throw new Error('来源销售订单不存在，不能人工确认');
+
+  const content = `${manualConfirmTypeLabels.finish}：实出 ${shippedTotal}，缺出 ${shortTotal}`;
+  const traced = appendManualConfirmTrace({
+    ...row,
+    status: 'shipped',
+    lines: nextLines,
+    finalShipTime: stamp,
+  }, { stamp, content });
+
+  // 结果单沿本通知与来源订单行形成（演示口径：原型结果单为只读已审核态，直接生成已审核出库单）
+  generateOutboundFromNotice(traced);
+  substituteOrderOccupancy(orderRow, nextLines);
+  const persisted = loadNoticeById(row.id) || traced;
+  return persistNotice(persisted);
+}
+
+/** 确认取消结果：仓库同意→已取消并释放占用；仓库拒绝→回到待发货（不生成结果单）。 */
+function applyManualConfirmCancelResult(row, { cancelAgreed = false }) {
+  const stamp = nowStamp();
+  const content = `${manualConfirmTypeLabels.cancel_result}：${cancelAgreed ? '仓库同意取消' : '仓库拒绝取消'}`;
+  const next = applyWarehouseCancelResult(row, cancelAgreed);
+  return persistNotice(appendManualConfirmTrace(next, { stamp, content }));
 }
 
 export function normalizeNoticeRow(row) {
@@ -342,7 +448,7 @@ export function createDeliveryNotice(orderRow, form) {
     .map((line) => enrichNoticeLine({ ...line, shippedQty: 0, shortQty: 0 }));
 
   const existingNos = readMockRows(DELIVERY_NOTICE_STORAGE_KEY, []).map((row) => row.noticeNo);
-  const noticeNo = nextDocumentNo('XSFHTZ', new Date().toISOString().slice(0, 10), existingNos);
+  const noticeNo = nextDocumentNo('XSFHTZ', nowDateStamp(), existingNos);
   const deliveryMode = resolveDeliveryMode(form);
 
   if (deliveryMode === 'virtual') {

@@ -129,10 +129,10 @@ function renderUse(value) {
   return useStatusLabels[value] || EMPTY_PLACEHOLDER;
 }
 
-// 单据可选项：仅启用中的物流服务产品，展示 Code-Name（物流主PRD R03、AC04）。
+// 单据可选项：仅启用中的物流服务产品，展示 Code-Name（物流主PRD R03、AC04）；缺 useStatus 按启用兼容旧行。
 export function getSelectableLogisticsProductOptions() {
   const productOptions = readMockRows(PRODUCT_STORAGE_KEY, logisticsProducts)
-    .filter((row) => row.useStatus === 'enabled')
+    .filter((row) => (row.useStatus ?? 'enabled') === 'enabled')
     .map((row) => ({ value: row.code, label: formatCodeName(row.code, row.name) }));
   return [...productOptions, { value: 'warehouse-assign', label: '由仓库指定' }];
 }

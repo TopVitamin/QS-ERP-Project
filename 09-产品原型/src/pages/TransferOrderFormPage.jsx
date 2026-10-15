@@ -8,7 +8,7 @@ import { TransferOrderActionDialogs } from '../components/erp/TransferOrderActio
 import { erpFieldGridClassName } from '../styles/typography.js';
 import { useDocumentForm } from '../hooks/useDocumentForm.js';
 import { EMPTY_PLACEHOLDER } from '../lib/format.js';
-import { nowStamp } from '../lib/inventoryStockLogic.js';
+import { nowStamp } from '../lib/format.js';
 import { getInventoryLogicalWarehouseOptions } from '../data/warehouseData.js';
 import {
   defaultTransferOrderForm,

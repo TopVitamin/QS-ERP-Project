@@ -10,7 +10,8 @@
  */
 import { skuOptions } from '../data/masterData.js';
 import { nextDocumentNo } from './documentNo.js';
-import { nowStamp, postStockEntries } from './inventoryStockLogic.js';
+import { postStockEntries } from './inventoryStockLogic.js';
+import { nowStamp } from './format.js';
 import { readMockRows, upsertMockRow, writeMockRows } from './mockStorage.js';
 
 export const OTHER_OUTBOUND_STORAGE_KEY = 'qs-erp:other-outbounds:v2';
@@ -21,7 +22,7 @@ export const otherOutboundSourceTypeLabels = {
   warehouse: '仓库主动回传',
 };
 
-/** 审核状态：一期界面正常数据均为已审核；草稿/待审核的人工确认入口在系统集成中心。 */
+/** 审核状态：正常数据以已审核为主；人工确认形成的待审核单由对应申请单／通知单详情页「人工确认」生成（入口在对应单据详情页，2026-09-24 调整，不再由系统集成中心承接）。 */
 export const otherOutboundAuditLabels = {
   draft: '草稿',
   pending: '待审核',

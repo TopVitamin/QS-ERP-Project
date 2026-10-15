@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { CircleUserRound, MessageSquare } from 'lucide-react';
 import { Button } from '../components/ui/button.jsx';
+import { ConfirmDialog } from '../components/ui/alert-dialog.jsx';
 import { Input } from '../components/ui/input.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select.jsx';
 import { Switch } from '../components/ui/switch.jsx';
 import { currentAccount, themeSwatchColors } from '../data/accountData.js';
 import { useNotifications } from '../hooks/useNotifications.js';
+import { clearAllMockData } from '../lib/mockStorage.js';
 import { readPreferences, writePreferences } from '../lib/preferences.js';
 import { erpThemePresets } from '../styles/tokens.js';
 import { PAGE_REGISTRY } from '../config/pages.js';
@@ -179,6 +181,26 @@ export function ProfilePage({ theme, onThemeChange, onFeedback, onOpenPage }) {
                   </div>
                 </div>
                 <Button variant="outline" onClick={() => onOpenPage?.('notification-center')}>打开消息中心</Button>
+              </div>
+            </section>
+
+            <section className="rounded-erp-section bg-erp-surface-panel p-4" aria-label="演示数据">
+              <h2 className="border-b border-erp-border-light pb-3 text-[13px] font-medium text-erp-text-title">演示数据</h2>
+              <div className="mt-3 flex items-center justify-between gap-4">
+                <div className="text-[12px] leading-5 text-erp-text-muted">
+                  单据与资料演示数据保存在本浏览器。种子更新后旧数据不会自动替换，可在此清空并恢复初始演示数据。
+                </div>
+                <ConfirmDialog
+                  trigger={<Button variant="outline" className="shrink-0">重置演示数据</Button>}
+                  title="确认重置演示数据？"
+                  description="将清空本浏览器的全部单据与资料演示数据，恢复到初始种子，页面随后自动刷新。主题等偏好设置不受影响，此操作不可撤销。"
+                  confirmLabel="重置"
+                  confirmVariant="danger"
+                  onConfirm={() => {
+                    clearAllMockData();
+                    window.location.reload();
+                  }}
+                />
               </div>
             </section>
           </div>

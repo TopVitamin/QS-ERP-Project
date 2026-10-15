@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { DocumentEditorFrame, EditorCard } from '../components/erp/DocumentEditorFrame.jsx';
 import { FormFields } from '../components/erp/FormControl.jsx';
 import { LineItemTable } from '../components/erp/LineItemTable.jsx';
+import { NoticeSourceMissingState, useNoticeFormDraft } from './noticeFormShared.jsx';
 import { resolveOptionLabel } from '../lib/codeName.js';
 import { toSelectOptions } from '../lib/options.js';
 import { erpFieldGridClassName } from '../styles/typography.js';
@@ -25,12 +26,22 @@ import {
  * 创建：来源退货单带入单头与明细，录入通知数量与发货处理方式；编辑：仅备注可改（新增编辑页 PRD §3、§4）。
  */
 
-function shipModeField({ required = false, disabled = false } = {}) {
+// 发货处理方式说明图标文案（《采退发货通知单前端Demo版PRD_新增编辑页》§3、03《集成协作与人工补充》§4.2.1）。
+const SHIP_MODE_TIPS = {
+  warehouse: '通知按出库仓库的链路下发：自营仓由ERP直连；电商仓经聚水潭、领星中转，仍只执行一次退货出库',
+  virtual: '虚拟出库不会推送通知单到仓库，而是直接生成采退出库单，扣减ERP的库存，也不向聚水潭、领星同步库存',
+};
+
+function shipModeField({ required = false, disabled = false, showTips = false } = {}) {
   return {
     key: 'shipMode',
     label: required ? '发货处理方式 *' : '发货处理方式',
     type: 'radio',
-    options: toSelectOptions(returnShipModeLabels),
+    options: toSelectOptions(returnShipModeLabels).map((option) => (
+      showTips && SHIP_MODE_TIPS[option.value]
+        ? { ...option, tip: SHIP_MODE_TIPS[option.value] }
+        : option
+    )),
     disabled,
   };
 }
@@ -41,7 +52,7 @@ function buildCreateFields(returnRow) {
     { key: 'sourceReturnNo', label: '来源采购退货单', type: 'disabled', getValue: () => returnRow?.returnNo || '' },
     { key: 'supplier', label: '供应商', type: 'disabled', getValue: (form) => resolveOptionLabel(form.supplier, supplierOptions) },
     { key: 'warehouse', label: '出库仓库', type: 'disabled', getValue: (form) => resolveOptionLabel(form.warehouse, logicalWarehouseOptions) },
-    shipModeField({ required: true }),
+    shipModeField({ required: true, showTips: true }),
     { key: 'remark', label: '备注', type: 'textarea', className: 'col-span-3', placeholder: '请输入备注' },
   ];
 }
@@ -83,26 +94,9 @@ export function PurchaseReturnNoticeCreatePage({ context, onFeedback, onOpenPage
     return null;
   }, [context]);
 
-  const [form, setForm] = useState(() => buildNoticeFormForReturn(sourceReturn));
-  const [dirty, setDirty] = useState(false);
-
-  useEffect(() => {
-    setForm(buildNoticeFormForReturn(sourceReturn));
-    setDirty(false);
-  }, [sourceReturn]);
-
-  function updateField(key, value) {
-    setForm((current) => ({ ...current, [key]: value }));
-    setDirty(true);
-  }
-
-  function updateLine(lineId, key, value) {
-    setForm((current) => ({
-      ...current,
-      lines: current.lines.map((line) => (line.id === lineId ? { ...line, [key]: value } : line)),
-    }));
-    setDirty(true);
-  }
+  const { form, dirty, updateField, updateLine } = useNoticeFormDraft(sourceReturn, {
+    buildForm: buildNoticeFormForReturn,
+  });
 
   function handleSave() {
     const error = validateReturnNoticeForCreate(form);
@@ -121,19 +115,21 @@ export function PurchaseReturnNoticeCreatePage({ context, onFeedback, onOpenPage
 
   if (!sourceReturn) {
     return (
-      <div className="rounded-erp-section border border-erp-border-card bg-erp-surface-panel p-6 text-[12px] text-erp-text">
-        来源采购退货单不存在或不可下推发货通知。
-        <button type="button" className="ml-2 text-erp-primary" onClick={() => onOpenPage?.('purchase-return')}>返回采购退货单</button>
-      </div>
+      <NoticeSourceMissingState
+        message="来源采购退货单不存在或不可下推发货通知。"
+        linkLabel="返回采购退货单"
+        onBack={() => onOpenPage?.('purchase-return')}
+      />
     );
   }
 
   if (!form) {
     return (
-      <div className="rounded-erp-section border border-erp-border-card bg-erp-surface-panel p-6 text-[12px] text-erp-text">
-        当前采购退货单不可下推发货通知。
-        <button type="button" className="ml-2 text-erp-primary" onClick={() => onOpenPage?.('purchase-return-detail', { row: sourceReturn })}>返回采购退货单</button>
-      </div>
+      <NoticeSourceMissingState
+        message="当前采购退货单不可下推发货通知。"
+        linkLabel="返回采购退货单"
+        onBack={() => onOpenPage?.('purchase-return-detail', { row: sourceReturn })}
+      />
     );
   }
 
@@ -171,18 +167,9 @@ export function PurchaseReturnNoticeCreatePage({ context, onFeedback, onOpenPage
 
 export function PurchaseReturnNoticeEditPage({ context, onFeedback, onOpenPage }) {
   const sourceRow = context?.row;
-  const [form, setForm] = useState(() => buildEditableNoticeForm(sourceRow));
-  const [dirty, setDirty] = useState(false);
-
-  useEffect(() => {
-    setForm(buildEditableNoticeForm(sourceRow));
-    setDirty(false);
-  }, [sourceRow]);
-
-  function updateField(key, value) {
-    setForm((current) => ({ ...current, [key]: value }));
-    setDirty(true);
-  }
+  const { form, dirty, updateField } = useNoticeFormDraft(sourceRow, {
+    buildForm: buildEditableNoticeForm,
+  });
 
   function handleSave() {
     const next = updateReturnNoticeRemark(form, form.remark || '');
@@ -192,10 +179,11 @@ export function PurchaseReturnNoticeEditPage({ context, onFeedback, onOpenPage }
 
   if (!form) {
     return (
-      <div className="rounded-erp-section border border-erp-border-card bg-erp-surface-panel p-6 text-[12px] text-erp-text">
-        当前状态不可编辑。
-        <button type="button" className="ml-2 text-erp-primary" onClick={() => onOpenPage?.('purchase-return-notice')}>返回列表</button>
-      </div>
+      <NoticeSourceMissingState
+        message="当前状态不可编辑。"
+        linkLabel="返回列表"
+        onBack={() => onOpenPage?.('purchase-return-notice')}
+      />
     );
   }
 

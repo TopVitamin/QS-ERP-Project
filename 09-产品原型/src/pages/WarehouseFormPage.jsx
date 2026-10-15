@@ -6,6 +6,7 @@ import { WarehouseAddressFields } from '../components/erp/WarehouseAddressFields
 import { FormField } from '../components/ui/form-field.jsx';
 import { Input } from '../components/ui/input.jsx';
 import { erpFieldGridClassName } from '../styles/typography.js';
+import { nowStamp } from '../lib/format.js';
 import { readMockRows, upsertMockRow } from '../lib/mockStorage.js';
 import {
   applyPhysicalDockingFieldChange,
@@ -78,7 +79,7 @@ function WarehouseForm({ mode, context, onFeedback, onOpenPage }) {
       return;
     }
 
-    const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
+    const now = nowStamp().slice(0, 16);
     const nextRow = physicalFormToRow(form, {
       ...context?.row,
       id: context?.row?.id || `physical-warehouse-${Date.now()}`,

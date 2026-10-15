@@ -3,6 +3,7 @@ import { Button } from '../ui/button.jsx';
 import { ConfirmDialog } from '../ui/alert-dialog.jsx';
 import { SimpleDialog } from '../ui/dialog.jsx';
 import { Textarea } from '../ui/textarea.jsx';
+import { feedback } from '../../lib/feedback.js';
 import {
   applyApprovePriceAdjust,
   applyRejectPriceAdjust,
@@ -13,6 +14,7 @@ import {
   canSubmitPriceAdjust,
   deletePriceAdjustById,
   loadPriceAdjustById,
+  priceAdjustStatusLabels,
   REMARK_500_MAX,
 } from '../../lib/priceAdjustLogic.js';
 
@@ -30,13 +32,20 @@ const sideTexts = {
   },
 };
 
-const STATE_CHANGED_MESSAGE = '操作失败，单据状态已变更，请刷新后重试';
+/**
+ * 状态已变化提示：Toast「当前单据状态为{状态}，不可执行{动作}」（列表页／详情页 Demo PRD §7；
+ * 新增编辑页 Demo PRD §6）；新增/编辑页同时提供「刷新」入口。
+ */
+function buildStateMismatchMessage(row, actionLabel) {
+  const statusLabel = priceAdjustStatusLabels[row?.auditStatus] || row?.auditStatus || '-';
+  return `当前单据状态为${statusLabel}，不可执行${actionLabel}`;
+}
 
 /**
  * 价格调整单模块弹窗：提交确认、审核、驳回、删除（弹窗与Mock PRD §2、§3.1～§3.3）。
  * 离开未保存由 DocumentEditorFrame 统一确认，不在本文件重复。
  */
-export function PriceAdjustActionDialogs({ side = 'purchase', dialog, onClose, onComplete, onNotify }) {
+export function PriceAdjustActionDialogs({ side = 'purchase', dialog, onClose, onComplete, onNotify, onRefresh }) {
   const [returnComment, setReturnComment] = useState('');
   const texts = sideTexts[side] || sideTexts.purchase;
 
@@ -58,8 +67,20 @@ export function PriceAdjustActionDialogs({ side = 'purchase', dialog, onClose, o
     onClose?.();
   }
 
-  function blockStateChanged() {
-    onNotify?.(STATE_CHANGED_MESSAGE, 'warning');
+  function blockStateChanged(actionLabel) {
+    const latest = latestRow();
+    const message = buildStateMismatchMessage(latest, actionLabel);
+    if (onRefresh && latest) {
+      // 「刷新」入口（新增编辑页 Demo PRD §6）：点击后按最新行重载当前页。
+      // 这里直接走统一反馈入口 lib/feedback，因为 onNotify（App 的 showFeedback）暂不透传 Toast 选项；
+      // 后续 showFeedback 支持透传后可改回 onNotify。带操作的提示延长停留时间，保证可点击。
+      feedback.warning(message, {
+        duration: 8000,
+        action: { label: '刷新', onClick: () => onRefresh(latest) },
+      });
+    } else {
+      onNotify?.(message, 'warning');
+    }
     onClose?.();
   }
 
@@ -74,13 +95,19 @@ export function PriceAdjustActionDialogs({ side = 'purchase', dialog, onClose, o
         onConfirm={() => {
           // 表单页传入 onConfirm（走表单保存，保证单号、明细与校验口径一致）；列表/详情直接按单据提交。
           if (dialog.onConfirm) {
+            // 编辑态提交：确认前按最新落库状态复核，被他人提交或审核时阻断（新增编辑页 Demo PRD §6）
+            const latest = dialog.row ? latestRow() : null;
+            if (latest && !canSubmitPriceAdjust(latest)) {
+              blockStateChanged('提交');
+              return;
+            }
             dialog.onConfirm();
             onClose?.();
             return;
           }
           const latest = latestRow();
           if (!canSubmitPriceAdjust(latest)) {
-            blockStateChanged();
+            blockStateChanged('提交');
             return;
           }
           finish(`${texts.title}已提交`, 'success', applySubmitPriceAdjust(latest));
@@ -100,7 +127,7 @@ export function PriceAdjustActionDialogs({ side = 'purchase', dialog, onClose, o
         onConfirm={() => {
           const latest = latestRow();
           if (!canApprovePriceAdjust(latest)) {
-            blockStateChanged();
+            blockStateChanged('审核');
             return;
           }
           finish(`${texts.title}已审核，价目表当前价已更新`, 'success', applyApprovePriceAdjust(latest));
@@ -126,7 +153,7 @@ export function PriceAdjustActionDialogs({ side = 'purchase', dialog, onClose, o
               onClick={() => {
                 const latest = latestRow();
                 if (!canRejectPriceAdjust(latest)) {
-                  blockStateChanged();
+                  blockStateChanged('驳回');
                   return;
                 }
                 finish(`${texts.title}已驳回，可修改后重新提交`, 'success', applyRejectPriceAdjust(latest, returnComment.trim()));
@@ -162,7 +189,7 @@ export function PriceAdjustActionDialogs({ side = 'purchase', dialog, onClose, o
         onConfirm={() => {
           const latest = latestRow();
           if (!canDeletePriceAdjust(latest)) {
-            blockStateChanged();
+            blockStateChanged('删除');
             return;
           }
           deletePriceAdjustById(side, latest.id);

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { calculateLineAmount } from '../lib/format.js';
+import { roundAmount } from '../lib/money.js';
 import { hasFieldErrors, normalizeValidationResult } from '../lib/formValidation.js';
 
 function focusFirstFieldError(fieldErrors) {
@@ -32,8 +33,11 @@ export function useDocumentForm({
   onNavigate,
   navigateOnSave = true,
 }) {
-  const [form, setForm] = useState(() => getInitialForm(mode, context));
-  const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(getInitialForm(mode, context)));
+  // 只调用一次 getInitialForm：实现含随机值（Date.now 等）时，两次调用会产生不同结果，
+  // 导致新增页首帧 dirty 误报为 true。
+  const [initialForm] = useState(() => getInitialForm(mode, context));
+  const [form, setForm] = useState(initialForm);
+  const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(initialForm));
   const [fieldErrors, setFieldErrors] = useState({});
   const [lineErrors, setLineErrors] = useState({});
   const dirty = JSON.stringify(form) !== savedSnapshot;
@@ -44,7 +48,7 @@ export function useDocumentForm({
   );
 
   const totalAmount = useMemo(
-    () => form.lines.reduce((sum, line) => sum + calculateLineAmount(line), 0),
+    () => roundAmount(form.lines.reduce((sum, line) => sum + calculateLineAmount(line), 0)),
     [form.lines],
   );
 

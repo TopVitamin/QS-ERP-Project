@@ -16,9 +16,29 @@ import {
   TRANSFER_OUT_NOTICE_STORAGE_KEY,
 } from '../lib/transferOutNoticeLogic.js';
 
+/** 人工确认留痕演示数据：随待发货种子单展示人工确认人／时间／内容与操作日志。 */
+const manualConfirmDemo = {
+  confirmBy: '张三',
+  confirmAt: '2026-09-23 09:10:00',
+  confirmContent: '确认接单：已核实仓库实际接收本通知',
+  manualConfirmLogs: [
+    {
+      id: 'manual-confirm-2026-09-23 09:10:00',
+      time: '2026-09-23 09:10:00',
+      operator: '张三',
+      action: '人工确认',
+      remark: '确认接单：已核实仓库实际接收本通知',
+    },
+  ],
+};
+
 export const transferOutNotices = transferOrders
   .filter((order) => order.progress?.notice)
-  .map((order) => buildTransferOutNoticeSeed(order, order.progress.notice));
+  .map((order) => {
+    const seed = buildTransferOutNoticeSeed(order, order.progress.notice);
+    // 人工确认留痕演示（详情页 Demo PRD §7.1）：接口未返回接单结果，已人工确认接单
+    return order.orderNo === 'FBDB-20260923-0003' ? { ...seed, ...manualConfirmDemo } : seed;
+  });
 
 registerTransferOutNoticeSeedRows(transferOutNotices);
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { readMockRows, subscribeMockRows, writeMockRows } from '../lib/mockStorage.js';
 
 function compareValues(a, b) {
@@ -20,6 +20,11 @@ export function useListPageState({ initialRows, initialFilters, filterRows, init
     return normalizeRows ? normalizeRows(sourceRows) : sourceRows;
   });
   const skipPersistRef = useRef(false);
+  const lastWrittenRef = useRef(null);
+  const rowsRef = useRef(rows);
+  useLayoutEffect(() => {
+    rowsRef.current = rows;
+  });
   const [draftFilters, setDraftFilters] = useState(initialFilters);
   const [appliedFilters, setAppliedFilters] = useState(initialFilters);
   const [visibility, setVisibility] = useState(initialVisibility);
@@ -59,9 +64,14 @@ export function useListPageState({ initialRows, initialFilters, filterRows, init
 
   useEffect(() => {
     if (!storageKey) return undefined;
+    // 订阅外部写库（其他页面/标签页）。写库会同步派发事件，必须区分「外部数据」与
+    // 「本页刚写库的回声」，否则回声置位的 skip 标志会吞掉下一次本地变更的持久化。
     return subscribeMockRows(storageKey, (nextRows) => {
+      if (nextRows === lastWrittenRef.current) return;
+      const next = normalizeRows ? normalizeRows(nextRows) : nextRows;
+      if (next === rowsRef.current) return;
       skipPersistRef.current = true;
-      setRows(normalizeRows ? normalizeRows(nextRows) : nextRows);
+      setRows(next);
     });
   }, [storageKey, normalizeRows]);
 
@@ -71,6 +81,7 @@ export function useListPageState({ initialRows, initialFilters, filterRows, init
       skipPersistRef.current = false;
       return;
     }
+    lastWrittenRef.current = rows;
     writeMockRows(storageKey, rows);
   }, [rows, storageKey]);
 

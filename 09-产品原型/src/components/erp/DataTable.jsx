@@ -42,7 +42,12 @@ export function DataTable({
   const [contextMenuColumn, setContextMenuColumn] = useState(null);
 
   useEffect(() => {
-    setColumnWidths((current) => Object.fromEntries(columns.map((column) => [column.key, current[column.key] ?? column.defaultWidth])));
+    setColumnWidths((current) => {
+      const keys = columns.map((column) => column.key);
+      const unchanged = keys.length === Object.keys(current).length && keys.every((key) => key in current);
+      if (unchanged) return current;
+      return Object.fromEntries(keys.map((key) => [key, current[key] ?? columns.find((column) => column.key === key).defaultWidth]));
+    });
   }, [columns]);
 
   useEffect(() => {
@@ -397,6 +402,17 @@ function getColumnDisplayText(column, row) {
   return getCellText(value);
 }
 
+// 全表共享一个 ResizeObserver 检测单元格截断：每页 20 行 × 13 列如果各自 new
+// ResizeObserver，窗口缩放时会同时触发数百个回调。
+const truncationCallbacks = new WeakMap();
+const sharedTruncationObserver = typeof ResizeObserver !== 'undefined'
+  ? new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      truncationCallbacks.get(entry.target)?.();
+    }
+  })
+  : null;
+
 function EllipsisCell({ as: Element = 'span', content, ellipsis = true, className, children, ...props }) {
   const ref = useRef(null);
   const [isTruncated, setIsTruncated] = useState(false);
@@ -413,9 +429,13 @@ function EllipsisCell({ as: Element = 'span', content, ellipsis = true, classNam
     }
 
     updateTruncation();
-    const observer = new ResizeObserver(updateTruncation);
-    observer.observe(node);
-    return () => observer.disconnect();
+    if (!sharedTruncationObserver) return undefined;
+    truncationCallbacks.set(node, updateTruncation);
+    sharedTruncationObserver.observe(node);
+    return () => {
+      truncationCallbacks.delete(node);
+      sharedTruncationObserver.unobserve(node);
+    };
   }, [content, ellipsis]);
 
   const element = (

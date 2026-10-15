@@ -1,11 +1,10 @@
 import { skuOptions } from '../data/masterData.js';
 import { nextDocumentNo } from './documentNo.js';
-import { EMPTY_PLACEHOLDER } from './format.js';
+import { EMPTY_PLACEHOLDER, nowDateStamp, nowStamp } from './format.js';
 import { readMockRows, upsertMockRow, writeMockRows } from './mockStorage.js';
 import { createSalesReturnInboundFromNotice } from './salesReturnInboundLogic.js';
 import {
   loadSalesReturnById,
-  nowStamp,
   occupyReturnLines,
   persistSalesReturn,
   refreshSalesReturnLines,
@@ -125,6 +124,117 @@ export function canMockSalesReturnReceipt(row) {
   return row?.status === 'pending_receive';
 }
 
+// —— 人工确认（F09/R15；《销退收货通知单前端Demo版PRD_弹窗与Mock》§7）——
+
+export const manualConfirmTypeLabels = {
+  accept: '确认接单',
+  finish: '确认执行结束',
+  cancel_result: '确认取消结果',
+};
+
+/** 人工确认可选类型：按当前状态限定（推送中＝确认接单；待收货＝确认执行结束；取消中＝确认取消结果）。 */
+export function manualConfirmTypesForStatus(status) {
+  if (status === 'pushing') return ['accept'];
+  if (status === 'pending_receive') return ['finish'];
+  if (status === 'cancelling') return ['cancel_result'];
+  return [];
+}
+
+export function canManualConfirm(row) {
+  return manualConfirmTypesForStatus(row?.status).length > 0;
+}
+
+/** 人工确认留痕与操作日志：每次确认记录人工确认人／时间／内容，明细进操作日志（§7.2）。 */
+function appendManualConfirmTrace(row, { stamp, content, operator = '当前用户' }) {
+  return {
+    ...row,
+    confirmBy: operator,
+    confirmAt: stamp,
+    confirmContent: content,
+    operationLogs: [
+      ...(row.operationLogs || []),
+      {
+        id: `人工确认-${stamp}`,
+        time: stamp,
+        operator,
+        action: '人工确认',
+        remark: `${content}（演示数据）`,
+      },
+    ],
+  };
+}
+
+/**
+ * 人工确认提交（R15、§7.3）：
+ * 确认接单 推送中→待收货；确认执行结束 待收货→已收货并生成销退入库单；零收 待收货→已取消；确认取消结果 取消中→已取消／待收货。
+ * 边界：仅用于已交给仓库、接口拿不到结果的通知；不替代事先选择的虚拟入库，不能无来源新建销退入库单（INT-FR06）。
+ */
+export function applyManualConfirm(row, payload = {}) {
+  const type = payload.confirmType;
+  if (!manualConfirmTypesForStatus(row?.status).includes(type)) {
+    throw new Error('当前状态不可人工确认');
+  }
+  if (type === 'accept') return applyManualConfirmAccept(row);
+  if (type === 'cancel_result') return applyManualConfirmCancelResult(row, payload);
+  return applyManualConfirmFinish(row, payload);
+}
+
+/** 确认接单：视同仓库已接收，转待收货，不生成结果单。 */
+function applyManualConfirmAccept(row) {
+  const stamp = nowStamp();
+  const content = `${manualConfirmTypeLabels.accept}（视同仓库已接收）`;
+  return persistSalesReturnNotice(appendManualConfirmTrace({
+    ...row,
+    status: 'pending_receive',
+    lastHandledTime: stamp,
+  }, { stamp, content }));
+}
+
+/** 确认执行结束：回写实收／缺收并生成销退入库单；零收按取消结束、不生成入库单（§7.3）。 */
+function applyManualConfirmFinish(row, { lineReceipts = [], zeroReceive = false }) {
+  const stamp = nowStamp();
+
+  if (zeroReceive) {
+    const content = `${manualConfirmTypeLabels.finish}（整单零收，按取消结束）`;
+    const cancelled = applyCancelSalesReturnNotice({ ...row, cancelReason: '仓库零收' }, '仓库零收');
+    return persistSalesReturnNotice(appendManualConfirmTrace(cancelled, { stamp, content }));
+  }
+
+  const nextLines = row.lines.map((line, index) => enrichSalesReturnNoticeLine({
+    ...line,
+    receivedQty: clampMockLineReceipt(lineReceipts[index] ?? line.receivedQty ?? 0, line.notifyQty),
+  }));
+  const receivedTotal = sumSalesReturnNoticeLineQty(nextLines, 'receivedQty');
+  if (receivedTotal <= 0) throw new Error('请填写至少一行实收数量');
+  const shortTotal = sumSalesReturnNoticeLineQty(nextLines, 'shortQty');
+
+  const returnRow = loadSalesReturnById(row.sourceReturnId);
+  if (!returnRow) throw new Error('来源销售退货单不存在，不能人工确认');
+
+  const content = `${manualConfirmTypeLabels.finish}：实收 ${receivedTotal}，缺收 ${shortTotal}`;
+  const traced = appendManualConfirmTrace({
+    ...row,
+    status: 'received',
+    lines: nextLines,
+    finalReceiveTime: stamp,
+    lastHandledTime: stamp,
+  }, { stamp, content });
+
+  // 结果单沿本通知与来源退货行形成（演示口径：原型结果单为只读已审核态，直接生成已审核入库单）
+  const inbound = createSalesReturnInboundFromNotice(traced);
+  if (!inbound) throw new Error('入库结果未生成，销退收货未完成');
+  substituteReturnOccupancy(returnRow, nextLines);
+  return loadSalesReturnNoticeById(row.id) || traced;
+}
+
+/** 确认取消结果：仓库同意→已取消并释放占用；仓库拒绝→回到待收货（不生成结果单）。 */
+function applyManualConfirmCancelResult(row, { cancelAgreed = false }) {
+  const stamp = nowStamp();
+  const content = `${manualConfirmTypeLabels.cancel_result}：${cancelAgreed ? '仓库同意取消' : '仓库拒绝取消'}`;
+  const next = applyWarehouseCancelResult(row, cancelAgreed);
+  return persistSalesReturnNotice(appendManualConfirmTrace(next, { stamp, content }));
+}
+
 /** 下推创建页表单：带入来源退货单单头与明细，通知数量默认=各行可下推数量（R03、Q02） */
 export function buildSalesReturnNoticeFormFromReturn(returnRow) {
   const lines = refreshSalesReturnLines(returnRow.lines || [])
@@ -198,7 +308,7 @@ export function createSalesReturnNoticeFromReturn(returnRow, form) {
     .map((line) => enrichSalesReturnNoticeLine({ ...line, receivedQty: 0, shortQty: 0 }));
 
   const existingNos = readMockRows(RETURN_NOTICE_STORAGE_KEY, []).map((row) => row.noticeNo);
-  const noticeNo = nextDocumentNo('XTSHTZ', new Date().toISOString().slice(0, 10), existingNos);
+  const noticeNo = nextDocumentNo('XTSHTZ', nowDateStamp(), existingNos);
   const receiveMode = resolveReturnReceiveMode(form);
   const stamp = nowStamp();
 
@@ -444,6 +554,8 @@ function mergeLogEntries(...sources) {
 
 export function buildSalesReturnNoticeOperationLogs(row) {
   const entries = [];
+  const explicitLogs = row.operationLogs || [];
+  const hasExplicit = (actions) => explicitLogs.some((entry) => actions.includes(entry.action));
 
   pushLogEntry(entries, {
     time: row.createdAt,
@@ -463,7 +575,9 @@ export function buildSalesReturnNoticeOperationLogs(row) {
     });
   }
 
-  if (row.finalReceiveTime) {
+  // 人工确认执行结束的收货完成由「人工确认」条目承接，不再按系统回传重复推导
+  const manualFinish = row.confirmAt && row.finalReceiveTime && row.confirmAt === row.finalReceiveTime;
+  if (row.finalReceiveTime && !manualFinish && !hasExplicit(['收货完成'])) {
     pushLogEntry(entries, {
       time: row.finalReceiveTime,
       operator: '系统',
@@ -490,5 +604,14 @@ export function buildSalesReturnNoticeOperationLogs(row) {
     });
   }
 
-  return mergeLogEntries(entries, row.operationLogs || []);
+  if (row.confirmAt && !hasExplicit(['人工确认'])) {
+    pushLogEntry(entries, {
+      time: row.confirmAt,
+      operator: row.confirmBy,
+      action: '人工确认',
+      remark: row.confirmContent,
+    });
+  }
+
+  return mergeLogEntries(entries, row.operationLogs);
 }

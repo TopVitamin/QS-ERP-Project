@@ -1,8 +1,9 @@
 import { skuOptions } from '../data/masterData.js';
-import { computeLineTaxMetrics, computeLinesTotals } from './format.js';
+import { resolveLogicalWarehouseDocking } from '../data/warehouseData.js';
+import { computeLineTaxMetrics, computeLinesTotals, nowDateStamp, nowStamp } from './format.js';
 import { nextDocumentNo } from './documentNo.js';
 import { upsertMockRow, readMockRows, writeMockRows } from './mockStorage.js';
-import { loadOrderById, nowStamp, NOTICE_STORAGE_KEY } from './purchaseOrderLogic.js';
+import { loadOrderById, NOTICE_STORAGE_KEY } from './purchaseOrderLogic.js';
 import { ensureStockRow, loadStockFlows, postStockEntries } from './inventoryStockLogic.js';
 import { capturePurchaseDocumentNames, loadRowsWithNameSnapshots } from './documentNameSnapshots.js';
 
@@ -81,7 +82,7 @@ export function loadAllInbounds(seed = []) {
 export function cleanLegacyInboundWarehouseRows(seedRows = [], seedNotices = [], orders = []) {
   const stored = readMockRows(INBOUND_STORAGE_KEY, null);
   if (!Array.isArray(stored)) return seedRows;
-  const notices = readMockRows('qs-erp:purchase-receipt-notices:v2', seedNotices);
+  const notices = readMockRows(NOTICE_STORAGE_KEY, seedNotices);
   const kept = [];
   const removedIds = new Set();
   let changed = false;
@@ -158,6 +159,25 @@ function buildInboundLinesFromNotice(noticeRow, orderRow) {
         });
       }),
   );
+}
+
+/**
+ * 渠道回传来源标识（Demo 示意值）：电商仓经聚水潭／领星中转，自营仓直连作业系统；
+ * 虚拟入库不适用，留空（《采购入库单主PRD》R11、《采购入库单前端Demo版PRD_弹窗与Mock》§2.4）。
+ */
+export function buildChannelSourceIdentity(noticeRow) {
+  if (!noticeRow || noticeRow.receiptMode === 'virtual') {
+    return { sourceSystem: '', sourceNo: '', executionId: '' };
+  }
+  const { isSaaSTransit, dockingSystem } = resolveLogicalWarehouseDocking(noticeRow.warehouse);
+  const sourceSystem = isSaaSTransit && dockingSystem ? dockingSystem : '自营仓作业系统';
+  const suffix = String(noticeRow.noticeNo || '').replace(/^CGSHTZ-/, '') || nowDateStamp();
+  const prefix = sourceSystem === '聚水潭' ? 'JST' : sourceSystem === '领星' ? 'LX' : 'WMS';
+  return {
+    sourceSystem,
+    sourceNo: `${prefix}-${suffix}`,
+    executionId: `EXEC-${suffix}`,
+  };
 }
 
 function clearFinanceErpTimer(inboundId) {
@@ -266,6 +286,7 @@ export function generateInboundFromNotice(noticeRow) {
     warehouse: noticeRow.warehouse,
     warehouseNameSnapshot: noticeRow.warehouseNameSnapshot,
     warehouseSnapshotCode: noticeRow.warehouseSnapshotCode,
+    ...buildChannelSourceIdentity(noticeRow),
     currency: orderRow?.currency || '人民币',
     auditStatus: 'approved',
     financeErpPushStatus: 'un_pushed',
@@ -309,6 +330,7 @@ export function buildSeedInboundFromNotice(noticeRow, orderRow, overrides = {}) 
     warehouse: noticeRow.warehouse,
     warehouseNameSnapshot: noticeRow.warehouseNameSnapshot,
     warehouseSnapshotCode: noticeRow.warehouseSnapshotCode,
+    ...buildChannelSourceIdentity(noticeRow),
     currency: orderRow?.currency || '人民币',
     auditStatus: 'approved',
     financeErpPushStatus: overrides.financeErpPushStatus || 'push_success',

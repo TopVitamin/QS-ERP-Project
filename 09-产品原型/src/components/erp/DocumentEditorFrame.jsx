@@ -1,6 +1,6 @@
 import { Check, ChevronDown, ChevronRight, Save } from 'lucide-react';
 import { useState } from 'react';
-import { StatusBadge } from './StatusBadge.jsx';
+import { StatusBadgeList } from './StatusBadge.jsx';
 import { Button } from '../ui/button.jsx';
 import { ConfirmDialog } from '../ui/alert-dialog.jsx';
 import { typography } from '../../styles/typography.js';
@@ -32,24 +32,6 @@ export function EditorCard({ title, actions, children, className = '' }) {
       )}
       {open && children}
     </section>
-  );
-}
-
-function StatusBadgeList({ statuses, status }) {
-  const items = statuses?.length
-    ? statuses
-    : status
-      ? [{ label: status }]
-      : [];
-
-  if (!items.length) return null;
-
-  return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      {items.map((item, index) => (
-        <StatusBadge key={`${index}-${item.label ?? ''}`} tone={item.tone}>{item.label}</StatusBadge>
-      ))}
-    </div>
   );
 }
 

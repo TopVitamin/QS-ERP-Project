@@ -58,15 +58,25 @@ function freeLine({ id, product, quantity, price, taxRate, returnedQty = 0, inTr
 const sourceOutboundA = findOutbound(OUTBOUND_A);
 const sourceOutboundB = findOutbound(OUTBOUND_B);
 
+/**
+ * 溯源种子单头：字段取自来源出库单。出库单种子是条件构建的（来源通知缺失时不生成），
+ * 找不到时回退到演示口径值，保证退货种子始终可构建。
+ */
+function sourceOutboundHeader(sourceOutbound, fallbackOutboundNo) {
+  return {
+    customer: sourceOutbound?.customer || 'CUS000002',
+    warehouse: sourceOutbound?.warehouse || 'LWH000002',
+    currency: sourceOutbound?.currency || '人民币',
+    sourceOutboundNo: sourceOutbound?.outboundNo || fallbackOutboundNo,
+  };
+}
+
 const seedReturns = [
   {
     id: 'sales-return-1',
     returnNo: 'XSTH-20260919-0001',
-    customer: sourceOutboundA?.customer || 'CUS000002',
-    warehouse: sourceOutboundA?.warehouse || 'LWH000002',
-    currency: sourceOutboundA?.currency || '人民币',
+    ...sourceOutboundHeader(sourceOutboundA, 'XSCK-20260917-0001'),
     sourceOutboundId: OUTBOUND_A,
-    sourceOutboundNo: sourceOutboundA?.outboundNo || 'XSCK-20260917-0001',
     returnDeadline: '2026-10-31',
     auditStatus: 'draft',
     businessStatus: 'normal',
@@ -139,11 +149,8 @@ const seedReturns = [
   {
     id: 'sales-return-5',
     returnNo: 'XSTH-20260918-0005',
-    customer: sourceOutboundA?.customer || 'CUS000002',
-    warehouse: sourceOutboundA?.warehouse || 'LWH000002',
-    currency: sourceOutboundA?.currency || '人民币',
+    ...sourceOutboundHeader(sourceOutboundA, 'XSCK-20260917-0001'),
     sourceOutboundId: OUTBOUND_A,
-    sourceOutboundNo: sourceOutboundA?.outboundNo || 'XSCK-20260917-0001',
     returnDeadline: '2026-10-15',
     auditStatus: 'approved',
     businessStatus: 'normal',
@@ -161,11 +168,8 @@ const seedReturns = [
   {
     id: 'sales-return-6',
     returnNo: 'XSTH-20260917-0006',
-    customer: sourceOutboundB?.customer || 'CUS000002',
-    warehouse: sourceOutboundB?.warehouse || 'LWH000002',
-    currency: sourceOutboundB?.currency || '人民币',
+    ...sourceOutboundHeader(sourceOutboundB, 'XSCK-20260918-0001'),
     sourceOutboundId: OUTBOUND_B,
-    sourceOutboundNo: sourceOutboundB?.outboundNo || 'XSCK-20260918-0001',
     returnDeadline: '2026-10-10',
     auditStatus: 'approved',
     businessStatus: 'normal',
@@ -257,11 +261,8 @@ const seedReturns = [
   {
     id: 'sales-return-10',
     returnNo: 'XSTH-20260915-0010',
-    customer: sourceOutboundA?.customer || 'CUS000002',
-    warehouse: sourceOutboundA?.warehouse || 'LWH000002',
-    currency: sourceOutboundA?.currency || '人民币',
+    ...sourceOutboundHeader(sourceOutboundA, 'XSCK-20260917-0001'),
     sourceOutboundId: OUTBOUND_A,
-    sourceOutboundNo: sourceOutboundA?.outboundNo || 'XSCK-20260917-0001',
     returnDeadline: '2026-10-12',
     auditStatus: 'pending',
     businessStatus: 'normal',
@@ -277,11 +278,8 @@ const seedReturns = [
   {
     id: 'sales-return-11',
     returnNo: 'XSTH-20260915-0011',
-    customer: sourceOutboundB?.customer || 'CUS000002',
-    warehouse: sourceOutboundB?.warehouse || 'LWH000002',
-    currency: sourceOutboundB?.currency || '人民币',
+    ...sourceOutboundHeader(sourceOutboundB, 'XSCK-20260918-0001'),
     sourceOutboundId: OUTBOUND_B,
-    sourceOutboundNo: sourceOutboundB?.outboundNo || 'XSCK-20260918-0001',
     returnDeadline: '2026-10-12',
     auditStatus: 'pending',
     businessStatus: 'normal',

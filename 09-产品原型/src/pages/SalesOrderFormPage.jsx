@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { DocumentFormPage } from '../components/erp/DocumentFormPage.jsx';
 import { SalesOrderActionDialogs } from '../components/erp/SalesOrderActionDialogs.jsx';
-import { computeLinesTotals, formatAmount } from '../lib/format.js';
+import { computeLinesTotals, formatAmount, nowStamp } from '../lib/format.js';
 import {
   addressRecordToCnAddress,
   createEmptyCnAddress,
@@ -208,9 +208,9 @@ function toOrderRow(form, { context, shouldSubmit }) {
     shipStatus: computeShipStatus(lines),
     lines,
     creator: source.creator || '当前用户',
-    createdAt: source.createdAt || new Date().toISOString().slice(0, 19).replace('T', ' '),
+    createdAt: source.createdAt || nowStamp(),
     updater: '当前用户',
-    updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    updatedAt: nowStamp(),
   };
   return normalizeOrderRow(base);
 }

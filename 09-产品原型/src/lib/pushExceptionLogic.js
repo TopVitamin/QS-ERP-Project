@@ -8,6 +8,7 @@ import {
   PUSH_EXCEPTION_STORAGE_KEY,
   pushExceptionSeeds,
 } from '../data/pushExceptionData.js';
+import { financeResultDocTypeLabels } from '../data/financeResultData.js';
 import { products, PRODUCT_STORAGE_KEY } from '../data/productData.js';
 import { receiptNotices } from '../data/receiptNoticeData.js';
 import { purchaseReturnNotices } from '../data/purchaseReturnNoticeData.js';
@@ -22,6 +23,22 @@ import { DELIVERY_NOTICE_STORAGE_KEY } from './salesOrderLogic.js';
 import { RETURN_NOTICE_STORAGE_KEY as SALES_RETURN_NOTICE_STORAGE_KEY } from './salesReturnLogic.js';
 import { loadTransferInNoticeByNo } from './transferInNoticeLogic.js';
 import { loadTransferOutNoticeByNo } from './transferOutNoticeLogic.js';
+import { loadShopifyOrderByNo } from './shopifyOrderLogic.js';
+import { shopifyOrders } from '../data/shopifyOrderData.js';
+import { skuOptions } from '../data/masterData.js';
+import { resolveResultDocument } from './inventoryResultDocs.js';
+import { nowStamp } from './format.js';
+import { nextDocumentNo } from './documentNo.js';
+import { postStockEntries } from './inventoryStockLogic.js';
+import {
+  enrichOutboundLine,
+  loadAllOutbounds,
+  persistOutbound,
+  simulateFinanceErpPush,
+} from './salesOutboundLogic.js';
+import { salesOutbounds } from '../data/salesOutboundData.js';
+import { loadDomesticOrderByNo, upsertDomesticOrder } from '../data/domesticOrderData.js';
+import { loadCrossBorderOrderByNo, upsertCrossBorderOrder } from '../data/crossBorderOrderData.js';
 
 export {
   PUSH_EXCEPTION_NOTE_MAX,
@@ -70,13 +87,29 @@ const noticeLoaders = [
 ];
 
 /**
- * 按单据类型＋单据编号定位原单（推送外部仓库、推送电商平台页签的「单据编号」）。
+ * 七类已审核结果单（推送财务ERP页签「结果单号」）：与业财结果单据页同口径定位结果单详情。
+ * 口径依据：《推送异常主PRD》§4.2、AC09；复用 `inventoryResultDocs.resolveResultDocument`。
+ */
+const resultDocTypeLabels = new Set(Object.values(financeResultDocTypeLabels));
+
+/**
+ * 按单据类型＋单据编号定位原单（推送外部仓库／推送电商平台页签的「单据编号」、
+ * 推送财务ERP页签的「结果单号」）。
  * 找不到返回 null，由页面提示「单据不存在或不可访问」并停留列表（主PRD R09）。
- * 独立站订单页尚未接入原型：返回其 pageId，由 App 提示「该功能尚未完成」（见09《待改项》）。
+ * 独立站订单页已接入原型（2026-10-15）：按单号定位后直达订单详情。
  */
 export function resolveExceptionSourceDocument(docTypeLabel, docNo) {
   if (!docTypeLabel || !docNo) return null;
-  if (docTypeLabel === '独立站订单') return { pageId: 'sales-shopify-order', row: null };
+  if (docTypeLabel === '独立站订单') {
+    const row = loadShopifyOrderByNo(docNo, shopifyOrders);
+    return row ? { pageId: 'sales-shopify-order-detail', row } : null;
+  }
+
+  // 推送财务ERP页签：采购入库单、采退出库单、销售出库单、销退入库单、其他入库单、
+  // 其他出库单、直接调拨单，按业财结果单据页同口径进入对应模块的结果单详情（主PRD §4.2、AC09）。
+  if (resultDocTypeLabels.has(docTypeLabel)) {
+    return resolveResultDocument(docTypeLabel, docNo);
+  }
 
   const loader = noticeLoaders.find((item) => item.label === docTypeLabel);
   if (loader) {
@@ -141,4 +174,147 @@ export function syncFinanceExceptionFromPush({ row, trigger, success, record }) 
   }
 
   writeMockRows(PUSH_EXCEPTION_STORAGE_KEY, rows);
+}
+
+// —— 结果处理 Mock 演示链路（《结果处理规则（二版）》§二、§五、§八 M1/M2；SAL-FR12）——
+
+/**
+ * 可执行「修复后处理原记录」演示的记录：结果处理页签、待处理且带演示载荷（demoRecover）。
+ * 正式系统由接口机制自动重试处理原记录，本页只读；演示载荷仅用于原型走查。
+ */
+export function canRecoverResultException(row) {
+  return row?.tab === 'result' && row?.status === 'pending' && Boolean(row?.demoRecover);
+}
+
+/**
+ * 结果处理 Mock：补齐映射／解决阻塞原因后处理原记录，成功即完结、不产生第二张结果单。
+ * 处理链路按规则文档 §二：补映射（商品匹配失败时）→ 生成已审核销售出库单并关联来源订单
+ * （分两张：来源国内电商订单／来源跨境电商订单）→ 逻辑仓扣减一次 → 异常记录自动置为已处理、
+ * 追加「修复恢复·成功」处理记录；重复触发按「来源系统＋来源单号＋执行标识」去重，不重复记账。
+ *
+ * 返回 { ok, message, outboundNo?, orderNo?, duplicated? }。
+ */
+export function recoverResultExceptionMock(rowId) {
+  const rows = readMockRows(PUSH_EXCEPTION_STORAGE_KEY, pushExceptionSeeds);
+  const index = rows.findIndex((item) => item.id === rowId);
+  if (index < 0) return { ok: false, message: '异常记录不存在或已不可访问' };
+
+  const row = rows[index];
+  if (!row.demoRecover) {
+    return { ok: false, message: '该记录为只读演示数据，请查看处理记录' };
+  }
+  if (row.status !== 'pending') {
+    // 已处理：重复回传／重复触发不重复记账、不重复生成结果单（SAL-AC21、INT-FR02）
+    return { ok: false, duplicated: true, message: '该结果此前已处理成功，按去重规则不重复记账（来源系统＋来源单号＋执行标识）' };
+  }
+
+  const demo = row.demoRecover;
+  const isCrossborder = demo.kind === 'crossborder';
+  const order = isCrossborder ? loadCrossBorderOrderByNo(demo.orderNo) : loadDomesticOrderByNo(demo.orderNo);
+  if (!order) return { ok: false, message: '来源订单不存在或不可访问' };
+
+  const outboundId = `sales-outbound-recovered-${row.id}`;
+  if (loadAllOutbounds(salesOutbounds).some((item) => item.id === outboundId)) {
+    return { ok: false, duplicated: true, message: '该结果此前已处理成功，按去重规则不重复记账' };
+  }
+
+  const quantity = Number(demo.quantity || 0);
+  const sku = demo.product ? skuOptions.find((item) => item.value === demo.product) : null;
+  if (!demo.product || quantity <= 0) return { ok: false, message: '演示数据缺少可处理的商品或数量' };
+
+  // 1）补映射：商品匹配失败的行按外部编码补齐ERP商品（R09：匹配可在异常恢复后补齐）
+  const lines = (order.lines || []).map((line) => {
+    const isTargetLine = demo.platformSku ? line.platformSku === demo.platformSku : !line.product;
+    if (!isTargetLine) return line;
+    return {
+      ...line,
+      product: demo.product,
+      productCode: sku?.skuCode || demo.product,
+      productName: sku?.productName || '',
+      unit: sku?.unit || line.unit || '',
+    };
+  });
+
+  const time = nowStamp();
+  const businessDate = demo.businessDate || time.slice(0, 10);
+  const existingNos = loadAllOutbounds(salesOutbounds).map((item) => item.outboundNo);
+  const outboundNo = nextDocumentNo('XSCK', businessDate, existingNos);
+
+  // 2）处理原记录：逻辑仓扣减一次；校验不通过整批不生效，不出现负库存（§5.3 防错清单）
+  try {
+    postStockEntries([{ logicalWarehouse: demo.warehouse, product: demo.product, instantDelta: -quantity }], {
+      eventType: 'result_out',
+      sourceType: '销售出库单',
+      sourceNo: outboundNo,
+      businessType: '销售出库',
+      operator: '系统',
+      time,
+    });
+  } catch (error) {
+    return { ok: false, message: error?.message || '库存校验未通过，未记账' };
+  }
+
+  const outbound = persistOutbound({
+    id: outboundId,
+    outboundNo,
+    sourceType: isCrossborder ? 'crossborder_order' : 'domestic_order',
+    sourceDomesticOrderNo: isCrossborder ? '' : order.orderNo,
+    sourceCrossborderOrderNo: isCrossborder ? order.orderNo : '',
+    sourceNoticeId: '',
+    sourceNoticeNo: '',
+    sourceOrderId: '',
+    sourceOrderNo: '',
+    customer: order.customer,
+    warehouse: demo.warehouse,
+    currency: order.currency,
+    auditStatus: 'approved',
+    financeErpPushStatus: 'un_pushed',
+    businessDate,
+    actualOutboundTime: time,
+    pushTime: '',
+    pushFailReason: '',
+    remark: '',
+    auditor: '',
+    auditTime: time,
+    creator: '系统',
+    createdAt: time,
+    updater: '系统',
+    updatedAt: time,
+    lines: [enrichOutboundLine({ id: `${outboundId}-line-1`, product: demo.product, quantity, price: demo.price, taxRate: demo.taxRate })],
+  });
+
+  // 3）订单行落库（补映射结果），最后更新时间按「关联结果单变化」刷新
+  const nextOrder = { ...order, lines, updater: '系统', updatedAt: time };
+  if (isCrossborder) upsertCrossBorderOrder(nextOrder);
+  else upsertDomesticOrder(nextOrder);
+
+  // 4）异常记录自动置为已处理，处理记录追加「修复恢复·成功」（R04、R05；记录全部保留）
+  const entry = {
+    id: `${row.id}-recover-${Date.now()}`,
+    time,
+    method: 'recover',
+    result: 'success',
+    operator: '系统',
+    note: demo.note || '修复后处理原记录',
+  };
+  rows[index] = {
+    ...row,
+    status: 'handled',
+    handledAt: time,
+    resultDocNo: outboundNo,
+    resultDocType: 'sales_outbound',
+    records: [...(row.records || []), entry],
+  };
+  writeMockRows(PUSH_EXCEPTION_STORAGE_KEY, rows);
+
+  // 5）已审核结果单进入推送财务ERP队列（Mock：短延时后回写推送成功）
+  simulateFinanceErpPush(outbound.id);
+
+  return {
+    ok: true,
+    outboundNo,
+    orderNo: order.orderNo,
+    orderLabel: isCrossborder ? '跨境电商订单' : '国内电商订单',
+    note: entry.note,
+  };
 }

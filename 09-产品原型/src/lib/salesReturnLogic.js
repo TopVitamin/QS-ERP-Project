@@ -1,7 +1,7 @@
 import { skuOptions } from '../data/masterData.js';
 import { salesOutbounds } from '../data/salesOutboundData.js';
 import { nextDocumentNo } from './documentNo.js';
-import { computeLinesTotals, EMPTY_PLACEHOLDER } from './format.js';
+import { computeLinesTotals, EMPTY_PLACEHOLDER, nowStamp } from './format.js';
 import { emptyFieldMessage } from './formValidation.js';
 import { readMockRows, upsertMockRow, writeMockRows } from './mockStorage.js';
 import { loadAllOutbounds } from './salesOutboundLogic.js';
@@ -15,10 +15,6 @@ export const RETURN_INBOUND_STORAGE_KEY = 'qs-erp:sales-return-inbounds:v2';
 const BLOCKING_NOTICE_STATUSES = new Set(['pushing', 'pending_receive', 'cancelling']);
 /** 随退货单取消的通知状态（R17：待推送、推送失败随单取消） */
 const CANCELLABLE_NOTICE_STATUSES = new Set(['pending_push', 'push_failed']);
-
-export function nowStamp() {
-  return new Date().toISOString().slice(0, 19).replace('T', ' ');
-}
 
 export function computePushableQty(line) {
   return Math.max(
@@ -609,5 +605,5 @@ export function buildSalesReturnOperationLogs(row) {
     });
   }
 
-  return mergeLogEntries(entries, row.operationLogs || []);
+  return mergeLogEntries(entries, row.operationLogs);
 }

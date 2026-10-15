@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Button } from '../ui/button.jsx';
 import { ConfirmDialog } from '../ui/alert-dialog.jsx';
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group.jsx';
 import { SimpleDialog } from '../ui/dialog.jsx';
 import { Input } from '../ui/input.jsx';
 import { Textarea } from '../ui/textarea.jsx';
+import { MockCallbackLineTable } from './MockCallbackLineTable.jsx';
 import { EMPTY_PLACEHOLDER } from '../../lib/format.js';
 import { cn } from '../../lib/utils.js';
 import {
   applyApproveRequest,
   applyCancelRequest,
+  applyManualConfirmRequest,
   applyMockDeliveryRequest,
   applyRetryPushRequest,
   applySubmitRequest,
@@ -17,6 +20,7 @@ import {
   canApproveRequest,
   canCancelRequest,
   canDeleteRequest,
+  canManualConfirmRequest,
   canMockDeliveryRequest,
   canMockWarehouseCancelReply,
   canRetryPushRequest,
@@ -24,14 +28,17 @@ import {
   canWithdrawRequest,
   deleteOtherOutboundRequest,
   isTransitDirectPostingRequest,
+  manualConfirmTypeLabels,
+  otherOutboundRequestStatusLabels,
   refreshOutboundRequestLines,
+  resolveManualConfirmType,
 } from '../../lib/otherOutboundRequestLogic.js';
 
-const mockDeliveryTableClassName = 'w-full table-fixed border-collapse text-left text-[12px]';
-const mockDeliveryHeadClassName = 'h-7 border-b border-erp-border-table-header bg-erp-surface-table-head text-erp-text-section';
-const mockDeliveryThClassName = 'border-r border-erp-border-table-column px-2 font-normal last:border-r-0';
-const mockDeliveryRowClassName = 'h-8 border-b border-erp-border-table-row';
-const mockDeliveryTdClassName = 'border-r border-erp-border-table-column px-2 align-middle last:border-r-0';
+const confirmTableClassName = 'w-full table-fixed border-collapse text-left text-[12px]';
+const confirmHeadClassName = 'h-7 border-b border-erp-border-table-header bg-erp-surface-table-head text-erp-text-section';
+const confirmThClassName = 'border-r border-erp-border-table-column px-2 font-normal last:border-r-0';
+const confirmRowClassName = 'h-8 border-b border-erp-border-table-row';
+const confirmTdClassName = 'border-r border-erp-border-table-column px-2 align-middle last:border-r-0';
 
 function clampMockActual(value, requested) {
   const max = Number(requested || 0);
@@ -50,6 +57,7 @@ export function OtherOutboundRequestActionDialogs({ dialog, onClose, onComplete,
   const [fieldError, setFieldError] = useState('');
   const [lineActuals, setLineActuals] = useState([]);
   const [zeroOut, setZeroOut] = useState(false);
+  const [cancelResult, setCancelResult] = useState('agree');
 
   useEffect(() => {
     if (!dialog) return;
@@ -57,6 +65,7 @@ export function OtherOutboundRequestActionDialogs({ dialog, onClose, onComplete,
     setCancelReason('');
     setFieldError('');
     setZeroOut(false);
+    setCancelResult('agree');
     const lines = refreshOutboundRequestLines(dialog.row?.lines || []);
     setLineActuals(lines.map((line) => String(line.quantity || 0)));
   }, [dialog]);
@@ -71,7 +80,7 @@ export function OtherOutboundRequestActionDialogs({ dialog, onClose, onComplete,
   }
 
   function finishWithError(error) {
-    onNotify?.(error?.message || '操作失败，请稍后重试', 'warning');
+    onNotify?.(error.message, 'warning');
     onClose?.();
   }
 
@@ -268,6 +277,166 @@ export function OtherOutboundRequestActionDialogs({ dialog, onClose, onComplete,
     );
   }
 
+  if (type === 'manual-confirm') {
+    const confirmType = resolveManualConfirmType(row);
+
+    if (!confirmType) {
+      // 状态已变化：不进入成功流，按主PRD §6.4 阻断提示
+      return (
+        <SimpleDialog
+          open
+          onOpenChange={(open) => { if (!open) onClose?.(); }}
+          title="人工确认（补记仓库实际结果）"
+          description={`当前单据状态为${otherOutboundRequestStatusLabels[row?.status] || row?.status || '-'}，不可执行人工确认`}
+          footer={<Button variant="primary" size="compact" onClick={onClose}>关闭</Button>}
+        />
+      );
+    }
+
+    const lines = refreshOutboundRequestLines(row.lines || []);
+    const statusLabel = otherOutboundRequestStatusLabels[row?.status] || '';
+    const typeLabel = `${manualConfirmTypeLabels[confirmType]}（${statusLabel}）`;
+    const isFinish = confirmType === 'finish';
+
+    function handleManualConfirm() {
+      try {
+        const next = applyManualConfirmRequest(row, {
+          confirmType,
+          zeroOut,
+          lineActuals,
+          cancelResult,
+        });
+        const message = confirmType === 'finish'
+          ? (zeroOut
+            ? '已记录人工确认结果：零出（整单按取消结束）'
+            : '已记录人工确认结果：执行结束（已形成演示用其他出库单，待审核）')
+          : confirmType === 'accept'
+            ? '已记录人工确认结果：确认接单'
+            : (cancelResult === 'agree'
+              ? '已记录人工确认结果：仓库同意取消'
+              : '已记录人工确认结果：仓库拒绝取消，恢复等待实际结果');
+        finish(message, 'success', { row: next });
+      } catch (error) {
+        onNotify?.(error.message || '人工确认失败，请稍后重试', 'warning');
+      }
+    }
+
+    return (
+      <SimpleDialog
+        open
+        onOpenChange={(open) => { if (!open) onClose?.(); }}
+        size="xl"
+        title="人工确认（补记仓库实际结果）"
+        description="只用于已交给仓库、接口拿不到结果的申请；确认前请先与仓库核实实际结果。"
+        footer={(
+          <>
+            <Button variant="outline" size="compact" onClick={onClose}>取消</Button>
+            <Button variant="primary" size="compact" onClick={handleManualConfirm}>确认</Button>
+          </>
+        )}
+      >
+        <div className="space-y-1.5">
+          <span className="text-[12px] text-erp-text">确认类型</span>
+          <RadioGroup value={confirmType} aria-label="确认类型" className="h-7 gap-4">
+            <span className="flex items-center gap-1.5">
+              <RadioGroupItem value={confirmType} id="other-outbound-request-manual-confirm-type" aria-label={typeLabel} />
+              <label htmlFor="other-outbound-request-manual-confirm-type" className="cursor-pointer text-[12px] text-erp-text">{typeLabel}</label>
+            </span>
+          </RadioGroup>
+        </div>
+
+        {isFinish && (
+          <>
+            <div className="table-scroll mt-3 overflow-x-auto">
+              <table className={confirmTableClassName} style={{ minWidth: '760px' }}>
+                <colgroup>
+                  <col className="w-10" />
+                  <col className="w-[112px]" />
+                  <col className="w-[120px]" />
+                  <col className="w-[150px]" />
+                  <col className="w-[120px]" />
+                  <col className="w-[120px]" />
+                </colgroup>
+                <thead className={confirmHeadClassName}>
+                  <tr>
+                    <th className={confirmThClassName}>行号</th>
+                    <th className={confirmThClassName}>商品编码</th>
+                    <th className={confirmThClassName}>商品条码</th>
+                    <th className={confirmThClassName}>商品名称</th>
+                    <th className={cn(confirmThClassName, 'text-right')}>申请出库数量</th>
+                    <th className={cn(confirmThClassName, 'text-right')}>实出数量</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lines.map((line, index) => (
+                    <tr key={line.id || index} className={confirmRowClassName}>
+                      <td className={cn(confirmTdClassName, 'text-center text-erp-text-muted')}>{index + 1}</td>
+                      <td className={cn(confirmTdClassName, 'truncate')} title={line.productCode}>{line.productCode || EMPTY_PLACEHOLDER}</td>
+                      <td className={cn(confirmTdClassName, 'truncate text-erp-text-muted')} title={line.barcode}>{line.barcode || EMPTY_PLACEHOLDER}</td>
+                      <td className={cn(confirmTdClassName, 'truncate')} title={line.productName}>{line.productName || EMPTY_PLACEHOLDER}</td>
+                      <td className={cn(confirmTdClassName, 'text-right')}>{line.quantity ?? 0}</td>
+                      <td className={cn(confirmTdClassName, 'px-1.5')}>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={lineActuals[index] ?? ''}
+                          disabled={zeroOut}
+                          onChange={(event) => {
+                            const raw = event.target.value;
+                            const next = [...lineActuals];
+                            next[index] = raw;
+                            setLineActuals(next);
+                          }}
+                          className="text-right"
+                          aria-label={`第${index + 1}行实出数量`}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <label className="mt-3 flex items-center gap-2 text-[12px] text-erp-text">
+              <input type="checkbox" checked={zeroOut} onChange={(event) => setZeroOut(event.target.checked)} />
+              零出（整单按取消结束，不生成其他出库单）
+            </label>
+            <p className="mt-3 text-[12px] text-erp-text-muted">
+              演示说明：确认执行结束且实出&gt;0 时形成演示用其他出库单（待审核，演示数据）；审核通过后才扣减即时库存、消耗实出预占、释放未出预占并推送财务ERP，原型不提供该结果单的审核入口。
+            </p>
+          </>
+        )}
+
+        {confirmType === 'cancel_result' && (
+          <>
+            <div className="mt-3 space-y-1.5">
+              <span className="text-[12px] text-erp-text">取消结果 *</span>
+              <RadioGroup value={cancelResult} onValueChange={setCancelResult} aria-label="取消结果" className="h-7 gap-4">
+                <span className="flex items-center gap-1.5">
+                  <RadioGroupItem value="agree" id="other-outbound-request-cancel-agree" aria-label="仓库同意取消" />
+                  <label htmlFor="other-outbound-request-cancel-agree" className="cursor-pointer text-[12px] text-erp-text">仓库同意取消</label>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <RadioGroupItem value="reject" id="other-outbound-request-cancel-reject" aria-label="仓库拒绝取消" />
+                  <label htmlFor="other-outbound-request-cancel-reject" className="cursor-pointer text-[12px] text-erp-text">仓库拒绝取消</label>
+                </span>
+              </RadioGroup>
+            </div>
+            <p className="mt-3 text-[12px] text-erp-text-muted">
+              需已取得仓库明确回复：仓库同意→已取消并释放未执行预占；仓库拒绝→恢复待发货、预占继续占用。无明确回复不得确认。
+            </p>
+          </>
+        )}
+
+        {confirmType === 'accept' && (
+          <p className="mt-3 text-[12px] text-erp-text-muted">
+            确认接单视同仓库已接收本申请，转待发货；预占保持占用、不生成结果单。
+          </p>
+        )}
+      </SimpleDialog>
+    );
+  }
+
   if (type === 'mock-delivery') {
     const lines = refreshOutboundRequestLines(row.lines || []);
 
@@ -318,79 +487,20 @@ export function OtherOutboundRequestActionDialogs({ dialog, onClose, onComplete,
         )}
       >
         <div className="mt-3 space-y-3">
-          <div className="table-scroll overflow-x-auto">
-            <table className={mockDeliveryTableClassName} style={{ minWidth: '720px' }}>
-              <colgroup>
-                <col className="w-10" />
-                <col className="w-[108px]" />
-                <col className="w-[160px]" />
-                <col className="w-[64px]" />
-                <col className="w-[104px]" />
-                <col className="w-[104px]" />
-              </colgroup>
-              <thead className={mockDeliveryHeadClassName}>
-                <tr>
-                  <th className={mockDeliveryThClassName}>行号</th>
-                  <th className={mockDeliveryThClassName}>商品编码</th>
-                  <th className={mockDeliveryThClassName}>商品名称</th>
-                  <th className={mockDeliveryThClassName}>基本单位</th>
-                  <th className={cn(mockDeliveryThClassName, 'text-right')}>申请出库数量</th>
-                  <th className={cn(mockDeliveryThClassName, 'text-right')}>实出数量</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lines.map((line, index) => (
-                  <tr key={line.id || index} className={mockDeliveryRowClassName}>
-                    <td className={cn(mockDeliveryTdClassName, 'text-center text-erp-text-muted')}>{index + 1}</td>
-                    <td className={cn(mockDeliveryTdClassName, 'truncate')} title={line.productCode}>{line.productCode || EMPTY_PLACEHOLDER}</td>
-                    <td className={cn(mockDeliveryTdClassName, 'truncate')} title={line.productName}>{line.productName || EMPTY_PLACEHOLDER}</td>
-                    <td className={cn(mockDeliveryTdClassName, 'truncate text-erp-text-muted')}>{line.unit || EMPTY_PLACEHOLDER}</td>
-                    <td className={cn(mockDeliveryTdClassName, 'text-right')}>{line.quantity ?? 0}</td>
-                    <td className={cn(mockDeliveryTdClassName, 'px-1.5')}>
-                      <Input
-                        type="number"
-                        min="0"
-                        max={line.quantity}
-                        value={lineActuals[index] ?? ''}
-                        disabled={zeroOut}
-                        onChange={(event) => {
-                          const raw = event.target.value;
-                          const requested = Number(line.quantity || 0);
-                          const next = [...lineActuals];
-                          if (raw === '') {
-                            next[index] = '';
-                            setLineActuals(next);
-                            return;
-                          }
-                          const parsed = Number(raw);
-                          if (!Number.isFinite(parsed)) return;
-                          if (parsed > requested) {
-                            next[index] = String(requested);
-                            setLineActuals(next);
-                            onNotify?.('实出数量不能超过申请数量，已自动调整为申请数量', 'warning');
-                            return;
-                          }
-                          next[index] = raw;
-                          setLineActuals(next);
-                        }}
-                        onBlur={() => {
-                          const requested = Number(line.quantity || 0);
-                          const clamped = clampMockActual(lineActuals[index], requested);
-                          if (String(lineActuals[index] ?? '') !== String(clamped)) {
-                            const next = [...lineActuals];
-                            next[index] = String(clamped);
-                            setLineActuals(next);
-                          }
-                        }}
-                        className="text-right"
-                        aria-label={`第${index + 1}行实出数量`}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <MockCallbackLineTable
+            lines={lines}
+            values={lineActuals}
+            onValuesChange={setLineActuals}
+            clamp={clampMockActual}
+            limitKey="quantity"
+            limitLabel="申请出库数量"
+            quantityLabel="实出数量"
+            limitExceededMessage="实出数量不能超过申请数量，已自动调整为申请数量"
+            disabled={zeroOut}
+            showBarcode={false}
+            showUnit
+            onNotify={onNotify}
+          />
           <label className="flex items-center gap-2 text-[12px] text-erp-text">
             <input type="checkbox" checked={zeroOut} onChange={(event) => setZeroOut(event.target.checked)} />
             零出（整单按取消结束）
@@ -454,6 +564,7 @@ export function OtherOutboundRequestDetailHeaderActions({ row, onAction }) {
   if (canApproveRequest(row)) actions.push({ id: 'approve', label: '审核' });
   if (canWithdrawRequest(row)) actions.push({ id: 'withdraw', label: '撤回' });
   if (canRetryPushRequest(row)) actions.push({ id: 'retry', label: '重试推送' });
+  if (canManualConfirmRequest(row)) actions.push({ id: 'manual-confirm', label: '人工确认' });
   if (canCancelRequest(row)) actions.push({ id: 'cancel', label: '取消' });
   if (canMockDeliveryRequest(row)) actions.push({ id: 'mock-delivery', label: '模拟仓库回传' });
   if (canMockWarehouseCancelReply(row)) actions.push({ id: 'warehouse-cancel-demo', label: '模拟仓库回执' });

@@ -1,5 +1,5 @@
 import { Pencil } from 'lucide-react';
-import { StatusBadge } from './StatusBadge.jsx';
+import { StatusBadgeList } from './StatusBadge.jsx';
 import { Button } from '../ui/button.jsx';
 import { DetailField } from '../ui/form-field.jsx';
 import { typography } from '../../styles/typography.js';
@@ -15,24 +15,6 @@ export function DialogViewSection({ title, children, className }) {
       {title ? <h3 className={typography.sectionTitle}>{title}</h3> : null}
       {children}
     </section>
-  );
-}
-
-function StatusBadgeList({ statuses, status }) {
-  const items = statuses?.length
-    ? statuses
-    : status
-      ? [{ label: status }]
-      : [];
-
-  if (!items.length) return null;
-
-  return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      {items.map((item, index) => (
-        <StatusBadge key={`${index}-${item.label ?? ''}`} tone={item.tone}>{item.label}</StatusBadge>
-      ))}
-    </div>
   );
 }
 

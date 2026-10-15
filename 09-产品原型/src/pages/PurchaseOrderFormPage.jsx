@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { DocumentFormPage } from '../components/erp/DocumentFormPage.jsx';
 import { PurchaseOrderActionDialogs } from '../components/erp/PurchaseOrderActionDialogs.jsx';
-import { computeLinesTotals, formatAmount } from '../lib/format.js';
+import { computeLinesTotals, formatAmount, nowStamp } from '../lib/format.js';
 import { currencySymbol } from '../lib/money.js';
 import { orders } from '../data/orderData.js';
 import { nextDocumentNo } from '../lib/documentNo.js';
@@ -138,9 +138,9 @@ function toOrderRow(form, { context, shouldSubmit }) {
     receiveStatus: computeReceiveStatus(lines),
     lines,
     creator: source.creator || '当前用户',
-    createdAt: source.createdAt || new Date().toISOString().slice(0, 19).replace('T', ' '),
+    createdAt: source.createdAt || nowStamp(),
     updater: '当前用户',
-    updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    updatedAt: nowStamp(),
   };
   return normalizeOrderRow(base);
 }

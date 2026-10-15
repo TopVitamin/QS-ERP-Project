@@ -25,6 +25,7 @@ import {
   resolvePhysicalWarehouseLabel,
 } from '../data/warehouseData.js';
 import { readMockRows, upsertMockRow, writeMockRows } from './mockStorage.js';
+import { nowStamp } from './format.js';
 
 export const STOCK_STORAGE_KEY = 'qs-erp:inventory-stock:v2';
 export const STOCK_RESERVATION_STORAGE_KEY = 'qs-erp:inventory-reservations:v1';
@@ -32,12 +33,6 @@ export const STOCK_FLOW_STORAGE_KEY = 'qs-erp:inventory-flows:v1';
 export const STOCK_COMPARE_STORAGE_KEY = 'qs-erp:inventory-compare:v1';
 
 export { stockEventTypeLabels };
-
-export function nowStamp() {
-  const date = new Date();
-  const pad = (value) => String(value).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-}
 
 export function formatSignedQty(value) {
   const number = Number(value || 0);
@@ -384,11 +379,14 @@ export function loadStockFlows() {
     .sort((left, right) => String(right.time || '').localeCompare(String(left.time || '')));
 }
 
+/** 流水最多保留 500 条：流水只增不减，防止长会话演示撑爆 localStorage 配额。 */
+const MAX_STOCK_FLOW_ROWS = 500;
+
 /** 写回流水：统一在这里补齐展示字段，避免只写数量字段导致列表按库存状态、逻辑仓筛不到。 */
 export function appendStockFlows(rows) {
   if (!rows.length) return;
   const existing = readMockRows(STOCK_FLOW_STORAGE_KEY, stockFlowSeeds);
-  writeMockRows(STOCK_FLOW_STORAGE_KEY, [...rows.map(resolveStockFlow), ...existing]);
+  writeMockRows(STOCK_FLOW_STORAGE_KEY, [...rows.map(resolveStockFlow), ...existing].slice(0, MAX_STOCK_FLOW_ROWS));
 }
 
 /**

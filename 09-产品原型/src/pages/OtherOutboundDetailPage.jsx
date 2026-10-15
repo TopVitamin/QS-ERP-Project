@@ -1,10 +1,8 @@
-import { useEffect, useState } from 'react';
 import { DocumentDetailPage } from '../components/erp/DocumentDetailPage.jsx';
 import { productOptions, skuOptions } from '../data/masterData.js';
-import { buildCreateMetaFields } from '../components/erp/DocumentMetaTabsCard.jsx';
-import { Button } from '../components/ui/button.jsx';
+import { buildOperationInfoTabs } from '../components/erp/DocumentMetaTabsCard.jsx';
 import { EMPTY_PLACEHOLDER } from '../lib/format.js';
-import { subscribeMockRows } from '../lib/mockStorage.js';
+import { useDocumentRow } from '../hooks/useDocumentRow.js';
 import {
   buildOtherOutboundOperationLogs,
   loadOtherOutboundById,
@@ -104,10 +102,11 @@ const outboundDetailConfig = {
       title: '操作信息',
       variant: 'meta-tabs',
       defaultTab: 'create',
-      tabs: ({ row }) => [
-        { key: 'create', label: '制单信息', fields: buildCreateMetaFields({ ...row, creator: row.creator || '系统', updater: row.updater || '系统' }) },
-        { key: 'log', label: '操作日志', variant: 'log', logEntries: () => buildOtherOutboundOperationLogs(row) },
-      ],
+      tabs: ({ row }) => buildOperationInfoTabs({
+        row,
+        buildLogs: buildOtherOutboundOperationLogs,
+        toMetaRow: (metaRow) => ({ ...metaRow, creator: metaRow.creator || '系统', updater: metaRow.updater || '系统' }),
+      }),
     },
   ],
   buildLineSummary: ({ detail }) => ({
@@ -115,41 +114,9 @@ const outboundDetailConfig = {
   }),
 };
 
-/** 详情加载失败的错误态（其他出库单前端Demo版PRD_详情页 §4）。 */
-function OutboundErrorState({ onBack }) {
-  return (
-    <main className="flex min-h-0 flex-1 flex-col bg-erp-surface text-erp-text">
-      <div className="w-full px-4 py-3">
-        <div className="flex items-center gap-2 rounded-erp-section border border-erp-border-card bg-erp-surface-panel px-4 py-6 text-[12px] text-erp-text">
-          <span>其他出库单不存在或无权查看</span>
-          <Button variant="outline" size="compact" onClick={onBack}>返回列表</Button>
-        </div>
-      </div>
-    </main>
-  );
-}
-
 export function OtherOutboundDetailPage({ onOpenPage, onFeedback, context }) {
-  const contextRow = context?.row;
-  const [row, setRow] = useState(contextRow || null);
-
-  useEffect(() => {
-    if (!contextRow?.id) {
-      setRow(contextRow || null);
-      return undefined;
-    }
-
-    function syncRow() {
-      setRow(loadOtherOutboundById(contextRow.id) || contextRow);
-    }
-
-    syncRow();
-    return subscribeMockRows(OTHER_OUTBOUND_STORAGE_KEY, syncRow);
-  }, [contextRow]);
-
-  if (!row) {
-    return <OutboundErrorState onBack={() => onOpenPage?.('inventory-other-outbound')} />;
-  }
+  // 单据不存在时由 DocumentDetailPage 统一提供错误态。
+  const row = useDocumentRow(context, { storageKey: OTHER_OUTBOUND_STORAGE_KEY, loadById: loadOtherOutboundById });
 
   const config = {
     ...outboundDetailConfig,

@@ -18,9 +18,10 @@ import {
 export const CUSTOMER_STORAGE_KEY = 'qs-erp:customers:v1';
 
 // 单据可选项：仅审核通过且启用，展示 Code-Name（客户主PRD F03/F04、AC04/AC05）。
+// 缺字段按「审核通过且启用」处理：浏览器里可能残留早期版本写入的行，过滤不能把有效数据剔除。
 export function getSelectableCustomerOptions() {
   return readMockRows(CUSTOMER_STORAGE_KEY, customers)
-    .filter((row) => row.auditStatus === 'approved' && row.useStatus === 'enabled')
+    .filter((row) => (row.auditStatus ?? 'approved') === 'approved' && (row.useStatus ?? 'enabled') === 'enabled')
     .map((row) => buildMasterOption({ code: row.code, name: row.name, defaultCurrency: row.currency }));
 }
 

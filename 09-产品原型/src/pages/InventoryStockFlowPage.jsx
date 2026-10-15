@@ -20,7 +20,7 @@ import {
 } from '../lib/listFilters.js';
 import { toSelectOptions } from '../lib/options.js';
 import { getTransferTarget } from '../lib/transferTargets.js';
-import { formatQtyChange, loadStockFlows } from '../lib/inventoryStockLogic.js';
+import { formatQtyChange, loadStockFlows, STOCK_FLOW_STORAGE_KEY } from '../lib/inventoryStockLogic.js';
 import { resolveResultDocument } from '../lib/inventoryResultDocs.js';
 
 const businessTypeOptions = [
@@ -118,7 +118,7 @@ export function InventoryStockFlowPage(props) {
   const config = {
     title: '库存流水',
     rows,
-    storageKey: 'qs-erp:inventory-flows:v1',
+    storageKey: STOCK_FLOW_STORAGE_KEY,
     initialFilters,
     filterRows,
     initialVisibility,

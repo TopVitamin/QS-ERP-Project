@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { DocumentEditorFrame, EditorCard } from '../components/erp/DocumentEditorFrame.jsx';
 import { FormFields } from '../components/erp/FormControl.jsx';
 import { LineItemTable } from '../components/erp/LineItemTable.jsx';
+import { NoticeSourceMissingState, useNoticeFormDraft } from './noticeFormShared.jsx';
 import { resolveOptionLabel } from '../lib/codeName.js';
 import { toSelectOptions } from '../lib/options.js';
 import { erpFieldGridClassName } from '../styles/typography.js';
@@ -29,12 +30,37 @@ function getSourceReturn(context) {
   return null;
 }
 
-function receiveModeField({ required = false, disabled = false } = {}) {
+/** 下推创建：来源退货单须已审核+正常+有可下推量（R02） */
+function buildNoticeFormForReturn(sourceReturn) {
+  if (!sourceReturn || !canPushReturnNotice(sourceReturn)) return null;
+  return buildSalesReturnNoticeFormFromReturn(sourceReturn);
+}
+
+/** 编辑备注：仅待推送、推送失败可进入（R12） */
+function buildEditableNoticeForm(sourceRow) {
+  if (!sourceRow?.id) return null;
+  const latest = loadSalesReturnNoticeById(sourceRow.id) || sourceRow;
+  if (!canEditSalesReturnNoticeRemark(latest)) return null;
+  return {
+    ...latest,
+    receiveMode: resolveReturnReceiveMode(latest),
+    lines: latest.lines.map((line) => ({ ...line })),
+  };
+}
+
+// 收货处理方式说明图标文案（对照 03《集成协作与人工补充》§4.2.1：仅 ERP 内记账，不向聚水潭／领星同步库存）。
+const VIRTUAL_RECEIVE_TIP = '虚拟入库不会推送通知单到仓库，而是直接生成销退入库单，增加ERP的库存，也不向聚水潭、领星同步库存';
+
+function receiveModeField({ required = false, disabled = false, showVirtualTip = false } = {}) {
   return {
     key: 'receiveMode',
     label: required ? '收货处理方式 *' : '收货处理方式',
     type: 'radio',
-    options: toSelectOptions(returnReceiveModeLabels),
+    options: toSelectOptions(returnReceiveModeLabels).map((option) => (
+      showVirtualTip && option.value === 'virtual'
+        ? { ...option, tip: VIRTUAL_RECEIVE_TIP }
+        : option
+    )),
     disabled,
   };
 }
@@ -45,7 +71,7 @@ function buildCreateFields(returnRow) {
     { key: 'sourceReturnNo', label: '来源销售退货单', type: 'disabled', getValue: () => returnRow?.returnNo || '' },
     { key: 'customer', label: '客户', type: 'disabled', getValue: (form) => resolveOptionLabel(form.customer, customerOptions) },
     { key: 'warehouse', label: '收货仓库', type: 'disabled', getValue: (form) => resolveOptionLabel(form.warehouse, logicalWarehouseOptions) },
-    receiveModeField({ required: true }),
+    receiveModeField({ required: true, showVirtualTip: true }),
     { key: 'remark', label: '备注', type: 'textarea', className: 'col-span-3', placeholder: '请输入备注' },
   ];
 }
@@ -63,34 +89,9 @@ function buildEditFields() {
 
 export function SalesReturnNoticeCreatePage({ context, onFeedback, onOpenPage }) {
   const sourceReturn = useMemo(() => getSourceReturn(context), [context]);
-  const [form, setForm] = useState(null);
-  const [dirty, setDirty] = useState(false);
-
-  useEffect(() => {
-    if (!sourceReturn) {
-      setForm(null);
-      return;
-    }
-    if (!canPushReturnNotice(sourceReturn)) {
-      setForm(null);
-      return;
-    }
-    setForm(buildSalesReturnNoticeFormFromReturn(sourceReturn));
-    setDirty(false);
-  }, [sourceReturn]);
-
-  function updateField(key, value) {
-    setForm((current) => ({ ...current, [key]: value }));
-    setDirty(true);
-  }
-
-  function updateLine(lineId, key, value) {
-    setForm((current) => ({
-      ...current,
-      lines: current.lines.map((line) => (line.id === lineId ? { ...line, [key]: value } : line)),
-    }));
-    setDirty(true);
-  }
+  const { form, dirty, updateField, updateLine } = useNoticeFormDraft(sourceReturn, {
+    buildForm: buildNoticeFormForReturn,
+  });
 
   function handleSave() {
     const error = validateSalesReturnNoticeForCreate(form);
@@ -109,19 +110,21 @@ export function SalesReturnNoticeCreatePage({ context, onFeedback, onOpenPage })
 
   if (!sourceReturn) {
     return (
-      <div className="rounded-erp-section border border-erp-border-card bg-erp-surface-panel p-6 text-[12px] text-erp-text">
-        来源销售退货单不存在或不可下推收货通知。
-        <button type="button" className="ml-2 text-erp-primary" onClick={() => onOpenPage?.('sales-return')}>返回销售退货单</button>
-      </div>
+      <NoticeSourceMissingState
+        message="来源销售退货单不存在或不可下推收货通知。"
+        linkLabel="返回销售退货单"
+        onBack={() => onOpenPage?.('sales-return')}
+      />
     );
   }
 
   if (!form) {
     return (
-      <div className="rounded-erp-section border border-erp-border-card bg-erp-surface-panel p-6 text-[12px] text-erp-text">
-        当前销售退货单不可下推收货通知。
-        <button type="button" className="ml-2 text-erp-primary" onClick={() => onOpenPage?.('sales-return-detail', { row: sourceReturn })}>返回销售退货单</button>
-      </div>
+      <NoticeSourceMissingState
+        message="当前销售退货单不可下推收货通知。"
+        linkLabel="返回销售退货单"
+        onBack={() => onOpenPage?.('sales-return-detail', { row: sourceReturn })}
+      />
     );
   }
 
@@ -154,31 +157,9 @@ export function SalesReturnNoticeCreatePage({ context, onFeedback, onOpenPage })
 
 export function SalesReturnNoticeEditPage({ context, onFeedback, onOpenPage }) {
   const sourceRow = context?.row;
-  const [form, setForm] = useState(null);
-  const [dirty, setDirty] = useState(false);
-
-  useEffect(() => {
-    if (!sourceRow?.id) {
-      setForm(null);
-      return;
-    }
-    const latest = loadSalesReturnNoticeById(sourceRow.id) || sourceRow;
-    if (!canEditSalesReturnNoticeRemark(latest)) {
-      setForm(null);
-      return;
-    }
-    setForm({
-      ...latest,
-      receiveMode: resolveReturnReceiveMode(latest),
-      lines: latest.lines.map((line) => ({ ...line })),
-    });
-    setDirty(false);
-  }, [sourceRow]);
-
-  function updateField(key, value) {
-    setForm((current) => ({ ...current, [key]: value }));
-    setDirty(true);
-  }
+  const { form, dirty, updateField } = useNoticeFormDraft(sourceRow, {
+    buildForm: buildEditableNoticeForm,
+  });
 
   function handleSave() {
     const next = updateSalesReturnNoticeRemark(form, form.remark || '');
@@ -188,10 +169,11 @@ export function SalesReturnNoticeEditPage({ context, onFeedback, onOpenPage }) {
 
   if (!form) {
     return (
-      <div className="rounded-erp-section border border-erp-border-card bg-erp-surface-panel p-6 text-[12px] text-erp-text">
-        当前状态不可编辑。
-        <button type="button" className="ml-2 text-erp-primary" onClick={() => onOpenPage?.('sales-return-notice')}>返回列表</button>
-      </div>
+      <NoticeSourceMissingState
+        message="当前状态不可编辑。"
+        linkLabel="返回列表"
+        onBack={() => onOpenPage?.('sales-return-notice')}
+      />
     );
   }
 

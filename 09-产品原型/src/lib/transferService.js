@@ -152,9 +152,10 @@ export function downloadValidationFailures({ fileName, fields, items }) {
  */
 export function recordDocumentImportTask({ target, fileName, validation, outcome }) {
   const fields = target.documentImportFields || getImportFields(target);
-  const failureItems = outcome?.failureItems || [];
-  const documents = outcome?.documents || [];
-  const failed = outcome?.status === 'failed' || failureItems.length > 0;
+  // commitDocumentImport 恒返回 { status, documents, failureItems }，调用方已直接取 outcome.status。
+  const failureItems = outcome.failureItems;
+  const documents = outcome.documents;
+  const failed = outcome.status === 'failed';
   const now = formatDateTime();
   const task = {
     id: nextTaskNo('IM'),

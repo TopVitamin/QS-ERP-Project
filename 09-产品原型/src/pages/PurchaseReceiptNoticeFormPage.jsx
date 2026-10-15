@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { DocumentEditorFrame, EditorCard } from '../components/erp/DocumentEditorFrame.jsx';
 import { FormFields } from '../components/erp/FormControl.jsx';
 import { LineItemTable } from '../components/erp/LineItemTable.jsx';
+import { NoticeSourceMissingState, useNoticeFormDraft } from './noticeFormShared.jsx';
 import { resolveOptionLabel } from '../lib/codeName.js';
 import { toSelectOptions } from '../lib/options.js';
 import { erpFieldGridClassName } from '../styles/typography.js';
@@ -30,16 +31,20 @@ function getSourceOrder(context) {
   return null;
 }
 
-const VIRTUAL_RECEIPT_TIP = '虚拟入库不会推送通知单到仓库，而是直接生成采购入库单，增加ERP的库存';
+// 收货处理方式说明图标文案（《采购收货通知单前端Demo版PRD_新增编辑页》§3.1、验收场景「处理方式说明」）。
+const RECEIPT_MODE_TIPS = {
+  warehouse: '通知按收货仓库的链路下发：自营仓由ERP直连；电商仓经聚水潭、领星中转，仍只执行一次收货',
+  virtual: '虚拟入库不会推送通知单到仓库，而是直接生成采购入库单，增加ERP的库存，也不向聚水潭、领星同步库存',
+};
 
-function receiptModeField({ required = false, disabled = false, showVirtualTip = false } = {}) {
+function receiptModeField({ required = false, disabled = false, showTips = false } = {}) {
   return {
     key: 'receiptMode',
     label: required ? '收货处理方式 *' : '收货处理方式',
     type: 'radio',
     options: toSelectOptions(receiptModeLabels).map((option) => (
-      showVirtualTip && option.value === 'virtual'
-        ? { ...option, tip: VIRTUAL_RECEIPT_TIP }
+      showTips && RECEIPT_MODE_TIPS[option.value]
+        ? { ...option, tip: RECEIPT_MODE_TIPS[option.value] }
         : option
     )),
     disabled,
@@ -52,7 +57,7 @@ function buildCreateFields(orderRow) {
     { key: 'sourceOrderNo', label: '来源采购订单', type: 'disabled', getValue: () => orderRow?.orderNo || '' },
     { key: 'supplier', label: '供应商', type: 'disabled', getValue: (form) => resolveOptionLabel(form.supplier, supplierOptions) },
     { key: 'warehouse', label: '收货仓库', type: 'disabled', getValue: (form) => resolveOptionLabel(form.warehouse, getInventoryLogicalWarehouseOptions()) },
-    receiptModeField({ required: true, showVirtualTip: true }),
+    receiptModeField({ required: true, showTips: true }),
     { key: 'remark', label: '备注', type: 'textarea', className: 'col-span-3', placeholder: '请输入备注' },
   ];
 }
@@ -70,34 +75,10 @@ function buildEditFields() {
 
 export function PurchaseReceiptNoticeCreatePage({ context, onFeedback, onOpenPage }) {
   const sourceOrder = useMemo(() => getSourceOrder(context), [context]);
-  const [form, setForm] = useState(null);
-  const [dirty, setDirty] = useState(false);
-
-  useEffect(() => {
-    if (!sourceOrder) {
-      setForm(null);
-      return;
-    }
-    if (!canPushNotice(sourceOrder)) {
-      setForm(null);
-      return;
-    }
-    setForm(buildNoticeFormFromOrder(sourceOrder));
-    setDirty(false);
-  }, [sourceOrder]);
-
-  function updateField(key, value) {
-    setForm((current) => ({ ...current, [key]: value }));
-    setDirty(true);
-  }
-
-  function updateLine(lineId, key, value) {
-    setForm((current) => ({
-      ...current,
-      lines: current.lines.map((line) => (line.id === lineId ? { ...line, [key]: value } : line)),
-    }));
-    setDirty(true);
-  }
+  const { form, dirty, updateField, updateLine } = useNoticeFormDraft(sourceOrder, {
+    canPush: canPushNotice,
+    buildForm: buildNoticeFormFromOrder,
+  });
 
   function handleSave() {
     const error = validateNoticeForCreate(form);
@@ -116,19 +97,21 @@ export function PurchaseReceiptNoticeCreatePage({ context, onFeedback, onOpenPag
 
   if (!sourceOrder) {
     return (
-      <div className="rounded-erp-section border border-erp-border-card bg-erp-surface-panel p-6 text-[12px] text-erp-text">
-        来源采购订单不存在或不可下推收货通知。
-        <button type="button" className="ml-2 text-erp-primary" onClick={() => onOpenPage?.('purchase-order')}>返回采购订单</button>
-      </div>
+      <NoticeSourceMissingState
+        message="来源采购订单不存在或不可下推收货通知。"
+        linkLabel="返回采购订单"
+        onBack={() => onOpenPage?.('purchase-order')}
+      />
     );
   }
 
   if (!form) {
     return (
-      <div className="rounded-erp-section border border-erp-border-card bg-erp-surface-panel p-6 text-[12px] text-erp-text">
-        当前采购订单不可下推收货通知。
-        <button type="button" className="ml-2 text-erp-primary" onClick={() => onOpenPage?.('purchase-order-detail', { row: sourceOrder })}>返回采购订单</button>
-      </div>
+      <NoticeSourceMissingState
+        message="当前采购订单不可下推收货通知。"
+        linkLabel="返回采购订单"
+        onBack={() => onOpenPage?.('purchase-order-detail', { row: sourceOrder })}
+      />
     );
   }
 
@@ -161,33 +144,25 @@ export function PurchaseReceiptNoticeCreatePage({ context, onFeedback, onOpenPag
   );
 }
 
+function buildEditableNoticeForm(sourceRow) {
+  const latest = loadNoticeById(sourceRow.id) || sourceRow;
+  return {
+    ...latest,
+    receiptMode: resolveReceiptMode(latest),
+    lines: latest.lines.map((line) => ({ ...line })),
+  };
+}
+
+function canEditLoadedNotice(sourceRow) {
+  return canEditRemark(loadNoticeById(sourceRow.id) || sourceRow);
+}
+
 export function PurchaseReceiptNoticeEditPage({ context, onFeedback, onOpenPage }) {
   const sourceRow = context?.row;
-  const [form, setForm] = useState(null);
-  const [dirty, setDirty] = useState(false);
-
-  useEffect(() => {
-    if (!sourceRow?.id) {
-      setForm(null);
-      return;
-    }
-    const latest = loadNoticeById(sourceRow.id) || sourceRow;
-    if (!canEditRemark(latest)) {
-      setForm(null);
-      return;
-    }
-    setForm({
-      ...latest,
-      receiptMode: resolveReceiptMode(latest),
-      lines: latest.lines.map((line) => ({ ...line })),
-    });
-    setDirty(false);
-  }, [sourceRow]);
-
-  function updateField(key, value) {
-    setForm((current) => ({ ...current, [key]: value }));
-    setDirty(true);
-  }
+  const { form, dirty, updateField } = useNoticeFormDraft(sourceRow, {
+    canPush: canEditLoadedNotice,
+    buildForm: buildEditableNoticeForm,
+  });
 
   function handleSave() {
     const next = updateNoticeRemark(form, form.remark || '');
@@ -197,10 +172,11 @@ export function PurchaseReceiptNoticeEditPage({ context, onFeedback, onOpenPage 
 
   if (!form) {
     return (
-      <div className="rounded-erp-section border border-erp-border-card bg-erp-surface-panel p-6 text-[12px] text-erp-text">
-        当前状态不可编辑。
-        <button type="button" className="ml-2 text-erp-primary" onClick={() => onOpenPage?.('purchase-receipt-notice')}>返回列表</button>
-      </div>
+      <NoticeSourceMissingState
+        message="当前状态不可编辑。"
+        linkLabel="返回列表"
+        onBack={() => onOpenPage?.('purchase-receipt-notice')}
+      />
     );
   }
 

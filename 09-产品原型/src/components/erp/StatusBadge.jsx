@@ -18,3 +18,22 @@ export function StatusBadge({ children, className, tone = 'warning' }) {
     </span>
   );
 }
+
+/** 页头状态标签组：statuses 优先，回退到单个 status 文案；全空不渲染。 */
+export function StatusBadgeList({ statuses, status }) {
+  const items = statuses?.length
+    ? statuses
+    : status
+      ? [{ label: status }]
+      : [];
+
+  if (!items.length) return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {items.map((item, index) => (
+        <StatusBadge key={`${index}-${item.label ?? ''}`} tone={item.tone}>{item.label}</StatusBadge>
+      ))}
+    </div>
+  );
+}

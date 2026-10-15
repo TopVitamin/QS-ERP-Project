@@ -1,10 +1,14 @@
 import { inboundOrders } from '../data/inboundData.js';
 import { auditStatusLabels, INBOUND_STORAGE_KEY, financeErpPushStatusLabels } from '../lib/inboundLogic.js';
 import { orderStatusLabels, orders } from '../data/orderData.js';
+import { NOTICE_STORAGE_KEY, ORDER_STORAGE_KEY } from './purchaseOrderLogic.js';
 import { receiptNotices } from '../data/receiptNoticeData.js';
 import { salesOrders, salesOrderStatusLabels } from '../data/salesOrderData.js';
 import { salesDeliveryNotices } from '../data/salesDeliveryNoticeData.js';
 import { salesOutbounds } from '../data/salesOutboundData.js';
+import { CROSSBORDER_ORDER_STORAGE_KEY, crossBorderOrderSeeds } from '../data/crossBorderOrderData.js';
+import { DOMESTIC_ORDER_STORAGE_KEY, domesticOrderSeeds } from '../data/domesticOrderData.js';
+import { orderFulfillmentStatusLabels } from './ecommerceOrderLogic.js';
 import { noticeStatusLabels, receiptModeLabels } from './receiptNoticeLogic.js';
 import { deliveryModeLabels, noticeStatusLabels as salesNoticeStatusLabels } from './salesDeliveryNoticeLogic.js';
 import { SALES_ORDER_STORAGE_KEY } from './salesOrderLogic.js';
@@ -796,7 +800,7 @@ export const transferTargets = [
   {
     id: 'purchase-order',
     label: '采购订单',
-    storageKey: 'qs-erp:purchase-orders:v4',
+    storageKey: ORDER_STORAGE_KEY,
     seedRows: orders,
     fileName: '采购订单',
     keyField: 'orderNo',
@@ -808,7 +812,7 @@ export const transferTargets = [
   {
     id: 'purchase-receipt-notice',
     label: '采购收货通知单',
-    storageKey: 'qs-erp:purchase-receipt-notices:v2',
+    storageKey: NOTICE_STORAGE_KEY,
     seedRows: receiptNotices,
     fileName: '采购收货通知单',
     keyField: 'noticeNo',
@@ -906,6 +910,52 @@ export const transferTargets = [
       { key: 'pushTime', label: '推送财务ERP时间' },
       { key: 'pushFailReason', label: '推送失败原因' },
       { key: 'createdAt', label: '创建时间' },
+      { key: 'updatedAt', label: '最后更新时间' },
+    ],
+  },
+  {
+    id: 'sales-domestic-order',
+    label: '国内电商订单',
+    storageKey: DOMESTIC_ORDER_STORAGE_KEY,
+    seedRows: domesticOrderSeeds,
+    fileName: '国内电商订单',
+    keyField: 'orderNo',
+    keyLabel: '订单编号',
+    importable: false,
+    fields: [
+      { key: 'orderNo', label: '订单编号' },
+      { key: 'channelOrderNo', label: '渠道单号' },
+      { key: 'platformOrderNo', label: '平台单号' },
+      { key: 'platform', label: '平台' },
+      { key: 'shop', label: '店铺' },
+      { key: 'orderedAt', label: '下单时间' },
+      { key: 'fulfillmentStatus', label: '履约状态', options: toOptions(orderFulfillmentStatusLabels) },
+      { key: 'currency', label: '币别' },
+      { key: 'amount', label: '成交优惠后金额合计' },
+      { key: 'returnAmount', label: '退货金额合计' },
+      { key: 'updatedAt', label: '最后更新时间' },
+    ],
+  },
+  {
+    id: 'sales-crossborder-order',
+    label: '跨境电商订单',
+    storageKey: CROSSBORDER_ORDER_STORAGE_KEY,
+    seedRows: crossBorderOrderSeeds,
+    fileName: '跨境电商订单',
+    keyField: 'orderNo',
+    keyLabel: '订单编号',
+    importable: false,
+    fields: [
+      { key: 'orderNo', label: '订单编号' },
+      { key: 'channelOrderNo', label: '渠道单号' },
+      { key: 'platformOrderNo', label: '平台单号' },
+      { key: 'platform', label: '平台' },
+      { key: 'shop', label: '店铺' },
+      { key: 'orderedAt', label: '下单时间' },
+      { key: 'fulfillmentStatus', label: '履约状态', options: toOptions(orderFulfillmentStatusLabels) },
+      { key: 'currency', label: '币别' },
+      { key: 'amount', label: '成交优惠后金额合计' },
+      { key: 'returnAmount', label: '退货金额合计' },
       { key: 'updatedAt', label: '最后更新时间' },
     ],
   },

@@ -4,10 +4,12 @@ import {
   PurchaseOrderActionDialogs,
   PurchaseOrderDetailHeaderActions,
 } from '../components/erp/PurchaseOrderActionDialogs.jsx';
-import { buildCreateMetaFields } from '../components/erp/DocumentMetaTabsCard.jsx';
+import {
+  buildOperationInfoTabs,
+} from '../components/erp/DocumentMetaTabsCard.jsx';
 import { buildPurchaseOrderOperationLogs } from '../lib/operationLog.js';
 import { RelatedDocumentsCard } from '../components/erp/RelatedDocumentsCard.jsx';
-import { usePurchaseOrderRow } from '../hooks/usePurchaseOrderRow.js';
+import { useDocumentRow } from '../hooks/useDocumentRow.js';
 import { resolveOptionLabel } from '../lib/codeName.js';
 import { formatSnapshotCodeName } from '../lib/documentNameSnapshots.js';
 import { formatAmount } from '../lib/format.js';
@@ -15,7 +17,7 @@ import { currencySymbol } from '../lib/money.js';
 import { buildOrderRelatedDocumentSections } from '../lib/purchaseOrderRelatedDocs.js';
 import { supplierOptions } from '../data/masterData.js';
 import { getInventoryLogicalWarehouseOptions } from '../data/warehouseData.js';
-import { loadOrderById, refreshOrderLines } from '../lib/purchaseOrderLogic.js';
+import { ORDER_STORAGE_KEY, loadOrderById, refreshOrderLines } from '../lib/purchaseOrderLogic.js';
 import { defaultOrderForm, getEditableOrder, getOrderStatusBadges, purchaseLineEditorOptions } from '../data/purchaseFormData.js';
 
 function getOrderDetail(row) {
@@ -83,19 +85,7 @@ const orderDetailConfig = {
       title: '操作信息',
       variant: 'meta-tabs',
       defaultTab: 'create',
-      tabs: ({ row }) => [
-        {
-          key: 'create',
-          label: '制单信息',
-          fields: buildCreateMetaFields(row),
-        },
-        {
-          key: 'log',
-          label: '操作日志',
-          variant: 'log',
-          logEntries: () => buildPurchaseOrderOperationLogs(row),
-        },
-      ],
+      tabs: ({ row }) => buildOperationInfoTabs({ row, buildLogs: buildPurchaseOrderOperationLogs }),
     },
   ],
   summary: { quantityLabel: '采购数量', amountLabel: '价税合计' },
@@ -111,7 +101,7 @@ const orderDetailConfig = {
 };
 
 export function PurchaseOrderDetailPage({ onFeedback, onOpenPage, context }) {
-  const row = usePurchaseOrderRow(context);
+  const row = useDocumentRow(context, { storageKey: ORDER_STORAGE_KEY, loadById: loadOrderById });
   const [dialog, setDialog] = useState(null);
 
   function handleDialogComplete(result) {

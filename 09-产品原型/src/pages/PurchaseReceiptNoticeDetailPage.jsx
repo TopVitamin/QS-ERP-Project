@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { DocumentDetailPage } from '../components/erp/DocumentDetailPage.jsx';
-import { buildCreateMetaFields } from '../components/erp/DocumentMetaTabsCard.jsx';
+import {
+  buildOperationInfoTabs,
+} from '../components/erp/DocumentMetaTabsCard.jsx';
 import { RelatedDocumentsCard } from '../components/erp/RelatedDocumentsCard.jsx';
 import { buildReceiptNoticeOperationLogs } from '../lib/operationLog.js';
 import { buildNoticeRelatedDocumentSections } from '../lib/receiptNoticeRelatedDocs.js';
@@ -8,14 +10,14 @@ import {
   PurchaseReceiptNoticeActionDialogs,
   PurchaseReceiptNoticeDetailHeaderActions,
 } from '../components/erp/PurchaseReceiptNoticeActionDialogs.jsx';
-import { usePurchaseReceiptNoticeRow } from '../hooks/usePurchaseReceiptNoticeRow.js';
+import { useDocumentRow } from '../hooks/useDocumentRow.js';
 import { resolveOptionLabel } from '../lib/codeName.js';
 import { formatSnapshotCodeName } from '../lib/documentNameSnapshots.js';
 import { EMPTY_PLACEHOLDER } from '../lib/format.js';
 import { supplierOptions } from '../data/masterData.js';
 import { getInventoryLogicalWarehouseOptions } from '../data/warehouseData.js';
 import { getNoticeStatusBadges } from '../data/receiptNoticeData.js';
-import { formatReceiptMode, loadNoticeById, refreshNoticeLines } from '../lib/receiptNoticeLogic.js';
+import { NOTICE_STORAGE_KEY, formatReceiptMode, loadNoticeById, manualConfirmTypesForStatus, refreshNoticeLines } from '../lib/receiptNoticeLogic.js';
 import { orders } from '../data/orderData.js';
 import { loadOrderById } from '../lib/purchaseOrderLogic.js';
 
@@ -42,6 +44,22 @@ function buildSourceOrderLink(detail, onOpenPage) {
   );
 }
 
+/** 推送失败去向：记录只读查看在系统集成中心「推送异常－推送外部仓库」页签，重试在本页办理（Demo 详情页 PRD §1 边界）。 */
+function buildPushFailReasonValue(row, onOpenPage) {
+  return (
+    <span className="flex min-w-0 items-center gap-1.5">
+      <span className="truncate">{row.pushFailReason}</span>
+      <button
+        type="button"
+        className="shrink-0 text-erp-primary hover:underline"
+        onClick={() => onOpenPage?.('integration-push-exceptions', { presetFilters: { tab: 'warehouse' } })}
+      >
+        查看推送异常
+      </button>
+    </span>
+  );
+}
+
 function buildNoticeInfoFields({ detail, row, onOpenPage }) {
   const fields = [
     { key: 'noticeNo', label: '单号', value: detail.noticeNo },
@@ -51,9 +69,19 @@ function buildNoticeInfoFields({ detail, row, onOpenPage }) {
     { key: 'receiptMode', label: '收货处理方式', value: formatReceiptMode(detail) },
     { key: 'pushTime', label: '推送时间', value: row.pushTime || EMPTY_PLACEHOLDER },
     { key: 'finalReceiveTime', label: '最终收货确认时间', value: row.finalReceiveTime || EMPTY_PLACEHOLDER },
+    { key: 'confirmBy', label: '人工确认人', value: row.confirmBy || EMPTY_PLACEHOLDER },
+    { key: 'confirmAt', label: '人工确认时间', value: row.confirmAt || EMPTY_PLACEHOLDER },
   ];
+  if (row.confirmContent) {
+    fields.push({ key: 'confirmContent', label: '人工确认内容', value: row.confirmContent, className: 'col-span-3' });
+  }
   if (row.pushFailReason) {
-    fields.push({ key: 'pushFailReason', label: '推送失败原因', value: row.pushFailReason, className: 'col-span-3' });
+    fields.push({
+      key: 'pushFailReason',
+      label: '推送失败原因',
+      value: buildPushFailReasonValue(row, onOpenPage),
+      className: 'col-span-3',
+    });
   }
   fields.push({ key: 'remark', label: '备注', value: detail.remark || EMPTY_PLACEHOLDER, className: 'col-span-3' });
   return fields;
@@ -88,19 +116,7 @@ const noticeDetailConfig = {
       title: '操作信息',
       variant: 'meta-tabs',
       defaultTab: 'create',
-      tabs: ({ row }) => [
-        {
-          key: 'create',
-          label: '制单信息',
-          fields: buildCreateMetaFields(row),
-        },
-        {
-          key: 'log',
-          label: '操作日志',
-          variant: 'log',
-          logEntries: () => buildReceiptNoticeOperationLogs(row),
-        },
-      ],
+      tabs: ({ row }) => buildOperationInfoTabs({ row, buildLogs: buildReceiptNoticeOperationLogs }),
     },
   ],
   summary: { quantityLabel: '通知数量', amountLabel: '实收数量' },
@@ -112,7 +128,7 @@ const noticeDetailConfig = {
 };
 
 export function PurchaseReceiptNoticeDetailPage({ onFeedback, onOpenPage, context }) {
-  const row = usePurchaseReceiptNoticeRow(context);
+  const row = useDocumentRow(context, { storageKey: NOTICE_STORAGE_KEY, loadById: loadNoticeById });
   const [dialog, setDialog] = useState(null);
 
   function handleDialogComplete(result) {
@@ -141,6 +157,11 @@ export function PurchaseReceiptNoticeDetailPage({ onFeedback, onOpenPage, contex
         onAction={(id, currentRow) => {
           if (id === 'edit') {
             openPage?.('purchase-receipt-notice-edit', { row: currentRow });
+            return;
+          }
+          if (id === 'manual-confirm') {
+            const [confirmType] = manualConfirmTypesForStatus(currentRow.status);
+            setDialog({ type: 'manual-confirm', confirmType, row: currentRow });
             return;
           }
           setDialog({ type: id, row: currentRow });

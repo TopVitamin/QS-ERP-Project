@@ -60,19 +60,79 @@ const additionalB2BOutbounds = salesDeliveryNotices
 const directSourceOutbounds = [
   {
     id: 'sales-outbound-shopify-seed', outboundNo: 'XSCK-20260922-0007', sourceType: 'shopify',
-    sourceOrderNo: 'SHOP-20260922-0001', customer: 'CUS000001', warehouse: 'LWH000001', currency: '人民币',
-    auditStatus: 'approved', financeErpPushStatus: 'push_success', businessDate: '2026-09-22',
-    actualOutboundTime: '2026-09-22 14:20:00', pushTime: '2026-09-22 14:21:00', pushFailReason: '',
-    creator: '系统', createdAt: '2026-09-22 14:20:00', updater: '系统', updatedAt: '2026-09-22 14:21:00',
+    sourceOrderNo: 'XSDD-20260923-0005', customer: 'CUS000001', warehouse: 'LWH000001', currency: '人民币',
+    auditStatus: 'approved', financeErpPushStatus: 'push_success', businessDate: '2026-09-23',
+    actualOutboundTime: '2026-09-23 18:45:00', pushTime: '2026-09-23 18:46:00', pushFailReason: '',
+    creator: '系统', createdAt: '2026-09-23 18:45:00', updater: '系统', updatedAt: '2026-09-23 18:46:00',
     lines: [{ id: 'sales-outbound-shopify-line', product: 'SP0101010001', quantity: 1, price: 128, taxRate: '13' }],
   },
+  // 二版「分两张」：国内电商订单来源（来源国内电商订单关联 GNDS 单号，可跳转订单详情）
   {
-    id: 'sales-outbound-toc-seed', outboundNo: 'XSCK-20260922-0008', sourceType: 'external_toc',
-    sourceOrderNo: '', externalOrderNo: 'TOC-20260922-0001', customer: 'CUS000005', warehouse: 'LWH000001', currency: '人民币',
+    id: 'sales-outbound-toc-seed', outboundNo: 'XSCK-20260922-0008', sourceType: 'domestic_order',
+    sourceOrderNo: '', sourceDomesticOrderNo: 'GNDS-20260921-0002', customer: 'CUS000005', warehouse: 'LWH000001', currency: '人民币',
     auditStatus: 'approved', financeErpPushStatus: 'push_failed', businessDate: '2026-09-22',
     actualOutboundTime: '2026-09-22 15:10:00', pushTime: '2026-09-22 15:11:00', pushFailReason: '接口超时，财务ERP未确认接收',
     creator: '系统', createdAt: '2026-09-22 15:10:00', updater: '系统', updatedAt: '2026-09-22 15:11:00',
     lines: [{ id: 'sales-outbound-toc-line', product: 'SP0101010001', quantity: 1, price: 128, taxRate: '13' }],
+  },
+  {
+    id: 'sales-outbound-domestic-2', outboundNo: 'XSCK-20260923-0001', sourceType: 'domestic_order',
+    sourceOrderNo: '', sourceDomesticOrderNo: 'GNDS-20260921-0002', customer: 'CUS000005', warehouse: 'LWH000001', currency: '人民币',
+    auditStatus: 'approved', financeErpPushStatus: 'push_success', businessDate: '2026-09-23',
+    actualOutboundTime: '2026-09-23 10:20:00', pushTime: '2026-09-23 10:21:00', pushFailReason: '',
+    creator: '系统', createdAt: '2026-09-23 10:20:00', updater: '系统', updatedAt: '2026-09-23 10:21:00',
+    lines: [{ id: 'sales-outbound-domestic-2-line-1', product: 'SP0101010001', quantity: 2, price: 128, taxRate: '13' }],
+  },
+  {
+    id: 'sales-outbound-domestic-3', outboundNo: 'XSCK-20260919-0001', sourceType: 'domestic_order',
+    sourceOrderNo: '', sourceDomesticOrderNo: 'GNDS-20260918-0001', customer: 'CUS000005', warehouse: 'LWH000001', currency: '人民币',
+    auditStatus: 'approved', financeErpPushStatus: 'push_success', businessDate: '2026-09-19',
+    actualOutboundTime: '2026-09-19 14:05:00', pushTime: '2026-09-19 14:06:00', pushFailReason: '',
+    creator: '系统', createdAt: '2026-09-19 14:05:00', updater: '系统', updatedAt: '2026-09-19 14:06:00',
+    lines: [
+      { id: 'sales-outbound-domestic-3-line-1', product: 'SP0101020001', quantity: 10, price: 160, taxRate: '13' },
+      { id: 'sales-outbound-domestic-3-line-2', product: 'SP0103010001', quantity: 2, price: 189, taxRate: '13' },
+      { id: 'sales-outbound-domestic-3-line-3', product: 'SP0103030001', quantity: 5, price: 99, taxRate: '13' },
+    ],
+  },
+  {
+    id: 'sales-outbound-domestic-4', outboundNo: 'XSCK-20260920-0001', sourceType: 'domestic_order',
+    sourceOrderNo: '', sourceDomesticOrderNo: 'GNDS-20260919-0001', customer: 'CUS000005', warehouse: 'LWH000001', currency: '人民币',
+    auditStatus: 'approved', financeErpPushStatus: 'push_success', businessDate: '2026-09-20',
+    actualOutboundTime: '2026-09-20 09:30:00', pushTime: '2026-09-20 09:31:00', pushFailReason: '',
+    creator: '系统', createdAt: '2026-09-20 09:30:00', updater: '系统', updatedAt: '2026-09-20 09:31:00',
+    lines: [
+      { id: 'sales-outbound-domestic-4-line-1', product: 'SP0102010001', quantity: 1, price: 1299, taxRate: '13' },
+      { id: 'sales-outbound-domestic-4-line-2', product: 'SP0103020001', quantity: 4, price: 18, taxRate: '13' },
+    ],
+  },
+  // 二版「分两张」：跨境电商订单来源（来源跨境电商订单关联 KJDS 单号，可跳转订单详情）
+  {
+    id: 'sales-outbound-crossborder-1', outboundNo: 'XSCK-20260923-0002', sourceType: 'crossborder_order',
+    sourceOrderNo: '', sourceCrossborderOrderNo: 'KJDS-20260918-0001', customer: 'CUS000005', warehouse: 'LWH000001', currency: '美元',
+    auditStatus: 'approved', financeErpPushStatus: 'push_success', businessDate: '2026-09-23',
+    actualOutboundTime: '2026-09-23 15:40:00', pushTime: '2026-09-23 15:41:00', pushFailReason: '',
+    creator: '系统', createdAt: '2026-09-23 15:40:00', updater: '系统', updatedAt: '2026-09-23 15:41:00',
+    lines: [{ id: 'sales-outbound-crossborder-1-line-1', product: 'SP0101010001', quantity: 2, price: 124, taxRate: '0' }],
+  },
+  {
+    id: 'sales-outbound-crossborder-2', outboundNo: 'XSCK-20260923-0003', sourceType: 'crossborder_order',
+    sourceOrderNo: '', sourceCrossborderOrderNo: 'KJDS-20260918-0001', customer: 'CUS000005', warehouse: 'LWH000001', currency: '美元',
+    auditStatus: 'approved', financeErpPushStatus: 'pushing', businessDate: '2026-09-23',
+    actualOutboundTime: '2026-09-23 16:18:40', pushTime: '2026-09-23 16:18:40', pushFailReason: '',
+    creator: '系统', createdAt: '2026-09-23 16:18:40', updater: '系统', updatedAt: '2026-09-23 16:18:40',
+    lines: [
+      { id: 'sales-outbound-crossborder-2-line-1', product: 'SP0101010001', quantity: 1, price: 124, taxRate: '0' },
+      { id: 'sales-outbound-crossborder-2-line-2', product: 'SP0101020002', quantity: 2, price: 165, taxRate: '0' },
+    ],
+  },
+  {
+    id: 'sales-outbound-crossborder-3', outboundNo: 'XSCK-20261014-0001', sourceType: 'crossborder_order',
+    sourceOrderNo: '', sourceCrossborderOrderNo: 'KJDS-20261013-0001', customer: 'CUS000005', warehouse: 'LWH000001', currency: '人民币',
+    auditStatus: 'approved', financeErpPushStatus: 'push_success', businessDate: '2026-10-14',
+    actualOutboundTime: '2026-10-14 16:18:40', pushTime: '2026-10-14 16:19:10', pushFailReason: '',
+    creator: '系统', createdAt: '2026-10-14 16:18:40', updater: '系统', updatedAt: '2026-10-14 16:19:10',
+    lines: [{ id: 'sales-outbound-crossborder-3-line-1', product: 'SP0103010003', quantity: 3, price: 119, taxRate: '13' }],
   },
 ].map(normalizeOutboundRow);
 
@@ -141,4 +201,15 @@ export function buildSourceSalesOrderFilterOptions(rows = []) {
     map.set(row.sourceOrderNo, { value: row.sourceOrderNo, label: row.sourceOrderNo });
   });
   return [{ value: '', label: '全部订单' }, ...map.values()];
+}
+
+/** 来源国内电商订单／来源跨境电商订单筛选项：仅对应来源单据有值（TSV：可筛选=是、列表展示=否） */
+export function buildSourceOrderFilterOptions(rows = [], field, placeholder) {
+  const map = new Map();
+  rows.forEach((row) => {
+    const value = row[field];
+    if (!value) return;
+    map.set(value, { value, label: value });
+  });
+  return [{ value: '', label: placeholder }, ...map.values()];
 }

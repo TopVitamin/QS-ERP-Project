@@ -89,7 +89,8 @@ export const defaultNavItems = [
         title: '2C 渠道',
         items: [
           { label: '独立站订单', pageId: 'sales-shopify-order' },
-          { label: '外部电商订单', pageId: 'sales-external-order' },
+          { label: '国内电商订单', pageId: 'sales-domestic-order' },
+          { label: '跨境电商订单', pageId: 'sales-crossborder-order' },
         ],
       },
       {

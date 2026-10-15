@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { DocumentDetailPage } from '../components/erp/DocumentDetailPage.jsx';
-import { buildCreateMetaFields } from '../components/erp/DocumentMetaTabsCard.jsx';
+import {
+  buildOperationInfoTabs,
+} from '../components/erp/DocumentMetaTabsCard.jsx';
 import { RelatedDocumentsCard } from '../components/erp/RelatedDocumentsCard.jsx';
 import {
   SalesReturnNoticeActionDialogs,
@@ -11,36 +13,16 @@ import { getSalesReturnNoticeStatusBadges } from '../data/salesReturnNoticeData.
 import { salesReturns } from '../data/salesReturnData.js';
 import { resolveOptionLabel } from '../lib/codeName.js';
 import { EMPTY_PLACEHOLDER } from '../lib/format.js';
-import { subscribeMockRows } from '../lib/mockStorage.js';
+import { useDocumentRow } from '../hooks/useDocumentRow.js';
 import {
   buildSalesReturnNoticeOperationLogs,
   formatReturnReceiveMode,
   loadSalesReturnNoticeById,
+  manualConfirmTypesForStatus,
   refreshSalesReturnNoticeLines,
   RETURN_NOTICE_STORAGE_KEY,
 } from '../lib/salesReturnNoticeLogic.js';
 import { buildSalesReturnNoticeRelatedDocumentSections } from '../lib/salesReturnRelatedDocs.js';
-
-function useSalesReturnNoticeRow(context) {
-  const contextRow = context?.row;
-  const [row, setRow] = useState(contextRow || null);
-
-  useEffect(() => {
-    if (!contextRow?.id) {
-      setRow(contextRow || null);
-      return undefined;
-    }
-
-    function syncRow() {
-      setRow(loadSalesReturnNoticeById(contextRow.id) || contextRow);
-    }
-
-    syncRow();
-    return subscribeMockRows(RETURN_NOTICE_STORAGE_KEY, syncRow);
-  }, [contextRow]);
-
-  return row;
-}
 
 function getNoticeDetail(row) {
   if (!row) return { lines: [] };
@@ -76,7 +58,12 @@ function buildNoticeInfoFields({ detail, row, onOpenPage }) {
     { key: 'pushTime', label: '推送时间', value: row.pushTime || EMPTY_PLACEHOLDER },
     { key: 'finalReceiveTime', label: '最终收货确认时间', value: row.finalReceiveTime || EMPTY_PLACEHOLDER },
     { key: 'lastHandledTime', label: '最近处理时间', value: row.lastHandledTime || EMPTY_PLACEHOLDER },
+    { key: 'confirmBy', label: '人工确认人', value: row.confirmBy || EMPTY_PLACEHOLDER },
+    { key: 'confirmAt', label: '人工确认时间', value: row.confirmAt || EMPTY_PLACEHOLDER },
   ];
+  if (row.confirmContent) {
+    fields.push({ key: 'confirmContent', label: '人工确认内容', value: row.confirmContent, className: 'col-span-3' });
+  }
   if (row.pushFailReason) {
     fields.push({ key: 'pushFailReason', label: '推送失败原因', value: row.pushFailReason, className: 'col-span-3' });
   }
@@ -113,19 +100,7 @@ const noticeDetailConfig = {
       title: '操作信息',
       variant: 'meta-tabs',
       defaultTab: 'create',
-      tabs: ({ row }) => [
-        {
-          key: 'create',
-          label: '制单信息',
-          fields: buildCreateMetaFields(row),
-        },
-        {
-          key: 'log',
-          label: '操作日志',
-          variant: 'log',
-          logEntries: () => buildSalesReturnNoticeOperationLogs(row),
-        },
-      ],
+      tabs: ({ row }) => buildOperationInfoTabs({ row, buildLogs: buildSalesReturnNoticeOperationLogs }),
     },
   ],
   summary: { quantityLabel: '通知数量', amountLabel: '实收数量' },
@@ -137,7 +112,7 @@ const noticeDetailConfig = {
 };
 
 export function SalesReturnNoticeDetailPage({ onFeedback, onOpenPage, context }) {
-  const row = useSalesReturnNoticeRow(context);
+  const row = useDocumentRow(context, { storageKey: RETURN_NOTICE_STORAGE_KEY, loadById: loadSalesReturnNoticeById });
   const [dialog, setDialog] = useState(null);
 
   function handleDialogComplete(result) {
@@ -166,6 +141,11 @@ export function SalesReturnNoticeDetailPage({ onFeedback, onOpenPage, context })
         onAction={(id, currentRow) => {
           if (id === 'edit') {
             onOpenPage?.('sales-return-notice-edit', { row: currentRow });
+            return;
+          }
+          if (id === 'manual-confirm') {
+            const [confirmType] = manualConfirmTypesForStatus(currentRow.status);
+            setDialog({ type: 'manual-confirm', confirmType, row: currentRow });
             return;
           }
           setDialog({ type: id, row: currentRow });

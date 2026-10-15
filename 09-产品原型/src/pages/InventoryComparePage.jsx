@@ -12,7 +12,7 @@ import {
 } from '../lib/listFilters.js';
 import { toSelectOptions } from '../lib/options.js';
 import { getTransferTarget } from '../lib/transferTargets.js';
-import { formatSignedQty, latestCompareTime, loadCompareRows } from '../lib/inventoryStockLogic.js';
+import { formatSignedQty, latestCompareTime, loadCompareRows, STOCK_COMPARE_STORAGE_KEY } from '../lib/inventoryStockLogic.js';
 
 const initialFilters = {
   physicalWarehouse: '',
@@ -84,7 +84,7 @@ export function InventoryComparePage(props) {
   const config = {
     title: '库存比对',
     rows,
-    storageKey: 'qs-erp:inventory-compare:v1',
+    storageKey: STOCK_COMPARE_STORAGE_KEY,
     initialFilters,
     filterRows,
     initialVisibility,

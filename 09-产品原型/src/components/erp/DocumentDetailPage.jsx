@@ -21,7 +21,26 @@ function DetailFieldGrid({ fields }) {
  * 订单、入库单等页面只提供详情转换和字段清单，保持详情页结构一致。
  */
 export function DocumentDetailPage({ context, onOpenPage, config }) {
-  const row = context?.row || {};
+  const row = context?.row;
+
+  // 无行上下文（直接打开详情 hash、单据已被删除）时按 PRD 提供错误态，不渲染空详情。
+  if (!row) {
+    return (
+      <DocumentDetailFrame
+        title="单据不存在"
+        onBack={() => onOpenPage?.(config.listPageId)}
+      >
+        <EditorCard title="提示">
+          <p className="text-[12px] text-erp-text-muted">单据不存在或不可访问，可能已被删除，请返回列表查看。</p>
+        </EditorCard>
+      </DocumentDetailFrame>
+    );
+  }
+
+  return <DocumentDetailContent row={row} onOpenPage={onOpenPage} config={config} />;
+}
+
+function DocumentDetailContent({ row, onOpenPage, config }) {
   const detail = useMemo(() => config.getDetail(row), [config, row]);
   const lineTotals = computeLinesTotals(detail.lines);
   const totalQuantity = lineTotals.quantity;

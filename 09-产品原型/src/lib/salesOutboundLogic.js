@@ -1,8 +1,8 @@
 import { skuOptions } from '../data/masterData.js';
-import { computeLineTaxMetrics, computeLinesTotals } from './format.js';
+import { computeLineTaxMetrics, computeLinesTotals, nowStamp } from './format.js';
 import { nextDocumentNo } from './documentNo.js';
 import { upsertMockRow, readMockRows, writeMockRows } from './mockStorage.js';
-import { loadOrderById, nowStamp, DELIVERY_NOTICE_STORAGE_KEY } from './salesOrderLogic.js';
+import { loadOrderById, DELIVERY_NOTICE_STORAGE_KEY } from './salesOrderLogic.js';
 import { getAvailableStock, getReservationRemaining, loadStockFlows, postStockEntries } from './inventoryStockLogic.js';
 import { captureSalesDocumentNames, loadRowsWithNameSnapshots } from './documentNameSnapshots.js';
 
@@ -19,10 +19,12 @@ export const financeErpPushStatusLabels = {
   push_failed: '推送失败',
 };
 
+/** 来源类型（二版「分两张」：国内电商订单、跨境电商订单分别关联来源订单对象；B5） */
 export const sourceTypeLabels = {
   b2b_notice: 'B2B发货通知',
   shopify: '独立站订单',
-  external_toc: '外部ToC',
+  domestic_order: '国内电商订单',
+  crossborder_order: '跨境电商订单',
 };
 
 const FINANCE_ERP_AUTO_RETRY_MAX = 3;
@@ -78,23 +80,32 @@ export function persistOutbound(row) {
 
 export function loadAllOutbounds(seed = []) {
   const rows = readMockRows(SALES_OUTBOUND_STORAGE_KEY, seed);
-  const legacyTocSeed = rows.find((row) => row.id === 'sales-outbound-toc-seed'
-    && row.sourceType === 'external_toc'
-    && row.sourceOrderNo === 'TOC-20260922-0001'
-    && row.warehouse === 'LWH000009'
-    && row.lines?.some((line) => line.product === 'SP0101020001'));
-  if (legacyTocSeed) {
-    const next = rows.map((row) => row.id !== legacyTocSeed.id ? row : normalizeOutboundRow({
-      ...row,
-      sourceOrderNo: '',
-      externalOrderNo: row.externalOrderNo || row.sourceOrderNo,
-      warehouse: 'LWH000001',
-      warehouseNameSnapshot: '',
-      warehouseSnapshotCode: '',
-      lines: row.lines.map((line) => line.product === 'SP0101020001'
-        ? { ...line, product: 'SP0101010001', price: 128 }
-        : line),
-    }));
+  // 二版「分两张」迁移：历史演示存储中的旧来源类型行改写为来源国内电商订单，删除 externalOrderNo；
+  // 原来落在在途逻辑仓的演示行一并归到普通逻辑仓（一期不向在途仓出库）。
+  // `external_toc` 仅为历史演示数据迁移兼容的旧值识别，不属展示内容，也不作为业务口径。
+  const legacyTocRows = rows.filter((row) => row.sourceType === 'external_toc');
+  if (legacyTocRows.length) {
+    const legacyIds = new Set(legacyTocRows.map((row) => row.id));
+    const next = rows.map((row) => {
+      if (!legacyIds.has(row.id)) return row;
+      return normalizeOutboundRow({
+        ...row,
+        sourceType: 'domestic_order',
+        sourceDomesticOrderNo: row.sourceDomesticOrderNo || row.sourceOrderNo || row.externalOrderNo || '',
+        sourceOrderNo: '',
+        externalOrderNo: '',
+        ...(row.id === 'sales-outbound-toc-seed'
+          ? {
+            warehouse: 'LWH000001',
+            warehouseNameSnapshot: '',
+            warehouseSnapshotCode: '',
+            lines: (row.lines || []).map((line) => (line.product === 'SP0101020001'
+              ? { ...line, product: 'SP0101010001', price: 128 }
+              : line)),
+          }
+          : {}),
+      });
+    });
     writeMockRows(SALES_OUTBOUND_STORAGE_KEY, next);
   }
   const currentRows = readMockRows(SALES_OUTBOUND_STORAGE_KEY, seed);

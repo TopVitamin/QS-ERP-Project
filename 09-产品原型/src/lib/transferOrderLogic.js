@@ -14,10 +14,10 @@
 import { skuOptions } from '../data/masterData.js';
 import { isTransitLogicalWarehouse } from '../data/warehouseData.js';
 import { nextDocumentNo } from './documentNo.js';
+import { nowStamp } from './format.js';
 import {
   loadReservations,
   loadStockRows,
-  nowStamp,
   persistReservations,
   persistStockRows,
   reserveStock,
@@ -665,5 +665,5 @@ export function buildTransferOrderOperationLogs(row) {
       remark: '两端执行完成自动完结',
     });
   }
-  return mergeTransferLogs(entries, row.operationLogs || []);
+  return mergeTransferLogs(entries, row.operationLogs);
 }

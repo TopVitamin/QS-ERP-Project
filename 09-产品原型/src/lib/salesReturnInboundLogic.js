@@ -1,10 +1,9 @@
 import { skuOptions } from '../data/masterData.js';
 import { nextDocumentNo } from './documentNo.js';
-import { computeLineTaxMetrics, computeLinesTotals, EMPTY_PLACEHOLDER } from './format.js';
-import { readMockRows, upsertMockRow } from './mockStorage.js';
+import { computeLineTaxMetrics, computeLinesTotals, EMPTY_PLACEHOLDER, nowStamp } from './format.js';
+import { readMockRows, upsertMockRow, writeMockRows } from './mockStorage.js';
 import {
   loadSalesReturnById,
-  nowStamp,
   RETURN_INBOUND_STORAGE_KEY,
   RETURN_NOTICE_STORAGE_KEY,
 } from './salesReturnLogic.js';
@@ -17,10 +16,11 @@ export const auditStatusLabels = {
   approved: '已审核',
 };
 
-/** 来源类型：路径一=销退收货通知，路径二=外部ToC（主PRD §7.1） */
+/** 来源类型：路径一=销退收货通知，路径二=国内电商订单／跨境电商订单（二版「分两张」，B5） */
 export const sourceTypeLabels = {
   notice: '销退收货通知',
-  toc: '外部ToC',
+  domestic_order: '国内电商订单',
+  crossborder_order: '跨境电商订单',
 };
 
 export const financeErpPushStatusLabels = {
@@ -58,21 +58,23 @@ export function refreshSalesReturnInboundLines(lines = []) {
 }
 
 export function normalizeSalesReturnInboundRow(row) {
-  const sourceType = row.sourceType || 'notice';
-  const isExternalToc = sourceType === 'toc';
+  // 历史演示存储的旧来源类型（toc）按二版口径迁移为国内电商订单来源（来源订单字段留空）
+  const sourceType = row.sourceType === 'toc' ? 'domestic_order' : (row.sourceType || 'notice');
+  const isChannelOrder = sourceType === 'domestic_order' || sourceType === 'crossborder_order';
   // 路径二无关联通知与销售退货单：来源通知行一并留空，列表与详情展示「-」（主PRD §7.4 回写范围）
   const lines = refreshSalesReturnInboundLines(row.lines || []).map((line) => (
-    isExternalToc ? { ...line, sourceNoticeLineId: '', sourceNoticeLine: '' } : line
+    isChannelOrder ? { ...line, sourceNoticeLineId: '', sourceNoticeLine: '' } : line
   ));
   const totals = computeLinesTotals(lines);
   return {
     ...row,
     sourceType,
-    externalOrderNo: row.externalOrderNo || '',
-    sourceNoticeId: isExternalToc ? '' : row.sourceNoticeId || '',
-    sourceNoticeNo: isExternalToc ? '' : row.sourceNoticeNo || '',
-    sourceReturnId: isExternalToc ? '' : row.sourceReturnId || '',
-    sourceReturnNo: isExternalToc ? '' : row.sourceReturnNo || '',
+    sourceDomesticOrderNo: row.sourceDomesticOrderNo || '',
+    sourceCrossborderOrderNo: row.sourceCrossborderOrderNo || '',
+    sourceNoticeId: isChannelOrder ? '' : row.sourceNoticeId || '',
+    sourceNoticeNo: isChannelOrder ? '' : row.sourceNoticeNo || '',
+    sourceReturnId: isChannelOrder ? '' : row.sourceReturnId || '',
+    sourceReturnNo: isChannelOrder ? '' : row.sourceReturnNo || '',
     lines,
     totalReceiveQty: totals.quantity,
     amount: totals.grossAmount,
@@ -92,7 +94,17 @@ export function persistSalesReturnInbound(row) {
 }
 
 export function loadAllSalesReturnInbounds(seed = []) {
-  return readMockRows(RETURN_INBOUND_STORAGE_KEY, seed);
+  const rows = readMockRows(RETURN_INBOUND_STORAGE_KEY, seed);
+  // 二版「分两张」迁移：历史演示存储中的旧来源类型行改写为国内电商订单来源
+  const legacyIds = new Set(rows.filter((row) => row.sourceType === 'toc').map((row) => row.id));
+  if (legacyIds.size) {
+    const next = rows.map((row) => (legacyIds.has(row.id)
+      ? normalizeSalesReturnInboundRow({ ...row, sourceType: 'domestic_order' })
+      : row));
+    writeMockRows(RETURN_INBOUND_STORAGE_KEY, next);
+    return next;
+  }
+  return rows;
 }
 
 export function loadSalesReturnInboundById(id) {
@@ -220,7 +232,6 @@ export function createSalesReturnInboundFromNotice(noticeRow) {
     id: `sales-return-inbound-${Date.now()}`,
     inboundNo,
     sourceType: 'notice',
-    externalOrderNo: '',
     sourceNoticeId: noticeRow.id,
     sourceNoticeNo: noticeRow.noticeNo,
     sourceReturnId: noticeRow.sourceReturnId,
@@ -263,7 +274,6 @@ export function buildSeedSalesReturnInboundFromNotice(noticeRow, returnRow, over
     id: overrides.id || `sales-return-inbound-seed-${noticeRow.id}`,
     inboundNo: overrides.inboundNo || nextDocumentNo('XTRK', businessDate, []),
     sourceType: 'notice',
-    externalOrderNo: '',
     sourceNoticeId: noticeRow.id,
     sourceNoticeNo: noticeRow.noticeNo,
     sourceReturnId: noticeRow.sourceReturnId,
@@ -315,13 +325,13 @@ function mergeLogEntries(...sources) {
 
 export function buildSalesReturnInboundOperationLogs(row) {
   const entries = [];
-  const isExternalToc = row.sourceType === 'toc';
+  const isChannelOrder = row.sourceType === 'domestic_order' || row.sourceType === 'crossborder_order';
 
   pushLogEntry(entries, {
     time: row.createdAt,
     operator: row.creator || '系统',
     action: '生成',
-    remark: isExternalToc ? '按渠道退货结果归集生成入库单' : '根据销退收货通知回传生成入库单',
+    remark: isChannelOrder ? '按渠道退货结果归集生成入库单' : '根据销退收货通知回传生成入库单',
   });
 
   if (row.auditTime) {
@@ -343,5 +353,5 @@ export function buildSalesReturnInboundOperationLogs(row) {
     });
   }
 
-  return mergeLogEntries(entries, row.operationLogs || []);
+  return mergeLogEntries(entries, row.operationLogs);
 }

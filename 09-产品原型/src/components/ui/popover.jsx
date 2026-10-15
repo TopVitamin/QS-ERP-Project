@@ -13,7 +13,7 @@ export function PopoverContent({ className, align = 'center', sideOffset = 5, ..
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          'overflow-hidden rounded-erp-overlay border border-erp-border-strong bg-erp-surface-panel text-erp-text shadow-erp-overlay outline-none',
+          'pointer-events-auto overflow-hidden rounded-erp-overlay border border-erp-border-strong bg-erp-surface-panel text-erp-text shadow-erp-overlay outline-none',
           popoverLayerClassName,
           className,
         )}

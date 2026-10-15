@@ -9,7 +9,7 @@ import { SimpleDialog } from '../components/ui/dialog.jsx';
 import { PurchaseReturnActionDialogs } from '../components/erp/PurchaseReturnActionDialogs.jsx';
 import { erpFieldGridClassName } from '../styles/typography.js';
 import { useDocumentForm } from '../hooks/useDocumentForm.js';
-import { computeLinesTotals, formatAmount } from '../lib/format.js';
+import { computeLinesTotals, formatAmount, nowStamp } from '../lib/format.js';
 import { currencySymbol } from '../lib/money.js';
 import { findCurrentPurchasePrice } from '../lib/priceLogic.js';
 import { nextDocumentNo } from '../lib/documentNo.js';
@@ -25,7 +25,6 @@ import {
   loadAllReturns,
   loadReturnById,
   loadSourceInboundByNo,
-  nowStamp,
   persistReturn,
   refreshReturnLines,
   validateReturnForSave,

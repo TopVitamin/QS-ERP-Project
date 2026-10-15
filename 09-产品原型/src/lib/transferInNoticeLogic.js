@@ -13,8 +13,14 @@
  */
 import { skuOptions } from '../data/masterData.js';
 import { nextDocumentNo } from './documentNo.js';
-import { generateDirectTransferFromInNotice } from './directTransferLogic.js';
-import { nowStamp } from './inventoryStockLogic.js';
+import {
+  generateDirectTransferFromInNotice,
+  generateDirectTransferNo,
+  loadDirectTransfersByNoticeId,
+  persistDirectTransfer,
+  TRANSIT_WAREHOUSE_CODE,
+} from './directTransferLogic.js';
+import { nowStamp } from './format.js';
 import { readMockRows, upsertMockRow, writeMockRows } from './mockStorage.js';
 import {
   applyTransferInWriteBack,
@@ -115,6 +121,10 @@ export function normalizeTransferInNoticeRow(row) {
     totalQuantity: sumTransferInNoticeQty(lines),
     totalActualQty: sumTransferInNoticeActualQty(lines),
     totalShortageQty: sumTransferInNoticeShortageQty(lines),
+    confirmBy: row.confirmBy || '',
+    confirmAt: row.confirmAt || '',
+    confirmContent: row.confirmContent || '',
+    manualConfirmLogs: row.manualConfirmLogs || [],
     updatedAt: row.updatedAt || nowStamp(),
     updater: row.updater || '系统',
   };
@@ -168,6 +178,33 @@ export function canCancelNotice() {
 
 export function canMockReceive(row) {
   return row?.status === 'pending_receive';
+}
+
+/**
+ * 人工确认（F08／R08）：只适用于已交给仓库的通知——推送中（发送结果不确定）、待收货；
+ * 待推送先推送、推送失败先重试，不能用人工确认代替（主PRD §6.4）。
+ * 本期无取消入口，不涉及取消结果确认；详情页入口，列表行不提供。
+ */
+export function canManualConfirm(row) {
+  return row?.status === 'pushing' || row?.status === 'pending_receive';
+}
+
+/** 人工确认类型文案（弹窗与Mock §5；类型与填写内容随操作日志保留）。 */
+export const manualConfirmTypeLabels = {
+  accept: '确认接单',
+  finish: '确认执行结束',
+};
+
+/** 确认类型按当前状态给出可选项：推送中—确认接单；待收货—确认执行结束。 */
+export function resolveManualConfirmType(row) {
+  if (row?.status === 'pushing') return 'accept';
+  if (row?.status === 'pending_receive') return 'finish';
+  return '';
+}
+
+export function buildManualConfirmStatusMessage(row) {
+  const label = transferInNoticeStatusLabels[row?.status] || row?.status || '-';
+  return `当前单据状态为${label}，不可执行人工确认`;
 }
 
 // —— 生成与自动推送 ——
@@ -268,6 +305,153 @@ export function applyRetryPushInNotice(row) {
     });
   }, 600);
   return next;
+}
+
+// —— 人工确认（F08／R08；详情页入口，弹窗与Mock §5） ——
+
+function buildManualConfirmLogEntry({ time, operator, remark }) {
+  return { id: `manual-confirm-${time}`, time, operator, action: '人工确认', remark };
+}
+
+/** 录入数量按整数解析；空值按 0 处理，由调用方按 1～通知数量校验。 */
+function parseConfirmActual(raw) {
+  const text = String(raw ?? '').trim();
+  if (text === '') return 0;
+  const value = Number(text);
+  return Number.isFinite(value) && Number.isInteger(value) ? value : NaN;
+}
+
+/**
+ * 人工确认执行结束形成的调入端直接调拨单：按正式口径走草稿→待审核（R08、AC15）。
+ * 原型按「待审核 + 演示数据」落库：不直接记账；审核通过后才在途减、接收仓加，
+ * 回写主单并自动完结（原型不提供该结果单的审核入口，故演示不触发主单完结）。
+ */
+function createManualConfirmInTransfer(notice, lines, actuals, { operator, time }) {
+  const existing = loadDirectTransfersByNoticeId(notice.id, notice.noticeNo)
+    .find((item) => item.sourceType === 'step_in');
+  if (existing) return existing;
+
+  const activeLines = lines
+    .map((line, index) => ({ line, index, actualQty: actuals[index] }))
+    .filter((item) => item.actualQty > 0);
+  if (!activeLines.length) return null;
+
+  const stamp = String(time);
+  return persistDirectTransfer({
+    id: `direct-transfer-in-${notice.id}`,
+    transferNo: generateDirectTransferNo(stamp.slice(0, 10)),
+    sourceType: 'step_in',
+    sourceOrderId: notice.sourceOrderId,
+    sourceOrderNo: notice.sourceOrderNo,
+    sourceNoticeId: notice.id,
+    sourceNoticeNo: notice.noticeNo,
+    sourceSystem: '',
+    sourceNo: '',
+    fromWarehouse: TRANSIT_WAREHOUSE_CODE,
+    toWarehouse: notice.inWarehouse,
+    actualTransferTime: stamp,
+    businessDate: stamp.slice(0, 10),
+    remark: '人工确认执行结束形成（演示数据，待审核）',
+    auditStatus: 'pending',
+    financeErpPushStatus: 'un_pushed',
+    pushTime: '',
+    pushFailReason: '',
+    auditor: '',
+    auditTime: '',
+    returnComment: '',
+    returnedAt: '',
+    returnOperator: '',
+    creator: operator,
+    createdAt: stamp,
+    updater: operator,
+    updatedAt: stamp,
+    isMock: true,
+    lines: activeLines.map((item, index) => ({
+      id: `${notice.id}-in-line-${index + 1}`,
+      lineNo: index + 1,
+      sourceNoticeLineId: item.line.id,
+      sourceNoticeLine: `${notice.noticeNo} 行${item.line.lineNo || item.index + 1}`,
+      sourceOrderLineId: item.line.sourceOrderLineId,
+      sourceOrderLineNo: item.line.sourceOrderLineNo,
+      product: item.line.product,
+      productCode: item.line.productCode,
+      productName: item.line.productName,
+      unit: item.line.unit,
+      quantity: item.actualQty,
+    })),
+  });
+}
+
+/**
+ * 人工确认（R08）：确认接单／确认执行结束。
+ * - 确认接单：推送中→待收货，不生成结果单；
+ * - 确认执行结束：回写实际调入与少收，并形成调入端直接调拨单（草稿→待审核；原型按待审核落库并标注演示数据）；
+ * - 实际调入必须大于0，零调入属异常、不通过人工确认收口。
+ * 记录人工确认人／时间／内容；不能无来源建通知单。
+ */
+export function applyManualConfirmInNotice(row, payload = {}) {
+  const notice = loadTransferInNoticeById(row?.id) || row;
+  if (!notice || !canManualConfirm(notice)) {
+    throw new Error(buildManualConfirmStatusMessage(notice || row));
+  }
+
+  const confirmType = payload.confirmType || resolveManualConfirmType(notice);
+  const operator = payload.operator || '当前用户';
+  const stamp = nowStamp();
+  const appendLog = (remark) => [
+    ...(notice.manualConfirmLogs || []),
+    buildManualConfirmLogEntry({ time: stamp, operator, remark }),
+  ];
+
+  if (confirmType === 'accept') {
+    const content = '确认接单：已核实仓库实际接收本通知';
+    return persistTransferInNotice({
+      ...notice,
+      status: 'pending_receive',
+      confirmBy: operator,
+      confirmAt: stamp,
+      confirmContent: content,
+      manualConfirmLogs: appendLog(content),
+      updater: operator,
+      updatedAt: stamp,
+    });
+  }
+
+  if (confirmType === 'finish') {
+    const lines = refreshTransferInNoticeLines(notice.lines || []);
+    const actuals = lines.map((line, index) => {
+      const quantity = Number(line.quantity || 0);
+      const actualQty = parseConfirmActual(payload.lineActuals?.[index]);
+      if (!Number.isInteger(actualQty)) throw new Error(`第${index + 1}行实际调入数量须为整数`);
+      if (actualQty <= 0) {
+        throw new Error('实际调入必须大于0，零调入异常不通过人工确认收口；请改为大于0后重新确认');
+      }
+      if (actualQty > quantity) {
+        throw new Error(`第${index + 1}行实际调入数量超过通知调入数量（通知 ${quantity}），本次确认被拒绝`);
+      }
+      return actualQty;
+    });
+
+    const inTransfer = createManualConfirmInTransfer(notice, lines, actuals, { operator, time: stamp });
+    const receivedLines = lines.map((line, index) => ({ ...line, actualQty: actuals[index] }));
+    const content = `确认执行结束：实际调入 ${actuals.join('、')}（通知 ${lines.map((line) => Number(line.quantity || 0)).join('、')}）`;
+    const receivedNotice = persistTransferInNotice({
+      ...notice,
+      status: 'received',
+      finalReceiveTime: stamp,
+      zeroReceiveRejectedAt: '',
+      lines: receivedLines,
+      confirmBy: operator,
+      confirmAt: stamp,
+      confirmContent: content,
+      manualConfirmLogs: appendLog(`${content}，已形成演示用调入端直接调拨单 ${inTransfer?.transferNo || ''}（待审核）`),
+      updater: operator,
+      updatedAt: stamp,
+    });
+    return loadTransferInNoticeById(receivedNotice.id) || receivedNotice;
+  }
+
+  throw new Error(buildManualConfirmStatusMessage(notice));
 }
 
 // —— Demo Mock：模拟接收仓回传（F07）——
@@ -389,6 +573,8 @@ export function buildTransferInNoticeSeed(orderRow, outNoticeRow, plan = {}) {
 
 export function buildTransferInNoticeOperationLogs(row) {
   const entries = [];
+  const manualConfirmLogs = Array.isArray(row.manualConfirmLogs) ? row.manualConfirmLogs : [];
+  const confirmedFinish = manualConfirmLogs.some((log) => String(log.remark || '').startsWith('确认执行结束'));
   pushTransferLogEntry(entries, {
     time: row.createdAt,
     operator: '系统',
@@ -411,7 +597,7 @@ export function buildTransferInNoticeOperationLogs(row) {
       remark: '实际调入为0，整次回传被拒绝，通知单保持待收货',
     });
   }
-  if (row.finalReceiveTime) {
+  if (row.finalReceiveTime && !confirmedFinish) {
     pushTransferLogEntry(entries, {
       time: row.finalReceiveTime,
       operator: '系统',
@@ -419,5 +605,19 @@ export function buildTransferInNoticeOperationLogs(row) {
       remark: '仓库回传实际接收结果',
     });
   }
-  return mergeTransferLogs(entries, row.operationLogs || []);
+  manualConfirmLogs.forEach((log) => pushTransferLogEntry(entries, {
+    time: log.time,
+    operator: log.operator,
+    action: log.action || '人工确认',
+    remark: log.remark,
+  }));
+  if (!manualConfirmLogs.length && row.confirmAt) {
+    pushTransferLogEntry(entries, {
+      time: row.confirmAt,
+      operator: row.confirmBy,
+      action: '人工确认',
+      remark: row.confirmContent,
+    });
+  }
+  return mergeTransferLogs(entries, row.operationLogs);
 }

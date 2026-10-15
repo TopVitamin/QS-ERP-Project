@@ -4,10 +4,12 @@ import {
   SalesOrderActionDialogs,
   SalesOrderDetailHeaderActions,
 } from '../components/erp/SalesOrderActionDialogs.jsx';
-import { buildCreateMetaFields } from '../components/erp/DocumentMetaTabsCard.jsx';
+import {
+  buildOperationInfoTabs,
+} from '../components/erp/DocumentMetaTabsCard.jsx';
 import { buildSalesOrderOperationLogs } from '../lib/operationLog.js';
 import { RelatedDocumentsCard } from '../components/erp/RelatedDocumentsCard.jsx';
-import { useSalesOrderRow } from '../hooks/useSalesOrderRow.js';
+import { useDocumentRow } from '../hooks/useDocumentRow.js';
 import { resolveAddressLabel } from '../lib/cnAddress.js';
 import { resolveOptionLabel } from '../lib/codeName.js';
 import { formatSnapshotCodeName } from '../lib/documentNameSnapshots.js';
@@ -15,7 +17,7 @@ import { formatAmount } from '../lib/format.js';
 import { currencySymbol } from '../lib/money.js';
 import { formatShipMethod } from '../lib/salesDeliveryNoticeLogic.js';
 import { buildSalesOrderRelatedDocumentSections } from '../lib/salesOrderRelatedDocs.js';
-import { loadOrderById, refreshOrderLines } from '../lib/salesOrderLogic.js';
+import { SALES_ORDER_STORAGE_KEY, loadOrderById, refreshOrderLines } from '../lib/salesOrderLogic.js';
 import { defaultSalesOrderForm, getEditableSalesOrder, getSalesOrderStatusBadges, salesLineEditorOptions } from '../data/salesFormData.js';
 
 function getOrderDetail(row) {
@@ -102,19 +104,7 @@ const orderDetailConfig = {
       title: '操作信息',
       variant: 'meta-tabs',
       defaultTab: 'create',
-      tabs: ({ row }) => [
-        {
-          key: 'create',
-          label: '制单信息',
-          fields: buildCreateMetaFields(row),
-        },
-        {
-          key: 'log',
-          label: '操作日志',
-          variant: 'log',
-          logEntries: () => buildSalesOrderOperationLogs(row),
-        },
-      ],
+      tabs: ({ row }) => buildOperationInfoTabs({ row, buildLogs: buildSalesOrderOperationLogs }),
     },
   ],
   summary: { quantityLabel: '销售数量', amountLabel: '价税合计' },
@@ -130,7 +120,7 @@ const orderDetailConfig = {
 };
 
 export function SalesOrderDetailPage({ onFeedback, onOpenPage, context }) {
-  const row = useSalesOrderRow(context);
+  const row = useDocumentRow(context, { storageKey: SALES_ORDER_STORAGE_KEY, loadById: loadOrderById });
   const [dialog, setDialog] = useState(null);
 
   function handleDialogComplete(result) {

@@ -77,3 +77,15 @@ export function subscribeMockRows(storageKey, onChange) {
     window.removeEventListener('storage', handleStorageEvent);
   };
 }
+
+/** 清空本应用全部 Mock 数据（`qs-erp:*`），之后各集合按种子回落；主题等偏好设置不受影响。 */
+export function clearAllMockData() {
+  const storage = getStorage();
+  if (!storage) return;
+  const keys = [];
+  for (let index = 0; index < storage.length; index += 1) {
+    const key = storage.key(index);
+    if (key?.startsWith('qs-erp:')) keys.push(key);
+  }
+  keys.forEach((key) => storage.removeItem(key));
+}

@@ -9,14 +9,20 @@
  * - 「推送财务ERP」页签的行由业财结果单据存储中的推送失败单据派生（同源；重推成功后由
  *   `pushExceptionLogic.syncFinanceExceptionFromPush` 置为「已处理」）；
  * - 其余页签为演示种子；「单据编号／商品编码」点击跳原单，找不到时按主PRD R09 提示；
- * - 独立站订单页尚未接入原型，跳转落到其占位页（见09《待改项》）。
+ * - 独立站订单页已接入（2026-10-15）：跳转直达订单详情；
+ * - 处理状态筛选为多选、默认「待处理」（主PRD R07；详细稿第2行备注）；目标系统筛选项按页签取各自枚举；
+ * - 结果处理页签含两条可走完的 Mock 演示链路（《结果处理规则（二版）》§八 M1、M2）：
+ *   商品匹配失败→补映射→处理原记录、库存不足→解决→处理原记录，由 `pushExceptionLogic`
+ *   的 `recoverResultExceptionMock` 执行；`demoRecover` 为演示载荷，正式系统不存在该字段。
  */
-import { ensureSeedRows, readMockRows } from '../lib/mockStorage.js';
+import { readMockRows, writeMockRows } from '../lib/mockStorage.js';
 import { toSelectOptions } from '../lib/options.js';
 import { FINANCE_RESULT_STORAGE_KEY, financeResultDocTypeLabels, financeResultSeeds } from './financeResultData.js';
 import { products, PRODUCT_STORAGE_KEY } from './productData.js';
 
-export const PUSH_EXCEPTION_STORAGE_KEY = 'qs-erp:integration-exceptions:v2';
+// v3（2026-10-15）：B10① 修复种子——推送财务ERP页签结果单号跳转、已处理演示单号改为来源模块真实种子、
+// 推送外部仓库补独立站订单行与 3 条处理记录行；版本升级使旧演示存储重新按新种子落库。
+export const PUSH_EXCEPTION_STORAGE_KEY = 'qs-erp:integration-exceptions:v3';
 
 /** 五个推送对象页签（顺序按主PRD R03 与菜单说明）。 */
 export const pushExceptionTabItems = [
@@ -61,6 +67,16 @@ export const pushExceptionTargetSystemLabels = {
   kingdeeCloud: '金蝶云·星空',
 };
 
+/** 目标系统筛选项按页签取各自枚举集合（详细稿「目标系统」行；列表页 Demo PRD §2）。 */
+const targetSystemOptionsByTab = {
+  warehouse: ['self_wms', 'jushuitan', 'lingxing', 'third_wms'],
+  masterdata: ['third_wms', 'kingdeeCloud', 'jushuitan', 'lingxing'],
+};
+
+function toTargetSystemOptions(keys) {
+  return keys.map((key) => ({ value: key, label: pushExceptionTargetSystemLabels[key] }));
+}
+
 export const pushExceptionContentLabels = { shipment: '发货结果与运单', cancel: '取消结果' };
 
 export const pushExceptionSourceSystemLabels = {
@@ -82,7 +98,7 @@ export const PUSH_EXCEPTION_NOTE_MAX = 500;
 
 export const pushExceptionInitialFilters = {
   tab: 'finance',
-  status: 'pending',
+  status: ['pending'],
   failTime: { from: '', to: '' },
   docType: [],
   docNo: '',
@@ -95,16 +111,13 @@ export const pushExceptionInitialFilters = {
   stage: [],
 };
 
+/** 处理状态：多选（OR），默认「待处理」，未选等同全部（主PRD R07；详细稿第2行备注）。 */
 const statusField = {
   key: 'status',
   label: '处理状态',
-  type: 'select',
-  placeholder: '待处理',
-  options: [
-    { value: '', label: '全部' },
-    { value: 'pending', label: '待处理' },
-    { value: 'handled', label: '已处理' },
-  ],
+  type: 'multi-select',
+  placeholder: '全部',
+  options: toSelectOptions(pushExceptionStatusLabels),
 };
 
 const failTimeField = { key: 'failTime', label: '失败时间', type: 'date-range', placeholder: '不限' };
@@ -174,7 +187,7 @@ const pushExceptionFilterFieldsByTab = {
     failTimeField,
     { key: 'docType', label: '单据类型', type: 'multi-select', placeholder: '全部', options: toSelectOptions(pushExceptionDocTypeLabels) },
     { key: 'docNo', label: '单据编号', type: 'search', placeholder: '请输入单据编号' },
-    { key: 'targetSystem', label: '目标系统', type: 'multi-select', placeholder: '全部', options: toSelectOptions(pushExceptionTargetSystemLabels) },
+    { key: 'targetSystem', label: '目标系统', type: 'multi-select', placeholder: '全部', options: toTargetSystemOptions(targetSystemOptionsByTab.warehouse) },
   ],
   platform: [
     statusField,
@@ -188,7 +201,7 @@ const pushExceptionFilterFieldsByTab = {
     failTimeField,
     { key: 'productCode', label: '商品编码', type: 'search', placeholder: '请输入商品编码' },
     { key: 'productName', label: '商品名称', type: 'search', placeholder: '请输入商品名称' },
-    { key: 'targetSystem', label: '目标系统', type: 'multi-select', placeholder: '全部', options: toSelectOptions(pushExceptionTargetSystemLabels) },
+    { key: 'targetSystem', label: '目标系统', type: 'multi-select', placeholder: '全部', options: toTargetSystemOptions(targetSystemOptionsByTab.masterdata) },
   ],
   result: [
     statusField,
@@ -294,25 +307,27 @@ function buildFinanceTabSeeds() {
       id: 'push-exception-finance-h1',
       tab: 'finance',
       docType: 'purchase_inbound',
-      docNo: 'CGRK-20260919-0003',
-      failTime: '2026-09-19 16:12:00',
+      // 演示单号取采购入库单真实种子（notice-seed-inbound-3 生成），点击可跳转（主PRD AC09、R09）
+      docNo: 'CGRK-20260921-0001',
+      failTime: '2026-09-21 11:50:00',
       failReason: '接口超时，财务ERP未确认接收',
       status: 'handled',
       records: [
-        { id: 'push-exception-finance-h1-1', time: '2026-09-19 16:12:30', method: 'auto_retry', result: 'failed', operator: '系统', note: '' },
-        { id: 'push-exception-finance-h1-2', time: '2026-09-19 16:40:00', method: 'retry', result: 'success', operator: '当前用户', note: '接口恢复后重推' },
+        { id: 'push-exception-finance-h1-1', time: '2026-09-21 11:55:00', method: 'auto_retry', result: 'failed', operator: '系统', note: '' },
+        { id: 'push-exception-finance-h1-2', time: '2026-09-21 12:01:00', method: 'retry', result: 'success', operator: '当前用户', note: '接口恢复后重推' },
       ],
     },
     {
       id: 'push-exception-finance-h2',
       tab: 'finance',
       docType: 'sales_return_inbound',
+      // 演示单号取销退入库单真实种子，点击可跳转（主PRD AC09、R09）
       docNo: 'XTRK-20260920-0002',
-      failTime: '2026-09-20 09:30:00',
+      failTime: '2026-09-20 21:05:00',
       failReason: '财务ERP返回往来单位不匹配',
       status: 'handled',
       records: [
-        { id: 'push-exception-finance-h2-1', time: '2026-09-20 10:05:00', method: 'retry', result: 'success', operator: '当前用户', note: '修复客户映射后重推' },
+        { id: 'push-exception-finance-h2-1', time: '2026-09-20 21:21:00', method: 'retry', result: 'success', operator: '当前用户', note: '修复客户映射后重推' },
       ],
     },
   ];
@@ -374,6 +389,20 @@ const seedRows = [
     id: 'push-exception-warehouse-8', tab: 'warehouse', docType: 'other_outbound_request', docNo: 'QTCKSQ-20260923-0001',
     targetSystem: 'self_wms', failTime: '2026-09-23 09:30:00', failReason: '仓库接口连接超时', status: 'pending', records: [],
   },
+  {
+    // 电商仓场景演示（《采购收货通知单前端Demo版PRD_弹窗与Mock》§5.8）：对应通知种子 notice-seed-ec-failed；
+    // 原单重试成功或取消后，由 receiptNoticeLogic 的同步把本行置为「已处理」。
+    id: 'push-exception-warehouse-9', tab: 'warehouse', docType: 'purchase_receipt_notice', docNo: 'CGSHTZ-20261014-0001',
+    targetSystem: 'jushuitan', failTime: '2026-10-14 09:45:00', failReason: '经聚水潭中转推送超时，未确认接收', status: 'pending',
+    records: [{ id: 'push-exception-warehouse-9-1', time: '2026-10-14 09:46:00', method: 'auto_retry', result: 'failed', operator: '系统', note: '' }],
+  },
+  {
+    // 独立站订单推送仓库失败演示（列表页 Demo PRD §8.1：推送外部仓库页签覆盖通知单、申请单、独立站订单各至少1条）；
+    // 对应独立站订单种子 XSDD-20261014-0007（shopifyOrderData，status=push_failed），单据编号可跳原单。
+    id: 'push-exception-warehouse-10', tab: 'warehouse', docType: 'shopify_order', docNo: 'XSDD-20261014-0007',
+    targetSystem: 'self_wms', failTime: '2026-10-14 09:52:00', failReason: '仓库接口超时（自动重试 3 次仍失败）', status: 'pending',
+    records: [{ id: 'push-exception-warehouse-10-1', time: '2026-10-14 09:52:00', method: 'auto_retry', result: 'failed', operator: '系统', note: '' }],
+  },
   // 推送电商平台
   {
     id: 'push-exception-platform-1', tab: 'platform', docType: 'shopify_order', docNo: 'XSDD-20260922-0006', pushContent: 'shipment',
@@ -415,33 +444,91 @@ const seedRows = [
   // 结果处理
   {
     id: 'push-exception-result-1', tab: 'result', sourceSystem: 'jushuitan', sourceNo: 'JST-88231007', stage: 'product_match',
-    failTime: '2026-09-22 11:30:00', failReason: '外部商品编码未匹配到唯一SKU', status: 'pending', records: [],
+    failTime: '2026-09-22 11:30:00', failReason: '外部商品编码未匹配到唯一SKU', status: 'pending', executionId: 'EX-20260922-01', records: [],
   },
   {
     id: 'push-exception-result-2', tab: 'result', sourceSystem: 'lingxing', sourceNo: 'LX-20260922-451', stage: 'ownership',
-    failTime: '2026-09-22 13:05:00', failReason: '无法识别归属逻辑仓', status: 'pending', records: [],
+    failTime: '2026-09-22 13:05:00', failReason: '无法识别归属逻辑仓', status: 'pending', executionId: 'EX-20260922-02', records: [],
   },
   {
     id: 'push-exception-result-3', tab: 'result', sourceSystem: 'self_wms', sourceNo: 'WH-RT-20260923-01', stage: 'stock_check',
-    failTime: '2026-09-23 09:48:00', failReason: '出库数量超过可用库存', status: 'handled',
+    failTime: '2026-09-23 09:48:00', failReason: '出库数量超过可用库存', status: 'handled', executionId: 'EX-20260923-01',
     records: [{ id: 'push-exception-result-3-1', time: '2026-09-23 10:30:00', method: 'recover', result: 'success', operator: '技术运维', note: '补齐库存归属后处理原记录' }],
   },
   {
     id: 'push-exception-result-4', tab: 'result', sourceSystem: 'shopify', sourceNo: 'SHOP-20260923-0009', stage: 'product_match',
-    failTime: '2026-09-23 15:12:00', failReason: '外部商品编码未匹配到唯一SKU', status: 'handled',
+    failTime: '2026-09-23 15:12:00', failReason: '外部商品编码未匹配到唯一SKU', status: 'handled', executionId: 'EX-20260923-02',
     records: [{ id: 'push-exception-result-4-1', time: '2026-09-23 16:00:00', method: 'recover', result: 'success', operator: '当前用户', note: '补齐商品映射后处理原记录' }],
   },
   {
     id: 'push-exception-result-5', tab: 'result', sourceSystem: 'third_wms', sourceNo: 'TPL-20260923-77', stage: 'stock_check',
-    failTime: '2026-09-23 20:35:00', failReason: '入库数量与校验口径不一致', status: 'pending', records: [],
+    failTime: '2026-09-23 20:35:00', failReason: '入库数量与校验口径不一致', status: 'pending', executionId: 'EX-20260923-03', records: [],
   },
   {
     id: 'push-exception-result-6', tab: 'result', sourceSystem: 'jushuitan', sourceNo: 'JST-88231101', stage: 'other',
-    failTime: '2026-09-24 08:55:00', failReason: '结果字段缺失，无法处理', status: 'pending', records: [],
+    failTime: '2026-09-24 08:55:00', failReason: '结果字段缺失，无法处理', status: 'pending', executionId: 'EX-20260924-01', records: [],
+  },
+  // —— 结果处理 Mock 演示链路（《结果处理规则（二版）》§八 M1、M2 与 SAL-FR12）——
+  // M1：商品匹配失败 → 补商品映射 → 处理原记录（生成已审核销售出库单、逻辑仓扣减一次、异常自动置为已处理）
+  {
+    id: 'push-exception-result-demo-m1', tab: 'result', sourceSystem: 'jushuitan', sourceNo: 'JST20261014007', stage: 'product_match',
+    failTime: '2026-10-14 10:06:00', failReason: '平台商品编码未匹配到ERP商品', status: 'pending', executionId: 'EX-20261014-02', records: [],
+    demoRecover: {
+      kind: 'domestic',
+      orderNo: 'GNDS-20261014-0007',
+      platformSku: 'TB-884729100061',
+      product: 'SP0101020002',
+      warehouse: 'LWH000001',
+      quantity: 2,
+      price: 165,
+      taxRate: '13',
+      note: '补齐商品映射后处理原记录',
+    },
+  },
+  // M2：库存不足 → 核实并补足库存 → 处理原记录（出库单与扣减只发生一次，不出现负库存）
+  {
+    id: 'push-exception-result-demo-m2', tab: 'result', sourceSystem: 'jushuitan', sourceNo: 'JST20261014008', stage: 'stock_check',
+    failTime: '2026-10-14 11:12:00', failReason: '渠道已出库，逻辑仓可用库存不足', status: 'pending', executionId: 'EX-20261014-03', records: [],
+    demoRecover: {
+      kind: 'domestic',
+      orderNo: 'GNDS-20261014-0008',
+      product: 'SP0101020001',
+      warehouse: 'LWH000001',
+      quantity: 10,
+      price: 169,
+      taxRate: '13',
+      note: '核实差异并补足库存后处理原记录',
+    },
+  },
+  // 已处理示例：归属识别失败，经系统自动重试、人工重试仍失败后补齐映射处理成功，关联结果单可跳转。
+  // 本行含 3 条处理记录（系统自动重试、人工重试、修复恢复），用于演示处理记录弹窗（列表页 Demo PRD §8.1、弹窗与Mock §4）。
+  {
+    id: 'push-exception-result-handled-1', tab: 'result', sourceSystem: 'jushuitan', sourceNo: 'JST20260918001', stage: 'ownership',
+    failTime: '2026-09-19 08:30:00', failReason: '无法识别归属逻辑仓', status: 'handled', executionId: 'EX-20260919-01',
+    resultDocNo: 'XSCK-20260919-0001', resultDocType: 'sales_outbound',
+    records: [
+      { id: 'push-exception-result-handled-1-1', time: '2026-09-19 08:35:00', method: 'auto_retry', result: 'failed', operator: '系统', note: '' },
+      { id: 'push-exception-result-handled-1-2', time: '2026-09-19 08:50:00', method: 'manual_retry', result: 'failed', operator: '技术运维', note: '人工重试仍失败，需先补齐仓库映射' },
+      { id: 'push-exception-result-handled-1-3', time: '2026-09-19 09:00:00', method: 'recover', result: 'success', operator: '系统', note: '补齐仓库映射后处理原记录' },
+    ],
+  },
+  // 跨境电商来源的待处理记录（静态只读示例，不提供处理演示）
+  {
+    id: 'push-exception-result-demo-cb5', tab: 'result', sourceSystem: 'lingxing', sourceNo: 'LX20261014005', stage: 'product_match',
+    failTime: '2026-10-14 13:25:00', failReason: '平台商品编码未匹配到ERP商品', status: 'pending', executionId: 'EX-20261014-05', records: [],
   },
 ];
 
 export const pushExceptionSeeds = [...buildFinanceTabSeeds(), ...seedRows];
 
-// 首次加载落库种子：避免第一次写入（如业财重推同步）把种子挤掉
-ensureSeedRows(PUSH_EXCEPTION_STORAGE_KEY, pushExceptionSeeds);
+// 首次加载落库种子：避免第一次写入（如业财重推同步）把种子挤掉；
+// 已落库时补齐缺失的演示种子（含结果处理演示链路），保证模拟数据覆盖随版本更新。
+{
+  const storedRows = readMockRows(PUSH_EXCEPTION_STORAGE_KEY, null);
+  if (!Array.isArray(storedRows)) {
+    writeMockRows(PUSH_EXCEPTION_STORAGE_KEY, pushExceptionSeeds);
+  } else {
+    const missingSeeds = pushExceptionSeeds.filter((seed) => !storedRows.some((row) => row.id === seed.id));
+    if (missingSeeds.length) writeMockRows(PUSH_EXCEPTION_STORAGE_KEY, [...storedRows, ...missingSeeds]);
+  }
+}

@@ -37,8 +37,10 @@ export function PartnerMasterForm({
   onOpenPage,
 }) {
   const isCreate = mode === 'create';
-  const [form, setForm] = useState(() => config.getInitialForm(mode, context));
-  const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(config.getInitialForm(mode, context)));
+  // 只调用一次 getInitialForm，避免非纯实现导致首帧 dirty 误报（同 useDocumentForm）。
+  const [initialForm] = useState(() => config.getInitialForm(mode, context));
+  const [form, setForm] = useState(initialForm);
+  const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(initialForm));
   const [fieldErrors, setFieldErrors] = useState({});
   const [dialog, setDialog] = useState(null);
   const dirty = JSON.stringify(form) !== savedSnapshot;

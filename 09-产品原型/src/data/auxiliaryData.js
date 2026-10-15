@@ -10,10 +10,10 @@ import {
 
 export { AUXILIARY_STORAGE_KEY, CATEGORY_STORAGE_KEY };
 
-// 商品等模块引用辅助资料时的可选项：仅启用项（辅助资料主PRD R07、AC06）。
+// 商品等模块引用辅助资料时的可选项：仅启用项（辅助资料主PRD R07、AC06）；缺 useStatus 按启用兼容旧行。
 export function getSelectableAuxiliaryOptions(typeId) {
   return readMockRows(AUXILIARY_STORAGE_KEY, auxiliaryItems)
-    .filter((row) => row.type === typeId && row.useStatus === 'enabled')
+    .filter((row) => row.type === typeId && (row.useStatus ?? 'enabled') === 'enabled')
     .map((row) => ({ value: row.name, label: row.name }));
 }
 

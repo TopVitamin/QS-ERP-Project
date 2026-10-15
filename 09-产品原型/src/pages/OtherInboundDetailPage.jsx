@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react';
 import { DocumentDetailPage } from '../components/erp/DocumentDetailPage.jsx';
-import { buildCreateMetaFields } from '../components/erp/DocumentMetaTabsCard.jsx';
+import { buildOperationInfoTabs } from '../components/erp/DocumentMetaTabsCard.jsx';
 import { EMPTY_PLACEHOLDER } from '../lib/format.js';
-import { subscribeMockRows } from '../lib/mockStorage.js';
+import { useDocumentRow } from '../hooks/useDocumentRow.js';
 import { productOptions, skuOptions } from '../data/masterData.js';
 import { resolveLogicalWarehouseLabel } from '../data/warehouseData.js';
 import { otherInboundRequests } from '../data/otherInboundRequestData.js';
@@ -17,25 +16,6 @@ import {
 } from '../lib/otherInboundLogic.js';
 
 /** 详情行跟随本地 Mock 集合刷新（Demo 生成后推送财务ERP状态即时更新）。 */
-function useOtherInboundRow(context) {
-  const contextRow = context?.row;
-  const [row, setRow] = useState(contextRow || null);
-
-  useEffect(() => {
-    if (!contextRow?.id) {
-      setRow(contextRow || null);
-      return undefined;
-    }
-    function syncRow() {
-      setRow(loadOtherInboundById(contextRow.id) || contextRow);
-    }
-    syncRow();
-    return subscribeMockRows(OTHER_INBOUND_STORAGE_KEY, syncRow);
-  }, [contextRow]);
-
-  return row;
-}
-
 function getOtherInboundDetail(row) {
   if (!row) return { lines: [] };
   return {
@@ -115,10 +95,11 @@ const otherInboundDetailConfig = {
       title: '操作信息',
       variant: 'meta-tabs',
       defaultTab: 'create',
-      tabs: ({ row }) => [
-        { key: 'create', label: '制单信息', fields: buildCreateMetaFields({ ...row, creator: row.creator || '系统', updater: row.updater || '系统' }) },
-        { key: 'log', label: '操作日志', variant: 'log', logEntries: () => buildOtherInboundOperationLogs(row) },
-      ],
+      tabs: ({ row }) => buildOperationInfoTabs({
+        row,
+        buildLogs: buildOtherInboundOperationLogs,
+        toMetaRow: (metaRow) => ({ ...metaRow, creator: metaRow.creator || '系统', updater: metaRow.updater || '系统' }),
+      }),
     },
   ],
   buildLineSummary: ({ detail, lineTotals }) => ({
@@ -127,7 +108,7 @@ const otherInboundDetailConfig = {
 };
 
 export function OtherInboundDetailPage({ onFeedback, onOpenPage, context }) {
-  const row = useOtherInboundRow(context);
+  const row = useDocumentRow(context, { storageKey: OTHER_INBOUND_STORAGE_KEY, loadById: loadOtherInboundById });
 
   const config = {
     ...otherInboundDetailConfig,

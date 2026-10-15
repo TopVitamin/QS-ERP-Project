@@ -1,13 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { DocumentDetailPage } from '../components/erp/DocumentDetailPage.jsx';
-import { buildCreateMetaFields } from '../components/erp/DocumentMetaTabsCard.jsx';
+import {
+  buildOperationInfoTabs,
+} from '../components/erp/DocumentMetaTabsCard.jsx';
 import { RelatedDocumentsCard } from '../components/erp/RelatedDocumentsCard.jsx';
 import {
   OtherInboundRequestActionDialogs,
   OtherInboundRequestDetailHeaderActions,
 } from '../components/erp/OtherInboundRequestActionDialogs.jsx';
 import { EMPTY_PLACEHOLDER } from '../lib/format.js';
-import { subscribeMockRows } from '../lib/mockStorage.js';
+import { useDocumentRow } from '../hooks/useDocumentRow.js';
 import { productOptions, skuOptions } from '../data/masterData.js';
 import { resolveLogicalWarehouseLabel } from '../data/warehouseData.js';
 import { getOtherInboundRequestStatusBadges } from '../data/otherInboundRequestData.js';
@@ -21,26 +23,6 @@ import {
   sumRequestQty,
   sumRequestRemainingQty,
 } from '../lib/otherInboundRequestLogic.js';
-
-/** 详情行跟随本地 Mock 集合刷新（状态动作后页头按钮与明细即时更新）。 */
-function useRequestRow(context) {
-  const contextRow = context?.row;
-  const [row, setRow] = useState(contextRow || null);
-
-  useEffect(() => {
-    if (!contextRow?.id) {
-      setRow(contextRow || null);
-      return undefined;
-    }
-    function syncRow() {
-      setRow(loadOtherInboundRequestById(contextRow.id) || contextRow);
-    }
-    syncRow();
-    return subscribeMockRows(OTHER_INBOUND_REQUEST_STORAGE_KEY, syncRow);
-  }, [contextRow]);
-
-  return row;
-}
 
 function getRequestDetail(row) {
   if (!row) return { lines: [] };
@@ -59,6 +41,9 @@ function buildRequestInfoFields({ detail, row }) {
     { key: 'lastPushTime', label: '最近推送时间', value: row.lastPushTime || EMPTY_PLACEHOLDER },
     { key: 'pushFailReason', label: '推送失败原因', value: row.pushFailReason || EMPTY_PLACEHOLDER, className: 'col-span-3' },
     { key: 'remark', label: '备注', value: detail.remark || EMPTY_PLACEHOLDER, className: 'col-span-3' },
+    { key: 'confirmBy', label: '人工确认人', value: row.confirmBy || EMPTY_PLACEHOLDER },
+    { key: 'confirmAt', label: '人工确认时间', value: row.confirmAt || EMPTY_PLACEHOLDER },
+    { key: 'confirmContent', label: '人工确认内容', value: row.confirmContent || EMPTY_PLACEHOLDER, className: 'col-span-3' },
   ];
 }
 
@@ -99,19 +84,7 @@ const requestDetailConfig = {
       title: '操作信息',
       variant: 'meta-tabs',
       defaultTab: 'create',
-      tabs: ({ row }) => [
-        {
-          key: 'create',
-          label: '制单信息',
-          fields: buildCreateMetaFields(row),
-        },
-        {
-          key: 'log',
-          label: '操作日志',
-          variant: 'log',
-          logEntries: () => buildOtherInboundRequestOperationLogs(row),
-        },
-      ],
+      tabs: ({ row }) => buildOperationInfoTabs({ row, buildLogs: buildOtherInboundRequestOperationLogs }),
     },
   ],
   buildLineSummary: ({ detail }) => ({
@@ -122,7 +95,7 @@ const requestDetailConfig = {
 };
 
 export function OtherInboundRequestDetailPage({ onFeedback, onOpenPage, context }) {
-  const row = useRequestRow(context);
+  const row = useDocumentRow(context, { storageKey: OTHER_INBOUND_REQUEST_STORAGE_KEY, loadById: loadOtherInboundRequestById });
   const [dialog, setDialog] = useState(null);
 
   function handleDialogComplete(result) {

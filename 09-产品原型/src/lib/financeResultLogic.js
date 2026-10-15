@@ -18,7 +18,7 @@ import {
   financeErpPushStatusLabels,
 } from '../data/financeResultData.js';
 import { resolveLogicalWarehouseLabel } from '../data/warehouseData.js';
-import { nowStamp } from './inventoryStockLogic.js';
+import { nowStamp } from './format.js';
 import { readMockRows, writeMockRows } from './mockStorage.js';
 import { syncFinanceExceptionFromPush } from './pushExceptionLogic.js';
 

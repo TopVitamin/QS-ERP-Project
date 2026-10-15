@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { DocumentDetailPage } from '../components/erp/DocumentDetailPage.jsx';
 import { buildCreateMetaFields } from '../components/erp/DocumentMetaTabsCard.jsx';
 import { resolveOptionLabel } from '../lib/codeName.js';
 import { EMPTY_PLACEHOLDER, formatAmount } from '../lib/format.js';
 import { currencySymbol } from '../lib/money.js';
-import { subscribeMockRows } from '../lib/mockStorage.js';
+import { useDocumentRow } from '../hooks/useDocumentRow.js';
 import { currencyOptions, logicalWarehouseOptions, supplierOptions } from '../data/masterData.js';
 import { getReturnOutboundStatusBadges } from '../data/purchaseReturnOutboundData.js';
 import { purchaseReturnNotices } from '../data/purchaseReturnNoticeData.js';
@@ -21,27 +21,6 @@ import {
 /**
  * 采退出库单详情（F04）：整单只读，页头仅返回列表；推送财务ERP失败原因展示，重推在系统集成中心。
  */
-
-function useReturnOutboundRow(context) {
-  const contextRow = context?.row;
-  const [row, setRow] = useState(contextRow || null);
-
-  useEffect(() => {
-    if (!contextRow?.id) {
-      setRow(contextRow || null);
-      return undefined;
-    }
-
-    function syncRow() {
-      setRow(loadReturnOutboundById(contextRow.id) || contextRow);
-    }
-
-    syncRow();
-    return subscribeMockRows(RETURN_OUTBOUND_STORAGE_KEY, syncRow);
-  }, [contextRow]);
-
-  return row;
-}
 
 function getOutboundDetail(row) {
   if (!row) return { lines: [] };
@@ -151,6 +130,6 @@ const outboundDetailConfig = {
 };
 
 export function PurchaseReturnOutboundDetailPage({ onOpenPage, context }) {
-  const row = useReturnOutboundRow(context);
+  const row = useDocumentRow(context, { storageKey: RETURN_OUTBOUND_STORAGE_KEY, loadById: loadReturnOutboundById });
   return <DocumentDetailPage context={{ row }} onOpenPage={onOpenPage} config={outboundDetailConfig} />;
 }

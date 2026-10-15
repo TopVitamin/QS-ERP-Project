@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { DocumentDetailPage } from '../components/erp/DocumentDetailPage.jsx';
-import { buildCreateMetaFields } from '../components/erp/DocumentMetaTabsCard.jsx';
+import {
+  buildOperationInfoTabs,
+} from '../components/erp/DocumentMetaTabsCard.jsx';
 import { RelatedDocumentsCard } from '../components/erp/RelatedDocumentsCard.jsx';
 import {
   PurchaseReturnNoticeActionDialogs,
@@ -8,7 +10,7 @@ import {
 } from '../components/erp/PurchaseReturnNoticeActionDialogs.jsx';
 import { resolveOptionLabel } from '../lib/codeName.js';
 import { EMPTY_PLACEHOLDER } from '../lib/format.js';
-import { subscribeMockRows } from '../lib/mockStorage.js';
+import { useDocumentRow } from '../hooks/useDocumentRow.js';
 import { logicalWarehouseOptions, supplierOptions } from '../data/masterData.js';
 import { purchaseReturns } from '../data/purchaseReturnData.js';
 import { getReturnNoticeStatusBadges } from '../data/purchaseReturnNoticeData.js';
@@ -18,6 +20,7 @@ import {
   buildReturnNoticeOperationLogs,
   formatReturnShipMode,
   loadReturnNoticeById,
+  manualConfirmTypesForStatus,
   refreshReturnNoticeLines,
   RETURN_NOTICE_STORAGE_KEY,
 } from '../lib/purchaseReturnNoticeLogic.js';
@@ -26,27 +29,6 @@ import {
  * 采退发货通知单详情（F04、F05～F08）。
  * 分区：单据信息 → 商品明细 → 关联单据（仅已发货）→ 终止信息（仅已取消）→ 操作信息。
  */
-
-function useReturnNoticeRow(context) {
-  const contextRow = context?.row;
-  const [row, setRow] = useState(contextRow || null);
-
-  useEffect(() => {
-    if (!contextRow?.id) {
-      setRow(contextRow || null);
-      return undefined;
-    }
-
-    function syncRow() {
-      setRow(loadReturnNoticeById(contextRow.id) || contextRow);
-    }
-
-    syncRow();
-    return subscribeMockRows(RETURN_NOTICE_STORAGE_KEY, syncRow);
-  }, [contextRow]);
-
-  return row;
-}
 
 function getNoticeDetail(row) {
   if (!row) return { lines: [] };
@@ -83,7 +65,12 @@ function buildNoticeInfoFields({ detail, row, onOpenPage }) {
     { key: 'pushTime', label: '推送时间', value: row.pushTime || EMPTY_PLACEHOLDER },
     { key: 'finalShipTime', label: '最终发货确认时间', value: row.finalShipTime || EMPTY_PLACEHOLDER },
     { key: 'lastProcessTime', label: '最近处理时间', value: row.lastProcessTime || EMPTY_PLACEHOLDER },
+    { key: 'confirmBy', label: '人工确认人', value: row.confirmBy || EMPTY_PLACEHOLDER },
+    { key: 'confirmAt', label: '人工确认时间', value: row.confirmAt || EMPTY_PLACEHOLDER },
   ];
+  if (row.confirmContent) {
+    fields.push({ key: 'confirmContent', label: '人工确认内容', value: row.confirmContent, className: 'col-span-3' });
+  }
   if (row.pushFailReason) {
     fields.push({ key: 'pushFailReason', label: '推送失败原因', value: row.pushFailReason, className: 'col-span-3' });
   }
@@ -124,19 +111,7 @@ const noticeDetailConfig = {
       title: '操作信息',
       variant: 'meta-tabs',
       defaultTab: 'create',
-      tabs: ({ row }) => [
-        {
-          key: 'create',
-          label: '制单信息',
-          fields: buildCreateMetaFields(row),
-        },
-        {
-          key: 'log',
-          label: '操作日志',
-          variant: 'log',
-          logEntries: () => buildReturnNoticeOperationLogs(row),
-        },
-      ],
+      tabs: ({ row }) => buildOperationInfoTabs({ row, buildLogs: buildReturnNoticeOperationLogs }),
     },
   ],
   summary: { quantityLabel: '通知数量', amountLabel: '实出数量' },
@@ -148,7 +123,7 @@ const noticeDetailConfig = {
 };
 
 export function PurchaseReturnNoticeDetailPage({ onFeedback, onOpenPage, context }) {
-  const row = useReturnNoticeRow(context);
+  const row = useDocumentRow(context, { storageKey: RETURN_NOTICE_STORAGE_KEY, loadById: loadReturnNoticeById });
   const [dialog, setDialog] = useState(null);
 
   function handleDialogComplete(result) {
@@ -177,6 +152,11 @@ export function PurchaseReturnNoticeDetailPage({ onFeedback, onOpenPage, context
         onAction={(id, currentRow) => {
           if (id === 'edit') {
             openPage?.('purchase-return-notice-edit', { row: currentRow });
+            return;
+          }
+          if (id === 'manual-confirm') {
+            const [confirmType] = manualConfirmTypesForStatus(currentRow.status);
+            setDialog({ type: 'manual-confirm', confirmType, row: currentRow });
             return;
           }
           setDialog({ type: id, row: currentRow });

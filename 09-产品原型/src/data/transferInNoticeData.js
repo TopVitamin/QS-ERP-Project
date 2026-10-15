@@ -17,13 +17,33 @@ import {
   TRANSFER_IN_NOTICE_STORAGE_KEY,
 } from '../lib/transferInNoticeLogic.js';
 
+/** 人工确认留痕演示数据：随待收货种子单展示人工确认人／时间／内容与操作日志。 */
+const manualConfirmDemo = {
+  confirmBy: '李四',
+  confirmAt: '2026-09-23 11:00:00',
+  confirmContent: '确认接单：已核实仓库实际接收本通知',
+  manualConfirmLogs: [
+    {
+      id: 'manual-confirm-2026-09-23 11:00:00',
+      time: '2026-09-23 11:00:00',
+      operator: '李四',
+      action: '人工确认',
+      remark: '确认接单：已核实仓库实际接收本通知',
+    },
+  ],
+};
+
 export const transferInNotices = transferOrders
   .filter((order) => order.progress?.inNotice)
-  .map((order) => buildTransferInNoticeSeed(
-    order,
-    transferOutNotices.find((notice) => notice.sourceOrderId === order.id) || null,
-    order.progress.inNotice,
-  ));
+  .map((order) => {
+    const seed = buildTransferInNoticeSeed(
+      order,
+      transferOutNotices.find((notice) => notice.sourceOrderId === order.id) || null,
+      order.progress.inNotice,
+    );
+    // 人工确认留痕演示（详情页 Demo PRD §7.1）：接口未返回接单结果，已人工确认接单
+    return order.orderNo === 'FBDB-20260922-0003' ? { ...seed, ...manualConfirmDemo } : seed;
+  });
 
 registerTransferInNoticeSeedRows(transferInNotices);
 

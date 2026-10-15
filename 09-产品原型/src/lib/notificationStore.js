@@ -17,10 +17,13 @@ export function subscribeNotifications(onChange) {
   return subscribeMockRows(NOTIFICATIONS_STORAGE_KEY, onChange);
 }
 
+let notificationSequence = 0;
+
 export function pushNotification({ title, tag = '系统', category = 'system', link = null }) {
   if (readPreferences().messageEnabled === false) return null;
   const item = {
-    id: `notice-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    // 递增序号避免同一毫秒内两条通知 id 碰撞（按 id 标记已读会误标两条）。
+    id: `notice-${Date.now()}-${notificationSequence++}`,
     title,
     tag,
     category,

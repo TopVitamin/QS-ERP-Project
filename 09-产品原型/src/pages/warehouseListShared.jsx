@@ -1,8 +1,7 @@
-import { useMemo } from 'react';
-import { ListPageFrame } from '../components/erp/ListPageFrame.jsx';
-import { useListPageActions } from '../hooks/useListPageActions.js';
-import { useListPageState } from '../hooks/useListPageState.js';
-import { hasActiveFilters, matchesDateRange, matchesTextContains } from '../lib/listFilters.js';
+import {
+  DocumentListPage,
+} from '../components/erp/DocumentListPage.jsx';
+import { matchesDateRange, matchesTextContains } from '../lib/listFilters.js';
 import {
   canApprove,
   canDisable,
@@ -90,6 +89,10 @@ export function buildLogicalRowActions() {
   ];
 }
 
+/**
+ * 仓库主数据列表：审计页签 + 批量审核。
+ * 列表接线统一走 DocumentListPage，这里只做页面 props → config 的适配（查询提示、页签、批量操作签名）。
+ */
 export function WarehouseObjectList({
   title,
   rows,
@@ -110,108 +113,36 @@ export function WarehouseObjectList({
   onFeedback,
   onOpenPage,
 }) {
-  const state = useListPageState({
-    initialRows: rows,
-    initialFilters,
-    filterRows,
-    initialVisibility: buildInitialVisibility(columns),
-    storageKey,
-    columns,
-    initialSort: defaultSort || { key: 'updatedAt', direction: 'desc' },
-  });
-  const orderedColumns = useMemo(() => {
-    const byKey = new Map(columns.map((column) => [column.key, column]));
-    const order = [
-      ...state.columnOrder.filter((key) => state.pinnedKeys.includes(key)),
-      ...state.columnOrder.filter((key) => !state.pinnedKeys.includes(key)),
-    ];
-    const list = order.map((key) => byKey.get(key)).filter(Boolean);
-    for (const column of columns) {
-      if (!order.includes(column.key)) list.push(column);
-    }
-    return list;
-  }, [columns, state.columnOrder, state.pinnedKeys]);
-  const visibleColumns = useMemo(
-    () => orderedColumns.filter((column) => state.visibility[column.key] !== false),
-    [orderedColumns, state.visibility],
-  );
-  const { notify, getSelectedRows } = useListPageActions({ onFeedback, state });
-  const actionContext = { state, notify, getSelectedRows, onFeedback, onOpenPage };
-
-  function handleHeaderAction(id) {
-    const action = headerActions.find((item) => item.id === id);
-    action?.onAction?.(actionContext);
-  }
-
-  const tabs = useMemo(() => ({
-    items: auditTabItems.map((item) => ({
-      ...item,
-      count: state.rows.filter((row) => !item.value || row.auditStatus === item.value).length,
-    })),
-    value: state.appliedFilters.auditStatus ?? '',
-    onChange: (value) => state.applyQuickFilter('auditStatus', value),
-  }), [state.rows, state.appliedFilters.auditStatus, state.applyQuickFilter]);
-
   return (
-    <ListPageFrame
-      header={{
+    <DocumentListPage
+      onFeedback={onFeedback}
+      onOpenPage={onOpenPage}
+      config={{
         title,
-        actions: headerActions,
-        filters: filterFields,
-        filterValues: state.draftFilters,
-        onFilterChange: state.setFilter,
-        onReset: () => {
-          state.resetFilters();
-          notify('筛选条件已重置', 'info');
+        rows,
+        storageKey,
+        columns,
+        initialFilters,
+        filterFields,
+        filterRows,
+        initialVisibility: buildInitialVisibility(columns),
+        defaultSort: defaultSort || { key: 'updatedAt', direction: 'desc' },
+        headerActions,
+        onHeaderAction: (id, actionContext) => {
+          const action = headerActions.find((item) => item.id === id);
+          action?.onAction?.(actionContext);
         },
-        onQuery: () => {
-          state.applyFilters();
-          notify('已执行仓库查询', 'success');
-        },
-        onAction: handleHeaderAction,
-        actionContext,
-      }}
-      tabs={tabs}
-      toolbar={{
-        selectedCount: state.filteredSelectedIds.length,
-        actions: toolbarActions || [],
-        onAction: (id) => onToolbarAction?.(id, getSelectedRows(), actionContext),
-        columnSettings: {
-          options: columns.map((column) => ({ key: column.key, label: column.label })),
-          visibility: state.visibility,
-          order: state.columnOrder,
-          pinnedKeys: state.pinnedKeys,
-          onToggle: state.setVisibility,
-          onPin: state.togglePin,
-          onReorder: state.setColumnOrder,
-          onReset: state.resetColumns,
-        },
-      }}
-      table={{
-        rows: state.pageRows,
-        autoFitRows: state.filteredRows,
-        columns: visibleColumns,
-        selectedIds: state.selectedIds,
-        onToggleRow: state.toggleRow,
-        onToggleAll: state.togglePage,
-        onFeedback,
-        emptyText: hasActiveFilters(state.appliedFilters) ? (emptyTextFiltered || '没有符合条件的记录，请调整筛选条件') : (emptyText || '暂无数据'),
-        onCellClick: (column, row) => onCellClick(column, row, { ...actionContext, state }),
-        onRowAction: (id, row) => onRowAction(id, row, { ...actionContext, state }),
+        queryMessage: '已执行仓库查询',
+        tabs: { filterKey: 'auditStatus', items: auditTabItems },
+        toolbarActions: toolbarActions || [],
+        onToolbarAction: (id, actionContext) => onToolbarAction?.(id, actionContext.getSelectedRows(), actionContext),
+        columnOptions: columns.map((column) => ({ key: column.key, label: column.label })),
+        emptyText: emptyText || '暂无数据',
+        emptyTextFiltered: emptyTextFiltered || '没有符合条件的记录，请调整筛选条件',
+        onCellClick,
+        onRowAction,
         rowActions,
         rowActionsMaxVisible: 3,
-        sort: state.sort,
-        onSort: state.toggleSort,
-        pinnedKeys: state.pinnedKeys,
-      }}
-      pagination={{
-        total: state.filteredRows.length,
-        selectedCount: state.filteredSelectedIds.length,
-        currentPage: state.currentPage,
-        pageCount: state.pageCount,
-        pageSize: state.pageSize,
-        onPageChange: state.setPage,
-        onPageSizeChange: state.setPageSize,
       }}
     />
   );

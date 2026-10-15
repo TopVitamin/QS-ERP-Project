@@ -104,18 +104,16 @@ export function App() {
   }
 
   function closeTab(pageId) {
-    setOpenTabs((current) => {
-      const nextTabs = current.filter((id) => id !== pageId);
-      if (activeView === pageId) {
-        if (nextTabs.length === 0) {
-          setActiveView('home');
-        } else {
-          const closedIndex = current.indexOf(pageId);
-          setActiveView(nextTabs[Math.min(closedIndex, nextTabs.length - 1)]);
-        }
-      }
-      return nextTabs;
-    });
+    // updater 必须是纯函数：先基于当前 openTabs 算出结果，再分别 setState。
+    const nextTabs = openTabs.filter((id) => id !== pageId);
+    setOpenTabs(nextTabs);
+    if (activeView !== pageId) return;
+    if (nextTabs.length === 0) {
+      setActiveView('home');
+      return;
+    }
+    const closedIndex = openTabs.indexOf(pageId);
+    setActiveView(nextTabs[Math.min(closedIndex, nextTabs.length - 1)]);
   }
 
   function handleTabAction(action, pageId) {

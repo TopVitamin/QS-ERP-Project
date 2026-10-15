@@ -22,15 +22,17 @@ export function DocumentListPage({ onFeedback, onOpenPage, config }) {
     mergeSeedRows: config.mergeSeedRows,
   });
   // 跨页跳转预填：调用方把要预填的筛选项交给 presetFilters，本页收到后立即生效（如库存查询跳转库存流水）。
-  const presetFiltersKey = config.presetFilters ? JSON.stringify(config.presetFilters) : '';
+  const presetFilters = config.presetFilters;
   const presetStateRef = useRef(state);
-  presetStateRef.current = state;
   useEffect(() => {
-    if (!presetFiltersKey) return;
-    Object.entries(JSON.parse(presetFiltersKey)).forEach(([key, value]) => {
+    presetStateRef.current = state;
+  });
+  useEffect(() => {
+    if (!presetFilters) return;
+    Object.entries(presetFilters).forEach(([key, value]) => {
       presetStateRef.current.applyQuickFilter(key, value);
     });
-  }, [presetFiltersKey]);
+  }, [presetFilters]);
   const orderedColumns = useMemo(() => {
     const byKey = new Map(config.columns.map((column) => [column.key, column]));
     const order = [

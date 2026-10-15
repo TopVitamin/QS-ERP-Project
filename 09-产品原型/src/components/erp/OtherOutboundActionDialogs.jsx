@@ -5,7 +5,7 @@ import { SimpleDialog } from '../ui/dialog.jsx';
 import { FormField } from '../ui/form-field.jsx';
 import { Input } from '../ui/input.jsx';
 import { SelectField } from '../ui/select-field.jsx';
-import { EMPTY_PLACEHOLDER } from '../../lib/format.js';
+import { EMPTY_PLACEHOLDER, nowDateStamp } from '../../lib/format.js';
 import { cn } from '../../lib/utils.js';
 import { productOptions, skuOptions } from '../../data/masterData.js';
 import { getInventoryLogicalWarehouseOptions } from '../../data/warehouseData.js';
@@ -23,7 +23,7 @@ function createMockLine() {
 }
 
 function today() {
-  return new Date().toISOString().slice(0, 10).replaceAll('-', '');
+  return nowDateStamp().replaceAll('-', '');
 }
 
 /**

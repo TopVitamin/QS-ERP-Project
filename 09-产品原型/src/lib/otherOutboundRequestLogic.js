@@ -11,17 +11,23 @@ import { skuOptions } from '../data/masterData.js';
 import { getInventoryLogicalWarehouseOptions, isTransitLogicalWarehouse } from '../data/warehouseData.js';
 import { nextDocumentNo } from './documentNo.js';
 import { emptyFieldMessage } from './formValidation.js';
+import { nowDateStamp, nowStamp } from './format.js';
 import {
   getAvailableStock,
   loadReservations,
   loadStockRows,
-  nowStamp,
   persistReservations,
   persistStockRows,
   reserveStock,
 } from './inventoryStockLogic.js';
 import { readMockRows, upsertMockRow, writeMockRows } from './mockStorage.js';
-import { generateOtherOutboundFromRequest } from './otherOutboundLogic.js';
+import {
+  createOtherOutboundLine,
+  generateOtherOutboundFromRequest,
+  loadAllOtherOutbounds,
+  loadOtherOutboundByRequestNo,
+  persistOtherOutbound,
+} from './otherOutboundLogic.js';
 
 export const OTHER_OUTBOUND_REQUEST_STORAGE_KEY = 'qs-erp:other-outbound-requests:v1';
 
@@ -148,7 +154,7 @@ export function sumOutboundRequestLineQty(lines = [], field) {
 
 /** 实出合计：所有行都未确认时返回 null，页面显示 `-`（主PRD R13）。 */
 export function sumOutboundRequestActualQty(lines = []) {
-  const confirmed = (lines || []).some((line) => line.actualQty != null);
+  const confirmed = lines.some((line) => line.actualQty != null);
   if (!confirmed) return null;
   return sumOutboundRequestLineQty(lines, 'actualQty');
 }
@@ -170,6 +176,10 @@ export function normalizeOtherOutboundRequestRow(row) {
     auditTime: row.auditTime || '',
     withdrawComment: row.withdrawComment || '',
     withdrawTime: row.withdrawTime || '',
+    confirmBy: row.confirmBy || '',
+    confirmAt: row.confirmAt || '',
+    confirmContent: row.confirmContent || '',
+    manualConfirmLogs: row.manualConfirmLogs || [],
   };
 }
 
@@ -254,6 +264,32 @@ export function canMockWarehouseCancelReply(row) {
   return row?.status === 'cancelling';
 }
 
+/**
+ * 人工确认（F10／R23）：只适用于已交给仓库的申请——已审核（已推送、发送结果不确定）、
+ * 待发货、取消中；草稿、待审核先提交审核，推送失败先重试或取消（主PRD §6.4）。
+ * 在途仓盘亏直接记账路径不推送仓库，不适用人工确认；详情页入口，列表行不提供（Demo PRD §2）。
+ */
+export function canManualConfirmRequest(row) {
+  if (isTransitDirectPostingRequest(row)) return false;
+  return row?.status === 'approved' || row?.status === 'pending_delivery' || row?.status === 'cancelling';
+}
+
+/** 人工确认类型文案（弹窗与Mock §3.10；类型与填写内容随操作日志保留）。 */
+export const manualConfirmTypeLabels = {
+  accept: '确认接单',
+  finish: '确认执行结束',
+  cancel_result: '确认取消结果',
+};
+
+/** 确认类型按当前状态给出可选项：已审核—确认接单；待发货—确认执行结束；取消中—确认取消结果。 */
+export function resolveManualConfirmType(row) {
+  if (isTransitDirectPostingRequest(row)) return '';
+  if (row?.status === 'approved') return 'accept';
+  if (row?.status === 'pending_delivery') return 'finish';
+  if (row?.status === 'cancelling') return 'cancel_result';
+  return '';
+}
+
 export function isTransitRequest(row) {
   return isTransitLogicalWarehouse(row?.logicalWarehouse);
 }
@@ -334,7 +370,7 @@ export function validateOutboundRequestForSubmit(form) {
 
 export function createOtherOutboundRequest(form, { submit = false, operator = '当前用户' } = {}) {
   const existingNos = loadAllOtherOutboundRequests([]).map((row) => row.requestNo);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = nowDateStamp();
   const requestNo = nextDocumentNo('QTCKSQ', today, existingNos);
   const time = nowStamp();
 
@@ -587,6 +623,200 @@ export function applyZeroOutCancel(row, { operator = '系统', time = nowStamp()
   });
   releaseRequestReservations(next, { operator, time });
   return next;
+}
+
+// —— 人工确认（F10／R23；详情页入口，弹窗与Mock §3.10） ——
+
+function buildManualConfirmLogEntry({ time, operator, remark }) {
+  return { id: `manual-confirm-${time}`, time, operator, action: '人工确认', remark };
+}
+
+/** 录入数量按整数解析；空值按 0 处理，由调用方按 0～申请数量校验。 */
+function parseConfirmActual(raw) {
+  const text = String(raw ?? '').trim();
+  if (text === '') return 0;
+  const value = Number(text);
+  return Number.isFinite(value) && Number.isInteger(value) ? value : NaN;
+}
+
+/**
+ * 人工确认执行结束形成的其他出库单：按正式口径走草稿→待审核（R23、AC18）。
+ * 原型按「待审核 + 演示数据」落库：不直接记账、不消耗或释放预占、不推送财务ERP；
+ * 审核通过后才扣减即时库存、消耗实出预占、释放未出预占并推送财务ERP（原型不提供该结果单的审核入口）。
+ */
+function createManualConfirmOutbound(request, lines, actuals, { operator, time }) {
+  const existing = loadOtherOutboundByRequestNo(request.requestNo);
+  if (existing) return existing;
+
+  const activeLines = lines
+    .map((line, index) => ({ line, index, actualQty: actuals[index] }))
+    .filter((item) => item.actualQty > 0);
+  if (!activeLines.length) throw new Error('实出合计为 0，请勾选零出或填写实出数量');
+
+  const businessDate = String(time).slice(0, 10);
+  const outboundNo = nextDocumentNo('QTCK', businessDate, loadAllOtherOutbounds([]).map((row) => row.outboundNo));
+  return persistOtherOutbound({
+    id: `other-outbound-${Date.now()}`,
+    outboundNo,
+    sourceType: 'request',
+    sourceRequestId: request.id,
+    sourceRequestNo: request.requestNo,
+    sourceSystem: '',
+    sourceNo: '',
+    logicalWarehouse: request.logicalWarehouse,
+    businessType: request.businessType,
+    actualOutboundTime: time,
+    businessDate,
+    auditStatus: 'pending',
+    auditor: '',
+    auditTime: '',
+    financeErpPushStatus: 'un_pushed',
+    pushTime: '',
+    pushFailReason: '',
+    remark: '人工确认执行结束形成（演示数据，待审核）',
+    creator: operator,
+    createdAt: time,
+    updater: operator,
+    updatedAt: time,
+    isMock: true,
+    lines: activeLines.map((item) => createOtherOutboundLine({
+      sourceRequestLineNo: item.line.lineNo || item.index + 1,
+      sourceOutboundLine: `${request.requestNo} 第${item.line.lineNo || item.index + 1}行`,
+      product: item.line.product,
+      productCode: item.line.productCode,
+      productName: item.line.productName,
+      unit: item.line.unit,
+      quantity: item.actualQty,
+    })),
+  });
+}
+
+/**
+ * 人工确认（R23）：确认接单／确认执行结束（含零出）／确认取消结果。
+ * - 确认接单：已审核→待发货，预占保持占用；
+ * - 确认执行结束：回写实出与未出，并形成其他出库单（草稿→待审核；原型按待审核落库并标注演示数据，不直接记账）；
+ * - 零出：已取消、释放全部预占、不生成结果单；
+ * - 确认取消结果：仓库同意→已取消并释放未执行预占；拒绝→恢复待发货、预占继续占用。
+ * 记录人工确认人／时间／内容；不能无来源新建其他出库单，也不适用于在途仓盘亏直接记账路径。
+ */
+export function applyManualConfirmRequest(row, payload = {}) {
+  const latest = loadOtherOutboundRequestById(row?.id) || row;
+  if (!latest || !canManualConfirmRequest(latest)) {
+    throw new Error(`当前单据状态为${otherOutboundRequestStatusLabels[latest?.status] || latest?.status || '-'}，不可执行人工确认`);
+  }
+
+  const confirmType = payload.confirmType || resolveManualConfirmType(latest);
+  const operator = payload.operator || '当前用户';
+  const stamp = nowStamp();
+  const appendLog = (remark) => [
+    ...(latest.manualConfirmLogs || []),
+    buildManualConfirmLogEntry({ time: stamp, operator, remark }),
+  ];
+
+  if (confirmType === 'accept') {
+    const content = '确认接单：已核实仓库实际接收本单';
+    return persistOtherOutboundRequest({
+      ...latest,
+      status: 'pending_delivery',
+      confirmBy: operator,
+      confirmAt: stamp,
+      confirmContent: content,
+      manualConfirmLogs: appendLog(content),
+      updater: operator,
+      updatedAt: stamp,
+    });
+  }
+
+  if (confirmType === 'finish') {
+    const lines = refreshOutboundRequestLines(latest.lines || []);
+    const zeroOut = Boolean(payload.zeroOut);
+    const actuals = lines.map((line, index) => {
+      const quantity = Number(line.quantity || 0);
+      const actualQty = zeroOut ? 0 : parseConfirmActual(payload.lineActuals?.[index]);
+      if (!zeroOut) {
+        if (!Number.isInteger(actualQty)) throw new Error(`第${index + 1}行实出数量须为整数`);
+        if (actualQty < 0) throw new Error(`第${index + 1}行实出数量不能小于 0`);
+        if (actualQty > quantity) {
+          throw new Error(`第${index + 1}行实出数量超过申请数量（申请 ${quantity}），本次确认被拒绝`);
+        }
+      }
+      return actualQty;
+    });
+
+    const totalQuantity = lines.reduce((sum, line) => sum + Number(line.quantity || 0), 0);
+    const totalActual = actuals.reduce((sum, value) => sum + value, 0);
+    if (!zeroOut && totalActual <= 0) {
+      throw new Error('执行结束实出合计为 0：请填写实出数量，或勾选零出（整单按取消结束）');
+    }
+
+    if (zeroOut) {
+      const content = `确认零出：整单按取消结束（申请 ${totalQuantity}）`;
+      return applyZeroOutCancel(
+        {
+          ...latest,
+          confirmBy: operator,
+          confirmAt: stamp,
+          confirmContent: content,
+          manualConfirmLogs: appendLog(content),
+          lines: lines.map((line) => ({ ...line, actualQty: 0 })),
+        },
+        { operator, time: stamp, reason: '人工确认零出：整单按取消结束' },
+      );
+    }
+
+    const outbound = createManualConfirmOutbound(latest, lines, actuals, { operator, time: stamp });
+    const content = `确认执行结束：实出 ${actuals.join('、')}（申请 ${lines.map((line) => Number(line.quantity || 0)).join('、')}）`;
+    return persistOtherOutboundRequest({
+      ...latest,
+      status: 'delivered',
+      deliverTime: stamp,
+      lines: lines.map((line, index) => ({
+        ...line,
+        actualQty: actuals[index],
+        remainingQty: Math.max(0, Number(line.quantity || 0) - actuals[index]),
+      })),
+      confirmBy: operator,
+      confirmAt: stamp,
+      confirmContent: content,
+      manualConfirmLogs: appendLog(`${content}，已形成演示用其他出库单 ${outbound.outboundNo}（待审核）`),
+      updater: operator,
+      updatedAt: stamp,
+    });
+  }
+
+  if (confirmType === 'cancel_result') {
+    const agreed = payload.cancelResult !== 'reject';
+    const content = agreed ? '确认取消结果：仓库同意取消' : '确认取消结果：仓库拒绝取消，恢复等待实际结果';
+    if (!agreed) {
+      return persistOtherOutboundRequest({
+        ...latest,
+        status: 'pending_delivery',
+        cancelReason: '',
+        confirmBy: operator,
+        confirmAt: stamp,
+        confirmContent: content,
+        manualConfirmLogs: appendLog(content),
+        updater: operator,
+        updatedAt: stamp,
+      });
+    }
+    const next = persistOtherOutboundRequest({
+      ...latest,
+      status: 'cancelled',
+      cancelTime: stamp,
+      cancelOperator: operator,
+      confirmBy: operator,
+      confirmAt: stamp,
+      confirmContent: content,
+      manualConfirmLogs: appendLog(content),
+      updater: operator,
+      updatedAt: stamp,
+    });
+    releaseRequestReservations(next, { operator, time: stamp });
+    return next;
+  }
+
+  throw new Error(`当前单据状态为${otherOutboundRequestStatusLabels[latest?.status] || latest?.status || '-'}，不可执行人工确认`);
 }
 
 /**

@@ -10,7 +10,7 @@ import {
   MasterDataFormDialog,
   useDialogFormState,
 } from './MasterDataFormDialog.jsx';
-import { EMPTY_PLACEHOLDER } from '../../lib/format.js';
+import { EMPTY_PLACEHOLDER, nowStamp } from '../../lib/format.js';
 import { formatCodeName } from '../../lib/codeName.js';
 import {
   applyApprove,
@@ -85,9 +85,9 @@ function LogicalWarehouseFormDialog({ dialog, onClose, onComplete }) {
         useStatus: row?.useStatus || 'enabled',
         auditStatus: row?.auditStatus || 'draft',
         creator: row?.creator || '当前用户',
-        createdAt: row?.createdAt || new Date().toISOString().slice(0, 16).replace('T', ' '),
+        createdAt: row?.createdAt || nowStamp().slice(0, 16),
         updater: '当前用户',
-        updatedAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
+        updatedAt: nowStamp().slice(0, 16),
         referenced: row?.referenced || false,
       },
     });

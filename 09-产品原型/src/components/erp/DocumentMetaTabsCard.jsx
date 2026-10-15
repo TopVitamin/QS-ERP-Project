@@ -91,3 +91,15 @@ export function buildCreateMetaFields(row) {
     { key: 'updatedAt', label: '最后更新时间', value: row.updatedAt },
   ];
 }
+
+/**
+ * 「操作信息」卡片默认页签：制单信息 + 操作日志。
+ * 需要追加页签（如审核信息、终止信息）时用 extraTabs；行需补默认值时传 toMetaRow。
+ */
+export function buildOperationInfoTabs({ row, buildLogs, toMetaRow, extraTabs = [] }) {
+  return [
+    { key: 'create', label: '制单信息', fields: buildCreateMetaFields(toMetaRow ? toMetaRow(row) : row) },
+    { key: 'log', label: '操作日志', variant: 'log', logEntries: () => buildLogs(row) },
+    ...extraTabs,
+  ];
+}

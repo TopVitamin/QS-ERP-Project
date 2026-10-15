@@ -6,7 +6,7 @@ import { SimpleDialog } from '../components/ui/dialog.jsx';
 import { Button } from '../components/ui/button.jsx';
 import { currencyOptions, logicalWarehouseOptions } from '../data/masterData.js';
 import { getCustomerLevel, getSelectableCustomerOptions } from '../data/customerData.js';
-import { computeLinesTotals, formatAmount } from '../lib/format.js';
+import { computeLinesTotals, formatAmount, nowDateStamp, nowStamp } from '../lib/format.js';
 import { currencySymbol } from '../lib/money.js';
 import { nextDocumentNo } from '../lib/documentNo.js';
 import { findCurrentSalesPrice, getProductDefaultTaxRate } from '../lib/priceLogic.js';
@@ -21,7 +21,6 @@ import {
 } from '../data/salesReturnData.js';
 import {
   findZeroPriceLines,
-  nowStamp,
   persistSalesReturn,
   refreshSalesReturnLines,
   SALES_RETURN_STORAGE_KEY,
@@ -108,7 +107,7 @@ function prepareReturnForm(form) {
   if (!next.id) next.id = `sales-return-${Date.now()}`;
   if (!next.returnNo || next.returnNo === '保存后自动生成') {
     const existingNos = readMockRows(SALES_RETURN_STORAGE_KEY, salesReturns).map((row) => row.returnNo);
-    next.returnNo = nextDocumentNo('XSTH', new Date().toISOString().slice(0, 10), existingNos);
+    next.returnNo = nextDocumentNo('XSTH', nowDateStamp(), existingNos);
   }
   return next;
 }

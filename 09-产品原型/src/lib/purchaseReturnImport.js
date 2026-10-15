@@ -2,7 +2,7 @@ import { currencyOptions, skuOptions, taxRateOptions } from '../data/masterData.
 import { getSelectableSupplierOptions } from '../data/supplierData.js';
 import { getSelectableLogicalWarehouseOptions } from '../data/warehouseData.js';
 import { nextDocumentNo } from './documentNo.js';
-import { EMPTY_PLACEHOLDER } from './format.js';
+import { EMPTY_PLACEHOLDER, nowStamp } from './format.js';
 import { writeMockRows } from './mockStorage.js';
 import {
   computeInboundLineRemaining,
@@ -10,7 +10,6 @@ import {
   loadAllReturns,
   loadSourceInboundByNo,
   normalizeReturnRow,
-  nowStamp,
   PURCHASE_RETURN_STORAGE_KEY,
 } from './purchaseReturnLogic.js';
 

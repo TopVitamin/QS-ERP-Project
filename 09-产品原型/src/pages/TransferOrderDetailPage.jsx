@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { DocumentDetailPage } from '../components/erp/DocumentDetailPage.jsx';
 import { productOptions, skuOptions } from '../data/masterData.js';
-import { buildCreateMetaFields } from '../components/erp/DocumentMetaTabsCard.jsx';
+import {
+  buildOperationInfoTabs,
+} from '../components/erp/DocumentMetaTabsCard.jsx';
 import { RelatedDocumentsCard } from '../components/erp/RelatedDocumentsCard.jsx';
 import {
   TransferOrderActionDialogs,
   TransferOrderDetailHeaderActions,
 } from '../components/erp/TransferOrderActionDialogs.jsx';
-import { useTransferDocRow } from '../hooks/useTransferDocRow.js';
+import { useDocumentRow } from '../hooks/useDocumentRow.js';
 import { EMPTY_PLACEHOLDER } from '../lib/format.js';
 import { resolveLogicalWarehouseLabel } from '../data/warehouseData.js';
 import { getTransferOrderStatusBadges } from '../data/transferOrderData.js';
@@ -100,16 +102,13 @@ const detailConfig = {
       title: '操作信息',
       variant: 'meta-tabs',
       defaultTab: 'create',
-      tabs: ({ row }) => [
-        { key: 'create', label: '制单信息', fields: buildCreateMetaFields(row) },
-        { key: 'log', label: '操作日志', variant: 'log', logEntries: () => buildTransferOrderOperationLogs(row) },
-      ],
+      tabs: ({ row }) => buildOperationInfoTabs({ row, buildLogs: buildTransferOrderOperationLogs }),
     },
   ],
 };
 
 export function TransferOrderDetailPage({ onFeedback, onOpenPage, context }) {
-  const row = useTransferDocRow(context, { storageKey: TRANSFER_ORDER_STORAGE_KEY, loadById: loadTransferOrderById });
+  const row = useDocumentRow(context, { storageKey: TRANSFER_ORDER_STORAGE_KEY, loadById: loadTransferOrderById });
   const [dialog, setDialog] = useState(null);
 
   function handleDialogComplete(result) {

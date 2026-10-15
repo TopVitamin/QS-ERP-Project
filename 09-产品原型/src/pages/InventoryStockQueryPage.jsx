@@ -9,7 +9,7 @@ import {
 import { stockStatusOptions } from '../lib/warehouseLogic.js';
 import { matchesBatchSearch, matchesBatchSearchIn, matchesMultiSelect } from '../lib/listFilters.js';
 import { getTransferTarget } from '../lib/transferTargets.js';
-import { listStockRows } from '../lib/inventoryStockLogic.js';
+import { listStockRows, STOCK_STORAGE_KEY } from '../lib/inventoryStockLogic.js';
 
 const initialFilters = {
   logicalWarehouses: [],
@@ -135,7 +135,7 @@ export function InventoryStockQueryPage(props) {
   const config = {
     title: '库存查询',
     rows,
-    storageKey: 'qs-erp:inventory-stock:v2',
+    storageKey: STOCK_STORAGE_KEY,
     initialFilters,
     filterRows,
     initialVisibility,

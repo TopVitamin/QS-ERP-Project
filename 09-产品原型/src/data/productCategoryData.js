@@ -84,7 +84,7 @@ export function getLevel2Options(level1Id) {
 
 export function getLevel3Options(level2Id) {
   return getCategoryRows()
-    .filter((row) => row.parentId === level2Id && row.useStatus === 'enabled')
+    .filter((row) => row.parentId === level2Id && (row.useStatus ?? 'enabled') === 'enabled')
     .map((item) => ({ value: item.id, label: item.name }));
 }
 

@@ -385,13 +385,3 @@ export function CustomerAddressSelect({
     />
   );
 }
-
-/** @deprecated 请通过 FormControl/FormFields 的 cn-address 类型使用分列布局。 */
-export function CnAddressFields(props) {
-  return (
-    <div className="flex min-w-0 flex-col gap-2">
-      <CnRegionPicker {...props} />
-      <CnAddressDetailInput {...props} />
-    </div>
-  );
-}

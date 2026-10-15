@@ -16,9 +16,10 @@ export const warehouseStatusTones = physicalAuditTones;
 export const warehouseUseStatusLabels = useStatusLabels;
 
 // 单据可选项：仅审核通过且启用的逻辑仓，展示 Code-Name（仓库主PRD R04、AC04）。
+// 缺字段按「审核通过且启用」处理：兼容浏览器里早期版本写入的行。
 export function getSelectableLogicalWarehouseOptions() {
   return readMockRows(LOGICAL_STORAGE_KEY, logicalWarehouses)
-    .filter((row) => row.auditStatus === 'approved' && row.useStatus === 'enabled')
+    .filter((row) => (row.auditStatus ?? 'approved') === 'approved' && (row.useStatus ?? 'enabled') === 'enabled')
     .map((row) => buildMasterOption({ code: row.code, name: row.name }));
 }
 
@@ -66,6 +67,19 @@ export function resolveLogicalWarehousePhysical(code, physicalRows = readMockRow
   const physical = physicalRows.find((row) => row.id === logical?.physicalWarehouseId || row.code === logical?.physicalWarehouseId);
   if (!physical) return { code: '', name: '', label: EMPTY_PLACEHOLDER, row: null };
   return { code: physical.code, name: physical.name, label: formatCodeName(physical.code, physical.name), row: physical };
+}
+
+/**
+ * 逻辑仓所属实体仓的对接通道（渠道回传演示用）：
+ * SaaS 中转对应聚水潭／领星，直连对应自营仓作业系统；档案缺失时返回空值。
+ */
+export function resolveLogicalWarehouseDocking(code) {
+  const { row } = resolveLogicalWarehousePhysical(code);
+  return {
+    dockingType: row?.dockingType || '',
+    dockingSystem: row?.dockingSystem || '',
+    isSaaSTransit: row?.dockingType === 'SaaS中转',
+  };
 }
 
 export function resolveLogicalWarehouseStockStatus(code) {

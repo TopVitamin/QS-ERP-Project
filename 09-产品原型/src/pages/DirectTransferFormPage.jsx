@@ -7,7 +7,7 @@ import { Button } from '../components/ui/button.jsx';
 import { DirectTransferActionDialogs } from '../components/erp/DirectTransferActionDialogs.jsx';
 import { erpFieldGridClassName } from '../styles/typography.js';
 import { useDocumentForm } from '../hooks/useDocumentForm.js';
-import { nowStamp } from '../lib/inventoryStockLogic.js';
+import { nowStamp } from '../lib/format.js';
 import { getInventoryLogicalWarehouseOptions } from '../data/warehouseData.js';
 import {
   defaultDirectTransferForm,

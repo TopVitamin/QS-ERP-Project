@@ -28,6 +28,9 @@ const tdClassName = 'border-r border-erp-border-table-column align-middle last:b
 const cellPaddingClassName = 'px-1.5';
 const readCellClassName = 'px-2';
 
+/** 计算列与来源引用列固定只读，任何 variant 的编辑态都不提供输入。 */
+const READ_ONLY_COLUMN_KEYS = new Set(['amount', 'grossAmount', 'taxAmount', 'netAmount', 'netPrice', 'productName', 'barcode', 'sourceInboundLine', 'sourceReturnLine', 'sourceOutboundLine', 'sourceNoticeLine', 'receivedQty', 'returnedQty', 'inTransitQty', 'shippedQty', 'shortQty', 'pushableQty']);
+
 const variants = {
   order: {
     minWidth: '1880px',
@@ -128,6 +131,43 @@ const variants = {
       { key: 'notifyQty', label: '在途通知', align: 'right', muted: true },
     ],
     viewColgroup: ['w-10', 'w-[108px]', 'w-[108px]', 'w-[140px]', 'w-[64px]', 'w-[88px]', 'w-[96px]', 'w-[72px]', 'w-[96px]', 'w-[96px]', 'w-[96px]', 'w-[96px]', 'w-[80px]', 'w-[80px]', 'w-[80px]', 'w-[80px]'],
+  },
+  'shopify-order': {
+    minWidth: '1960px',
+    colgroup: ['w-10', 'w-[108px]', 'w-[108px]', 'w-[140px]', 'w-[64px]', 'w-[88px]', 'w-[96px]', 'w-[88px]', 'w-[96px]', 'w-[72px]', 'w-[96px]', 'w-[96px]', 'w-[96px]', 'w-[96px]'],
+    editColumns: [
+      { key: 'index', label: '行号', align: 'center' },
+      { key: 'productCode', label: '商品编码', readOnly: true },
+      { key: 'barcode', label: '商品条码', readOnly: true },
+      { key: 'productName', label: '商品名称', readOnly: true },
+      { key: 'unit', label: '基本单位', readOnly: true },
+      { key: 'quantity', label: '订购数量', align: 'right', readOnly: true },
+      { key: 'shippedQty', label: '实际发货数量', align: 'right', readOnly: true },
+      { key: 'diffQty', label: '差额数量', align: 'right', readOnly: true },
+      { key: 'price', label: '含税单价', align: 'right', readOnly: true },
+      { key: 'taxRate', label: '税率', align: 'right', readOnly: true },
+      { key: 'netPrice', label: '不含税单价', align: 'right', readOnly: true },
+      { key: 'grossAmount', label: '价税合计', align: 'right', readOnly: true },
+      { key: 'taxAmount', label: '税额', align: 'right', readOnly: true },
+      { key: 'netAmount', label: '金额', align: 'right', readOnly: true },
+    ],
+    viewColumns: [
+      { key: 'index', label: '行号', align: 'center' },
+      { key: 'productCode', label: '商品编码' },
+      { key: 'barcode', label: '商品条码' },
+      { key: 'productName', label: '商品名称' },
+      { key: 'unit', label: '基本单位' },
+      { key: 'quantity', label: '订购数量', align: 'right' },
+      { key: 'shippedQty', label: '实际发货数量', align: 'right' },
+      { key: 'diffQty', label: '差额数量', align: 'right' },
+      { key: 'price', label: '含税单价', align: 'right' },
+      { key: 'taxRate', label: '税率', align: 'right' },
+      { key: 'netPrice', label: '不含税单价', align: 'right' },
+      { key: 'grossAmount', label: '价税合计', align: 'right' },
+      { key: 'taxAmount', label: '税额', align: 'right' },
+      { key: 'netAmount', label: '金额', align: 'right' },
+    ],
+    viewColgroup: ['w-10', 'w-[108px]', 'w-[108px]', 'w-[140px]', 'w-[64px]', 'w-[88px]', 'w-[96px]', 'w-[88px]', 'w-[96px]', 'w-[72px]', 'w-[96px]', 'w-[96px]', 'w-[96px]', 'w-[96px]'],
   },
   'delivery-notice': {
     minWidth: '1090px',
@@ -873,9 +913,8 @@ export function LineItemTable({
                 <tr className={rowClassName}>
                   {columns.map((column) => {
                     const isActionCell = column.key === 'actions';
-                    const readOnlyKeys = new Set(['amount', 'grossAmount', 'taxAmount', 'netAmount', 'netPrice', 'productName', 'barcode', 'sourceInboundLine', 'sourceReturnLine', 'sourceOutboundLine', 'sourceNoticeLine', 'receivedQty', 'returnedQty', 'inTransitQty', 'shippedQty', 'shortQty', 'pushableQty']);
                     const isPickerCell = isEdit && column.key === 'productCode' && enableSkuPicker;
-                    const isEditableCell = (isEdit && !column.readOnly && !isActionCell && column.key !== 'index' && !readOnlyKeys.has(column.key)) || isPickerCell;
+                    const isEditableCell = (isEdit && !column.readOnly && !isActionCell && column.key !== 'index' && !READ_ONLY_COLUMN_KEYS.has(column.key)) || isPickerCell;
                     const content = isEdit
                       ? renderEditCell({ column, line, index, onLineChange, onLineRemove, onProductSelect: setSkuDialogLineId, skuPickerEnabled: enableSkuPicker, editorOptions, lineActions, cellInvalid: Boolean(rowErrors[column.key]) })
                       : column.key === 'index'

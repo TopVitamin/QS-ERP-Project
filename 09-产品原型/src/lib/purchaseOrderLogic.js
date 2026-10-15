@@ -1,5 +1,5 @@
 import { skuOptions } from '../data/masterData.js';
-import { computeLinesTotals } from './format.js';
+import { computeLinesTotals, nowStamp } from './format.js';
 import { emptyFieldMessage } from './formValidation.js';
 import { hasInvalidTaxRate, hasNegativePrice } from './validation.js';
 import { upsertMockRow, readMockRows, writeMockRows } from './mockStorage.js';
@@ -17,10 +17,6 @@ export function loadOrderNotices(orderId) {
 
 export function hasBlockingOrderNotices(orderId) {
   return loadOrderNotices(orderId).some((notice) => BLOCKING_NOTICE_STATUSES.has(notice.status));
-}
-
-export function nowStamp() {
-  return new Date().toISOString().slice(0, 19).replace('T', ' ');
 }
 
 export function computePushableQty(line) {

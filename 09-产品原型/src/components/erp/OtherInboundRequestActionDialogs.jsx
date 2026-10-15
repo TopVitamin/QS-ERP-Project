@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Button } from '../ui/button.jsx';
 import { ConfirmDialog } from '../ui/alert-dialog.jsx';
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group.jsx';
 import { SimpleDialog } from '../ui/dialog.jsx';
 import { Input } from '../ui/input.jsx';
 import { Textarea } from '../ui/textarea.jsx';
@@ -9,6 +10,7 @@ import { cn } from '../../lib/utils.js';
 import {
   applyApproveRequest,
   applyCancelRequest,
+  applyManualConfirmRequest,
   applyMockReceiptRequest,
   applyRetryPushRequest,
   applySubmitRequest,
@@ -19,6 +21,7 @@ import {
   canApproveRequest,
   canCancelApprovedRequest,
   canCancelPendingRequest,
+  canManualConfirmRequest,
   canMockReceiptRequest,
   canMockWarehouseCancelRequest,
   canRetryPushRequest,
@@ -26,7 +29,10 @@ import {
   canWithdrawRequest,
   deleteOtherInboundRequest,
   loadOtherInboundRequestById,
+  manualConfirmTypeLabels,
+  otherInboundRequestStatusLabels,
   refreshRequestLines,
+  resolveManualConfirmType,
 } from '../../lib/otherInboundRequestLogic.js';
 import { ensureOtherInboundSeed } from '../../lib/otherInboundLogic.js';
 import { otherInbounds } from '../../data/otherInboundData.js';
@@ -47,12 +53,14 @@ export function OtherInboundRequestActionDialogs({ dialog, onClose, onComplete, 
   const [cancelReason, setCancelReason] = useState('');
   const [lineReceipts, setLineReceipts] = useState([]);
   const [zeroReceive, setZeroReceive] = useState(false);
+  const [cancelResult, setCancelResult] = useState('agree');
 
   useEffect(() => {
     if (!dialog) return;
     setWithdrawComment('');
     setCancelReason('');
     setZeroReceive(false);
+    setCancelResult('agree');
     setLineReceipts(refreshRequestLines(dialog.row?.lines || []).map((line) => String(line.quantity || 0)));
   }, [dialog]);
 
@@ -258,6 +266,172 @@ export function OtherInboundRequestActionDialogs({ dialog, onClose, onComplete, 
     );
   }
 
+  if (type === 'manual-confirm') {
+    const latest = latestRow();
+    const confirmType = resolveManualConfirmType(latest);
+
+    if (!confirmType) {
+      // 状态已变化：不进入成功流，按主PRD §6.4 阻断提示
+      return (
+        <SimpleDialog
+          open
+          onOpenChange={(open) => { if (!open) onClose?.(); }}
+          title="人工确认（补记仓库实际结果）"
+          description={buildStatusMismatchMessage(latest, '人工确认')}
+          footer={<Button variant="primary" size="compact" onClick={onClose}>关闭</Button>}
+        />
+      );
+    }
+
+    const lines = refreshRequestLines(latest?.lines || []);
+    const statusLabel = otherInboundRequestStatusLabels[latest?.status] || '';
+    const typeLabel = `${manualConfirmTypeLabels[confirmType]}（${statusLabel}）`;
+    const isFinish = confirmType === 'finish';
+
+    function handleConfirm() {
+      const current = latestRow();
+      if (!canManualConfirmRequest(current) || resolveManualConfirmType(current) !== confirmType) {
+        blockMismatch('人工确认');
+        return;
+      }
+      try {
+        const next = applyManualConfirmRequest(current, {
+          confirmType,
+          zeroReceive,
+          lineReceipts,
+          cancelResult,
+        });
+        const message = confirmType === 'finish'
+          ? (zeroReceive
+            ? '已记录人工确认结果：零收（整单按取消结束）'
+            : '已记录人工确认结果：执行结束（已形成演示用其他入库单，待审核）')
+          : confirmType === 'accept'
+            ? '已记录人工确认结果：确认接单'
+            : (cancelResult === 'agree'
+              ? '已记录人工确认结果：仓库同意取消'
+              : '已记录人工确认结果：仓库拒绝取消，恢复等待实际结果');
+        finish(message, 'success', next);
+      } catch (error) {
+        onNotify?.(error.message || '人工确认失败，请稍后重试', 'warning');
+      }
+    }
+
+    return (
+      <SimpleDialog
+        open
+        onOpenChange={(open) => { if (!open) onClose?.(); }}
+        size="xl"
+        title="人工确认（补记仓库实际结果）"
+        description="只用于已交给仓库、接口拿不到结果的申请；确认前请先与仓库核实实际结果。"
+        footer={(
+          <>
+            <Button variant="outline" size="compact" onClick={onClose}>取消</Button>
+            <Button variant="primary" size="compact" onClick={handleConfirm}>确认</Button>
+          </>
+        )}
+      >
+        <div className="space-y-1.5">
+          <span className="text-[12px] text-erp-text">确认类型</span>
+          <RadioGroup value={confirmType} aria-label="确认类型" className="h-7 gap-4">
+            <span className="flex items-center gap-1.5">
+              <RadioGroupItem value={confirmType} id="other-inbound-request-manual-confirm-type" aria-label={typeLabel} />
+              <label htmlFor="other-inbound-request-manual-confirm-type" className="cursor-pointer text-[12px] text-erp-text">{typeLabel}</label>
+            </span>
+          </RadioGroup>
+        </div>
+
+        {isFinish && (
+          <>
+            <div className="table-scroll mt-3 overflow-x-auto">
+              <table className={receiptTableClassName} style={{ minWidth: '760px' }}>
+                <colgroup>
+                  <col className="w-10" />
+                  <col className="w-[112px]" />
+                  <col className="w-[120px]" />
+                  <col className="w-[150px]" />
+                  <col className="w-[120px]" />
+                  <col className="w-[120px]" />
+                </colgroup>
+                <thead className={receiptHeadClassName}>
+                  <tr>
+                    <th className={receiptThClassName}>行号</th>
+                    <th className={receiptThClassName}>商品编码</th>
+                    <th className={receiptThClassName}>商品条码</th>
+                    <th className={receiptThClassName}>商品名称</th>
+                    <th className={cn(receiptThClassName, 'text-right')}>申请入库数量</th>
+                    <th className={cn(receiptThClassName, 'text-right')}>实收数量</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lines.map((line, index) => (
+                    <tr key={line.id || index} className={receiptRowClassName}>
+                      <td className={cn(receiptTdClassName, 'text-center text-erp-text-muted')}>{index + 1}</td>
+                      <td className={cn(receiptTdClassName, 'truncate')} title={line.productCode}>{line.productCode || EMPTY_PLACEHOLDER}</td>
+                      <td className={cn(receiptTdClassName, 'truncate text-erp-text-muted')} title={line.barcode}>{line.barcode || EMPTY_PLACEHOLDER}</td>
+                      <td className={cn(receiptTdClassName, 'truncate')} title={line.productName}>{line.productName || EMPTY_PLACEHOLDER}</td>
+                      <td className={cn(receiptTdClassName, 'text-right')}>{line.quantity ?? 0}</td>
+                      <td className={cn(receiptTdClassName, 'px-1.5')}>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={lineReceipts[index] ?? ''}
+                          disabled={zeroReceive}
+                          onChange={(event) => {
+                            const raw = event.target.value;
+                            const next = [...lineReceipts];
+                            next[index] = raw;
+                            setLineReceipts(next);
+                          }}
+                          className="text-right"
+                          aria-label={`第${index + 1}行实收数量`}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <label className="mt-3 flex items-center gap-2 text-[12px] text-erp-text">
+              <input type="checkbox" checked={zeroReceive} onChange={(event) => setZeroReceive(event.target.checked)} />
+              零收（整单按取消结束，不生成其他入库单）
+            </label>
+            <p className="mt-3 text-[12px] text-erp-text-muted">
+              演示说明：确认执行结束且实收&gt;0 时形成演示用其他入库单（待审核，演示数据）；审核通过后才增加库存并推送财务ERP，原型不提供该结果单的审核入口。
+            </p>
+          </>
+        )}
+
+        {confirmType === 'cancel_result' && (
+          <>
+            <div className="mt-3 space-y-1.5">
+              <span className="text-[12px] text-erp-text">取消结果 *</span>
+              <RadioGroup value={cancelResult} onValueChange={setCancelResult} aria-label="取消结果" className="h-7 gap-4">
+                <span className="flex items-center gap-1.5">
+                  <RadioGroupItem value="agree" id="other-inbound-request-cancel-agree" aria-label="仓库同意取消" />
+                  <label htmlFor="other-inbound-request-cancel-agree" className="cursor-pointer text-[12px] text-erp-text">仓库同意取消</label>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <RadioGroupItem value="reject" id="other-inbound-request-cancel-reject" aria-label="仓库拒绝取消" />
+                  <label htmlFor="other-inbound-request-cancel-reject" className="cursor-pointer text-[12px] text-erp-text">仓库拒绝取消</label>
+                </span>
+              </RadioGroup>
+            </div>
+            <p className="mt-3 text-[12px] text-erp-text-muted">
+              需已取得仓库明确回复：仓库同意→已取消；仓库拒绝→恢复待收货。无明确回复不得确认。
+            </p>
+          </>
+        )}
+
+        {confirmType === 'accept' && (
+          <p className="mt-3 text-[12px] text-erp-text-muted">
+            确认接单视同仓库已接收本申请，转待收货；库存不变、不生成结果单。
+          </p>
+        )}
+      </SimpleDialog>
+    );
+  }
+
   if (type === 'mock-receipt') {
     const lines = refreshRequestLines(row.lines || []);
     const totalRequestQty = lines.reduce((sum, line) => sum + Number(line.quantity || 0), 0);
@@ -424,6 +598,7 @@ export function OtherInboundRequestDetailHeaderActions({ row, onAction }) {
   if (canApproveRequest(row)) actions.push({ id: 'approve', label: '审核', variant: 'primary' });
   if (canWithdrawRequest(row)) actions.push({ id: 'withdraw', label: '撤回', variant: 'outline' });
   if (canRetryPushRequest(row)) actions.push({ id: 'retry', label: '重试推送', variant: 'outline' });
+  if (canManualConfirmRequest(row)) actions.push({ id: 'manual-confirm', label: '人工确认', variant: 'outline' });
   if (canCancelPendingRequest(row) || canCancelApprovedRequest(row)) actions.push({ id: 'cancel', label: '取消', variant: 'outline' });
   if (canApplyCancelRequest(row)) actions.push({ id: 'apply-cancel', label: '取消', variant: 'outline' });
   if (canMockReceiptRequest(row)) actions.push({ id: 'mock-receipt', label: '模拟仓库回传', variant: 'outline' });

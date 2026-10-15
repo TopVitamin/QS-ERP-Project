@@ -2,7 +2,8 @@ import { skuOptions } from '../data/masterData.js';
 import { emptyFieldMessage } from './formValidation.js';
 import { matchesDateRange, matchesMultiSelect } from './listFilters.js';
 import { readMockRows, writeMockRows } from './mockStorage.js';
-import { applyApprovedAdjustmentToPriceList, getProductBarcodes, nowStamp } from './priceLogic.js';
+import { applyApprovedAdjustmentToPriceList, getProductBarcodes } from './priceLogic.js';
+import { nowStamp } from './format.js';
 import { isValidTaxRate } from './validation.js';
 
 /**

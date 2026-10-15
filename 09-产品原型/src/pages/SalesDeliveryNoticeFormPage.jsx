@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { DocumentEditorFrame, EditorCard } from '../components/erp/DocumentEditorFrame.jsx';
 import { FormFields } from '../components/erp/FormControl.jsx';
 import { LineItemTable } from '../components/erp/LineItemTable.jsx';
+import { NoticeSourceMissingState, useNoticeFormDraft } from './noticeFormShared.jsx';
 import { resolveOptionLabel } from '../lib/codeName.js';
 import { createEmptyCnAddress, getCustomerAddressOptions } from '../lib/cnAddress.js';
 import { toSelectOptions } from '../lib/options.js';
@@ -33,7 +34,8 @@ function getSourceOrder(context) {
   return null;
 }
 
-const VIRTUAL_DELIVERY_TIP = '虚拟出库不会推送通知单到仓库，而是直接生成销售出库单，扣减ERP的库存';
+// 虚拟出库说明图标文案（《销售发货通知单前端Demo版PRD_新增编辑页》§3、03《集成协作与人工补充》§4.2.1）。
+const VIRTUAL_DELIVERY_TIP = '虚拟出库不会推送通知单到仓库，而是直接生成销售出库单，扣减ERP的库存，也不向聚水潭、领星同步库存';
 
 function deliveryModeField({ required = false, disabled = false, showVirtualTip = false } = {}) {
   return {
@@ -103,24 +105,14 @@ function buildEditFields() {
 
 export function SalesDeliveryNoticeCreatePage({ context, onFeedback, onOpenPage }) {
   const sourceOrder = useMemo(() => getSourceOrder(context), [context]);
-  const [form, setForm] = useState(null);
-  const [dirty, setDirty] = useState(false);
+  const { form, dirty, updateForm, updateLine } = useNoticeFormDraft(sourceOrder, {
+    canPush: canPushDeliveryNotice,
+    buildForm: buildNoticeFormFromOrder,
+  });
 
-  useEffect(() => {
-    if (!sourceOrder) {
-      setForm(null);
-      return;
-    }
-    if (!canPushDeliveryNotice(sourceOrder)) {
-      setForm(null);
-      return;
-    }
-    setForm(buildNoticeFormFromOrder(sourceOrder));
-    setDirty(false);
-  }, [sourceOrder]);
-
+  // 发货方式切换联动：自提清空收货地址与物流商，物流补默认地址与物流商（Demo PRD §3）。
   function updateField(key, value) {
-    setForm((current) => {
+    updateForm((current) => {
       const next = { ...current, [key]: value };
       if (key === 'shipMethod' && value === 'pickup') {
         next.deliveryAddress = createEmptyCnAddress();
@@ -134,15 +126,6 @@ export function SalesDeliveryNoticeCreatePage({ context, onFeedback, onOpenPage 
       }
       return next;
     });
-    setDirty(true);
-  }
-
-  function updateLine(lineId, key, value) {
-    setForm((current) => ({
-      ...current,
-      lines: current.lines.map((line) => (line.id === lineId ? { ...line, [key]: value } : line)),
-    }));
-    setDirty(true);
   }
 
   function handleSave() {
@@ -162,19 +145,21 @@ export function SalesDeliveryNoticeCreatePage({ context, onFeedback, onOpenPage 
 
   if (!sourceOrder) {
     return (
-      <div className="rounded-erp-section border border-erp-border-card bg-erp-surface-panel p-6 text-[12px] text-erp-text">
-        来源销售订单不存在或不可下推发货通知。
-        <button type="button" className="ml-2 text-erp-primary" onClick={() => onOpenPage?.('sales-order')}>返回销售订单</button>
-      </div>
+      <NoticeSourceMissingState
+        message="来源销售订单不存在或不可下推发货通知。"
+        linkLabel="返回销售订单"
+        onBack={() => onOpenPage?.('sales-order')}
+      />
     );
   }
 
   if (!form) {
     return (
-      <div className="rounded-erp-section border border-erp-border-card bg-erp-surface-panel p-6 text-[12px] text-erp-text">
-        当前销售订单不可下推发货通知。
-        <button type="button" className="ml-2 text-erp-primary" onClick={() => onOpenPage?.('sales-order-detail', { row: sourceOrder })}>返回销售订单</button>
-      </div>
+      <NoticeSourceMissingState
+        message="当前销售订单不可下推发货通知。"
+        linkLabel="返回销售订单"
+        onBack={() => onOpenPage?.('sales-order-detail', { row: sourceOrder })}
+      />
     );
   }
 
@@ -217,33 +202,21 @@ export function SalesDeliveryNoticeCreatePage({ context, onFeedback, onOpenPage 
   );
 }
 
+function buildEditableNoticeForm(sourceRow) {
+  const latest = loadNoticeById(sourceRow.id) || sourceRow;
+  return {
+    ...latest,
+    deliveryMode: resolveDeliveryMode(latest),
+    lines: latest.lines.map((line) => ({ ...line })),
+  };
+}
+
 export function SalesDeliveryNoticeEditPage({ context, onFeedback, onOpenPage }) {
   const sourceRow = context?.row;
-  const [form, setForm] = useState(null);
-  const [dirty, setDirty] = useState(false);
-
-  useEffect(() => {
-    if (!sourceRow?.id) {
-      setForm(null);
-      return;
-    }
-    const latest = loadNoticeById(sourceRow.id) || sourceRow;
-    if (!canEditRemark(latest)) {
-      setForm(null);
-      return;
-    }
-    setForm({
-      ...latest,
-      deliveryMode: resolveDeliveryMode(latest),
-      lines: latest.lines.map((line) => ({ ...line })),
-    });
-    setDirty(false);
-  }, [sourceRow]);
-
-  function updateField(key, value) {
-    setForm((current) => ({ ...current, [key]: value }));
-    setDirty(true);
-  }
+  const { form, dirty, updateField } = useNoticeFormDraft(sourceRow, {
+    canPush: canEditRemark,
+    buildForm: buildEditableNoticeForm,
+  });
 
   function handleSave() {
     const next = updateNoticeRemark(form, form.remark || '');
@@ -253,10 +226,11 @@ export function SalesDeliveryNoticeEditPage({ context, onFeedback, onOpenPage })
 
   if (!form) {
     return (
-      <div className="rounded-erp-section border border-erp-border-card bg-erp-surface-panel p-6 text-[12px] text-erp-text">
-        当前状态不可编辑。
-        <button type="button" className="ml-2 text-erp-primary" onClick={() => onOpenPage?.('sales-delivery-notice')}>返回列表</button>
-      </div>
+      <NoticeSourceMissingState
+        message="当前状态不可编辑。"
+        linkLabel="返回列表"
+        onBack={() => onOpenPage?.('sales-delivery-notice')}
+      />
     );
   }
 

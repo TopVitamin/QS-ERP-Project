@@ -4,6 +4,7 @@ export const LEGACY_PAGE_ALIASES = {
   'base-logistics': 'base-logistics-carrier',
   warehouse: 'warehouse-physical',
   logistics: 'base-logistics-carrier',
+  'sales-external-order': 'sales-domestic-order',
 };
 
 export function normalizePageId(pageId) {

@@ -29,6 +29,19 @@ const seedRequests = [
     auditor: '李四',
     auditTime: '2026-09-23 09:10:00',
     submittedAt: '2026-09-23 09:05:00',
+    // 人工确认留痕演示（详情页 PRD §5.1）：接口未返回接单结果，已人工确认接单
+    confirmBy: '张三',
+    confirmAt: '2026-09-23 09:40:00',
+    confirmContent: '确认接单：已核实仓库实际接收本单',
+    manualConfirmLogs: [
+      {
+        id: 'manual-confirm-2026-09-23 09:40:00',
+        time: '2026-09-23 09:40:00',
+        operator: '张三',
+        action: '人工确认',
+        remark: '确认接单：已核实仓库实际接收本单',
+      },
+    ],
     creator: '张三',
     createdAt: '2026-09-23 09:00:00',
     updater: '李四',
@@ -420,6 +433,18 @@ export function buildOtherOutboundRequestOperationLogs(row) {
         ? `仓库零出，实出 0、未出 ${row.totalQuantity ?? 0}，已释放全部预占`
         : `${row.cancelReason || '取消'}；已释放未执行预占`,
     });
+  }
+
+  const manualConfirmLogs = Array.isArray(row.manualConfirmLogs) ? row.manualConfirmLogs : [];
+  if (manualConfirmLogs.length) {
+    manualConfirmLogs.forEach((log) => push({
+      time: log.time,
+      operator: log.operator,
+      action: log.action || '人工确认',
+      remark: log.remark,
+    }));
+  } else if (row.confirmAt) {
+    push({ time: row.confirmAt, operator: row.confirmBy, action: '人工确认', remark: row.confirmContent });
   }
 
   return entries.sort((left, right) => String(right.time).localeCompare(String(left.time)));

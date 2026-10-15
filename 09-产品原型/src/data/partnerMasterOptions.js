@@ -31,7 +31,7 @@ export const partnerLevelOptions = [
 // 存储值沿用资料名称，展示时经 resolveXxxLabel 映射为「编码 名称」，兼容已有演示数据。
 function buildAuxiliaryTermOptions(typeId) {
   return readMockRows(AUXILIARY_STORAGE_KEY, auxiliaryItems)
-    .filter((row) => row.type === typeId && row.useStatus === 'enabled')
+    .filter((row) => row.type === typeId && (row.useStatus ?? 'enabled') === 'enabled')
     .map((row) => ({ value: row.name, label: formatCodeName(row.code, row.name), code: row.code, name: row.name }));
 }
 

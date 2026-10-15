@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { DocumentDetailPage } from '../components/erp/DocumentDetailPage.jsx';
 import { buildCreateMetaFields } from '../components/erp/DocumentMetaTabsCard.jsx';
 import { RelatedDocumentsCard } from '../components/erp/RelatedDocumentsCard.jsx';
@@ -12,7 +12,6 @@ import { getSalesReturnStatusBadges } from '../data/salesReturnData.js';
 import { salesOutbounds } from '../data/salesOutboundData.js';
 import { resolveOptionLabel } from '../lib/codeName.js';
 import { EMPTY_PLACEHOLDER, formatAmount } from '../lib/format.js';
-import { subscribeMockRows } from '../lib/mockStorage.js';
 import { currencySymbol } from '../lib/money.js';
 import {
   buildSalesReturnOperationLogs,
@@ -24,27 +23,7 @@ import {
   SALES_RETURN_STORAGE_KEY,
 } from '../lib/salesReturnLogic.js';
 import { buildSalesReturnRelatedDocumentSections } from '../lib/salesReturnRelatedDocs.js';
-
-function useSalesReturnRow(context) {
-  const contextRow = context?.row;
-  const [row, setRow] = useState(contextRow || null);
-
-  useEffect(() => {
-    if (!contextRow?.id) {
-      setRow(contextRow || null);
-      return undefined;
-    }
-
-    function syncRow() {
-      setRow(loadSalesReturnById(contextRow.id) || contextRow);
-    }
-
-    syncRow();
-    return subscribeMockRows(SALES_RETURN_STORAGE_KEY, syncRow);
-  }, [contextRow]);
-
-  return row;
-}
+import { useDocumentRow } from '../hooks/useDocumentRow.js';
 
 function getReturnDetail(row) {
   if (!row) return { lines: [] };
@@ -177,7 +156,7 @@ const returnDetailConfig = {
 };
 
 export function SalesReturnDetailPage({ onFeedback, onOpenPage, context }) {
-  const row = useSalesReturnRow(context);
+  const row = useDocumentRow(context, { storageKey: SALES_RETURN_STORAGE_KEY, loadById: loadSalesReturnById });
   const [dialog, setDialog] = useState(null);
 
   function handleDialogComplete(result) {

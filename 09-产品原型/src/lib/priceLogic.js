@@ -2,7 +2,7 @@ import { auxiliaryItems, AUXILIARY_STORAGE_KEY } from '../data/auxiliaryData.js'
 import { currencyOptions, skuOptions } from '../data/masterData.js';
 import { products } from '../data/productData.js';
 import { resolveOptionLabel } from './codeName.js';
-import { calculateNetUnitPrice4 } from './format.js';
+import { calculateNetUnitPrice4, nowStamp } from './format.js';
 import { matchesDateRange, matchesMultiSelect } from './listFilters.js';
 import { readMockRows, writeMockRows } from './mockStorage.js';
 
@@ -84,10 +84,6 @@ export function findCurrentSalesPrice({ customer, customerLevel, product, curren
       row.product === product && row.currency === currency && matchesScope(row)
     )))
     .find(Boolean) || null;
-}
-
-export function nowStamp() {
-  return new Date().toISOString().slice(0, 19).replace('T', ' ');
 }
 
 export function resolvePriceCurrencyLabel(value) {

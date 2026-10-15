@@ -1,11 +1,10 @@
 import { skuOptions } from '../data/masterData.js';
 import { nextDocumentNo } from './documentNo.js';
-import { computeLineTaxMetrics, computeLinesTotals } from './format.js';
+import { computeLineTaxMetrics, computeLinesTotals, nowStamp } from './format.js';
 import { auditStatusLabels, financeErpPushStatusLabels } from './inboundLogic.js';
 import {
   loadAllReturnOutbounds,
   loadReturnById,
-  nowStamp,
   pushLogEntry,
   mergeLogEntries,
   registerReturnOutboundSeedRows,
@@ -298,5 +297,5 @@ export function buildReturnOutboundOperationLogs(row) {
     });
   }
 
-  return mergeLogEntries(entries, row.operationLogs || []);
+  return mergeLogEntries(entries, row.operationLogs);
 }

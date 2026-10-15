@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { DocumentDetailPage } from '../components/erp/DocumentDetailPage.jsx';
 import { productOptions, skuOptions } from '../data/masterData.js';
-import { buildCreateMetaFields } from '../components/erp/DocumentMetaTabsCard.jsx';
+import {
+  buildOperationInfoTabs,
+} from '../components/erp/DocumentMetaTabsCard.jsx';
 import { RelatedDocumentsCard } from '../components/erp/RelatedDocumentsCard.jsx';
 import {
   TransferOutNoticeActionDialogs,
   TransferOutNoticeDetailHeaderActions,
 } from '../components/erp/TransferOutNoticeActionDialogs.jsx';
-import { useTransferDocRow } from '../hooks/useTransferDocRow.js';
+import { useDocumentRow } from '../hooks/useDocumentRow.js';
 import { EMPTY_PLACEHOLDER } from '../lib/format.js';
 import { resolveLogicalWarehouseLabel } from '../data/warehouseData.js';
 import { directTransfers } from '../data/directTransferData.js';
@@ -145,6 +147,9 @@ const detailConfig = {
         { key: 'pushTime', label: '推送时间', value: row.pushTime || EMPTY_PLACEHOLDER },
         { key: 'pushFailReason', label: '推送失败原因', value: row.pushFailReason || EMPTY_PLACEHOLDER, className: 'col-span-2' },
         { key: 'finalShipTime', label: '最终发货确认时间', value: row.finalShipTime || EMPTY_PLACEHOLDER },
+        { key: 'confirmBy', label: '人工确认人', value: row.confirmBy || EMPTY_PLACEHOLDER },
+        { key: 'confirmAt', label: '人工确认时间', value: row.confirmAt || EMPTY_PLACEHOLDER },
+        { key: 'confirmContent', label: '人工确认内容', value: row.confirmContent || EMPTY_PLACEHOLDER, className: 'col-span-3' },
       ],
     },
   ],
@@ -167,16 +172,13 @@ const detailConfig = {
       title: '操作信息',
       variant: 'meta-tabs',
       defaultTab: 'create',
-      tabs: ({ row }) => [
-        { key: 'create', label: '制单信息', fields: buildCreateMetaFields(row) },
-        { key: 'log', label: '操作日志', variant: 'log', logEntries: () => buildTransferOutNoticeOperationLogs(row) },
-      ],
+      tabs: ({ row }) => buildOperationInfoTabs({ row, buildLogs: buildTransferOutNoticeOperationLogs }),
     },
   ],
 };
 
 export function TransferOutNoticeDetailPage({ onFeedback, onOpenPage, context }) {
-  const row = useTransferDocRow(context, {
+  const row = useDocumentRow(context, {
     storageKey: TRANSFER_OUT_NOTICE_STORAGE_KEY,
     loadById: loadTransferOutNoticeById,
   });

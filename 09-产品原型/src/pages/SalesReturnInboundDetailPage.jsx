@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react';
 import { DocumentDetailPage } from '../components/erp/DocumentDetailPage.jsx';
 import { customerOptions, currencyOptions, logicalWarehouseOptions } from '../data/masterData.js';
 import { getSalesReturnInboundStatusBadges } from '../data/salesReturnInboundData.js';
 import { salesReturnNotices } from '../data/salesReturnNoticeData.js';
 import { salesReturns } from '../data/salesReturnData.js';
+import { loadDomesticOrderByNo } from '../data/domesticOrderData.js';
+import { loadCrossBorderOrderByNo } from '../data/crossBorderOrderData.js';
 import { resolveOptionLabel } from '../lib/codeName.js';
 import { EMPTY_PLACEHOLDER, formatAmount } from '../lib/format.js';
-import { subscribeMockRows } from '../lib/mockStorage.js';
 import { currencySymbol } from '../lib/money.js';
+import { useDocumentRow } from '../hooks/useDocumentRow.js';
 import {
   buildSalesReturnInboundOperationLogs,
   loadSalesReturnInboundById,
@@ -20,27 +21,6 @@ import {
  * 销退入库单详情（F04）：整单只读，页头展示审核状态与推送财务ERP状态两枚标签；
  * 单据信息分区顺序见页面骨架；推送财务ERP失败原因展示，重推在系统集成中心。
  */
-
-function useSalesReturnInboundRow(context) {
-  const contextRow = context?.row;
-  const [row, setRow] = useState(contextRow || null);
-
-  useEffect(() => {
-    if (!contextRow?.id) {
-      setRow(contextRow || null);
-      return undefined;
-    }
-
-    function syncRow() {
-      setRow(loadSalesReturnInboundById(contextRow.id) || contextRow);
-    }
-
-    syncRow();
-    return subscribeMockRows(RETURN_INBOUND_STORAGE_KEY, syncRow);
-  }, [contextRow]);
-
-  return row;
-}
 
 function getInboundDetail(row) {
   if (!row) return { lines: [] };
@@ -64,6 +44,10 @@ function buildInboundInfoFields({ detail, row, onOpenPage }) {
     (item) => item.id === row.sourceReturnId || item.returnNo === row.sourceReturnNo,
   );
 
+  // 二版「分两张」：路径二来源分别关联对应订单对象，可跳转订单详情（B5）
+  const relatedDomesticOrder = detail.sourceDomesticOrderNo ? loadDomesticOrderByNo(detail.sourceDomesticOrderNo) : null;
+  const relatedCrossBorderOrder = detail.sourceCrossborderOrderNo ? loadCrossBorderOrderByNo(detail.sourceCrossborderOrderNo) : null;
+
   const fields = [
     { key: 'inboundNo', label: '单号', value: detail.inboundNo },
     { key: 'sourceType', label: '来源类型', value: sourceTypeLabels[detail.sourceType] || detail.sourceType || EMPTY_PLACEHOLDER },
@@ -81,7 +65,24 @@ function buildInboundInfoFields({ detail, row, onOpenPage }) {
         row: relatedReturn || { returnNo: detail.sourceReturnNo, id: detail.sourceReturnId },
       })),
     },
-    { key: 'externalOrderNo', label: '外部原始订单', value: detail.externalOrderNo || EMPTY_PLACEHOLDER },
+    {
+      key: 'sourceDomesticOrderNo',
+      label: '来源国内电商订单',
+      value: detail.sourceDomesticOrderNo
+        ? (relatedDomesticOrder
+          ? buildDocumentLink(detail.sourceDomesticOrderNo, () => onOpenPage?.('sales-domestic-order-detail', { row: relatedDomesticOrder }))
+          : detail.sourceDomesticOrderNo)
+        : EMPTY_PLACEHOLDER,
+    },
+    {
+      key: 'sourceCrossborderOrderNo',
+      label: '来源跨境电商订单',
+      value: detail.sourceCrossborderOrderNo
+        ? (relatedCrossBorderOrder
+          ? buildDocumentLink(detail.sourceCrossborderOrderNo, () => onOpenPage?.('sales-crossborder-order-detail', { row: relatedCrossBorderOrder }))
+          : detail.sourceCrossborderOrderNo)
+        : EMPTY_PLACEHOLDER,
+    },
     { key: 'customer', label: '客户', value: resolveOptionLabel(detail.customer, customerOptions) },
     { key: 'currency', label: '币别', value: resolveOptionLabel(detail.currency, currencyOptions) },
     { key: 'warehouse', label: '收货仓库', value: resolveOptionLabel(detail.warehouse, logicalWarehouseOptions) },
@@ -155,7 +156,7 @@ const inboundDetailConfig = {
 };
 
 export function SalesReturnInboundDetailPage({ onOpenPage, context }) {
-  const row = useSalesReturnInboundRow(context);
+  const row = useDocumentRow(context, { storageKey: RETURN_INBOUND_STORAGE_KEY, loadById: loadSalesReturnInboundById });
 
   return <DocumentDetailPage context={{ row }} onOpenPage={onOpenPage} config={inboundDetailConfig} />;
 }

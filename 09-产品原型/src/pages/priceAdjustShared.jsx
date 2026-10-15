@@ -1,19 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { DocumentDetailPage } from '../components/erp/DocumentDetailPage.jsx';
 import { DocumentFormPage } from '../components/erp/DocumentFormPage.jsx';
 import { DocumentListPage } from '../components/erp/DocumentListPage.jsx';
 import { ImportExportActions } from '../components/erp/ImportExportActions.jsx';
-import { buildCreateMetaFields } from '../components/erp/DocumentMetaTabsCard.jsx';
+import { buildOperationInfoTabs } from '../components/erp/DocumentMetaTabsCard.jsx';
 import {
   PriceAdjustActionDialogs,
   PriceAdjustDetailHeaderActions,
 } from '../components/erp/PriceAdjustActionDialogs.jsx';
 import { resolveOptionLabel } from '../lib/codeName.js';
 import { nextDocumentNo } from '../lib/documentNo.js';
-import { EMPTY_PLACEHOLDER } from '../lib/format.js';
+import { EMPTY_PLACEHOLDER, nowDateStamp, nowStamp } from '../lib/format.js';
 import { buildPriceAdjustOperationLogs } from '../lib/operationLog.js';
-import { subscribeMockRows } from '../lib/mockStorage.js';
+import { useDocumentRow } from '../hooks/useDocumentRow.js';
 import { getSelectableCustomerOptions } from '../data/customerData.js';
 import { customerOptions, supplierOptions } from '../data/masterData.js';
 import { getSelectableSupplierOptions } from '../data/supplierData.js';
@@ -56,7 +56,6 @@ import {
 } from '../lib/priceAdjustLogic.js';
 import {
   getEnabledCurrencyOptions,
-  nowStamp,
   priceCustomerLevelOptions,
   priceRangeOptions,
   resolvePriceCurrencyLabel,
@@ -446,9 +445,20 @@ function preparePriceAdjustForm(form, side, meta) {
   if (!next.id) next.id = meta?.context?.row?.id || `${side}-adjust-${Date.now()}`;
   if (!next.adjustNo || next.adjustNo === '保存后显示') {
     const existingNos = loadAllPriceAdjustments(side).map((row) => row.adjustNo);
-    next.adjustNo = nextDocumentNo(sideTexts[side].docPrefix, nowStamp().slice(0, 10), existingNos);
+    next.adjustNo = nextDocumentNo(sideTexts[side].docPrefix, nowDateStamp(), existingNos);
   }
   return next;
+}
+
+/**
+ * 编辑期间单据状态被他人改变（并发提交／审核）：保存与提交都阻断并提示刷新，不覆盖他人结果
+ * （主PRD §11.1；新增编辑页 Demo PRD §6「编辑时单据状态已变化」）。
+ */
+function checkPriceAdjustStateChanged(side, form) {
+  if (!form?.id) return false;
+  const stored = loadPriceAdjustById(side, form.id);
+  if (!stored) return false;
+  return !canEditPriceAdjust(stored);
 }
 
 export function PriceAdjustFormPage({ side = 'purchase', mode = 'create', context, onFeedback, onOpenPage, ...props }) {
@@ -481,7 +491,8 @@ export function PriceAdjustFormPage({ side = 'purchase', mode = 'create', contex
         onOpenPage?.(base.detailPageId, { row: persistedRowRef.current });
       }
     };
-    setDialog({ type: 'submit', onConfirm: submit });
+    // 传入编辑单行：弹窗确认前按最新落库状态复核（新增编辑页 Demo PRD §6）
+    setDialog({ type: 'submit', onConfirm: submit, row: context?.row });
   }
 
   function handleDialogComplete(result) {
@@ -528,7 +539,10 @@ export function PriceAdjustFormPage({ side = 'purchase', mode = 'create', contex
       persistedRowRef.current = persisted;
       return persisted;
     },
-    validate: validatePriceAdjustForSave,
+    validate: (form) => {
+      if (checkPriceAdjustStateChanged(side, form)) return '单据状态已变化，请刷新后重试';
+      return validatePriceAdjustForSave(form);
+    },
     onLinesChanged: handleLinesChanged,
     createLine: createPriceAdjustLine,
     createLineFromSku: (sku, template) => createPriceAdjustLineFromSku(sku, template, side),
@@ -544,12 +558,14 @@ export function PriceAdjustFormPage({ side = 'purchase', mode = 'create', contex
   return (
     <>
       <DocumentFormPage {...props} mode={mode} context={context} onFeedback={onFeedback} onOpenPage={onOpenPage} config={config} />
+      {/* 状态已变化时 Toast 提供「刷新」入口：按最新行重载编辑页（新增编辑页 Demo PRD §6） */}
       <PriceAdjustActionDialogs
         side={side}
         dialog={dialog}
         onClose={() => setDialog(null)}
         onComplete={handleDialogComplete}
         onNotify={onFeedback}
+        onRefresh={(latest) => onOpenPage?.(base.editPageId, { row: latest })}
       />
     </>
   );
@@ -558,27 +574,6 @@ export function PriceAdjustFormPage({ side = 'purchase', mode = 'create', contex
 /* ------------------------------------------------------------------ *
  * 详情页
  * ------------------------------------------------------------------ */
-
-function usePriceAdjustRow(side, context) {
-  const contextRow = context?.row;
-  const [row, setRow] = useState(contextRow || null);
-
-  useEffect(() => {
-    if (!contextRow?.id) {
-      setRow(contextRow || null);
-      return undefined;
-    }
-
-    function syncRow() {
-      setRow(loadPriceAdjustById(side, contextRow.id) || contextRow);
-    }
-
-    syncRow();
-    return subscribeMockRows(getPriceAdjustStorageKey(side), syncRow);
-  }, [side, contextRow]);
-
-  return row;
-}
 
 function buildPurchaseInfoFields(detail) {
   return [
@@ -605,7 +600,8 @@ function buildSalesInfoFields(detail) {
 }
 
 export function PriceAdjustDetailPage({ side = 'purchase', onFeedback, onOpenPage, context }) {
-  const row = usePriceAdjustRow(side, context);
+  const loadAdjustById = useCallback((id) => loadPriceAdjustById(side, id), [side]);
+  const row = useDocumentRow(context, { storageKey: getPriceAdjustStorageKey(side), loadById: loadAdjustById });
   const [dialog, setDialog] = useState(null);
   const base = sideTexts[side] || sideTexts.purchase;
 
@@ -647,7 +643,7 @@ export function PriceAdjustDetailPage({ side = 'purchase', onFeedback, onOpenPag
     renderAfterLines: ({ row: currentRow }) => (currentRow?.auditStatus === 'approved' ? (
       <div className="rounded-erp-section border border-erp-border-card bg-erp-surface-panel px-4 py-2.5 text-[12px] text-erp-text-muted">
         {side === 'sales'
-          ? '本单价格已生效，只影响之后的新单；独立站与外部电商金额不受影响。'
+          ? '本单价格已生效，只影响之后的新单；独立站与国内/跨境电商订单金额不受影响。'
           : '本单价格已生效，只影响之后的新单。'}
       </div>
     ) : null),
@@ -665,10 +661,7 @@ export function PriceAdjustDetailPage({ side = 'purchase', onFeedback, onOpenPag
         title: '操作信息',
         variant: 'meta-tabs',
         defaultTab: 'create',
-        tabs: ({ row: currentRow }) => [
-          { key: 'create', label: '制单信息', fields: buildCreateMetaFields(currentRow) },
-          { key: 'log', label: '操作日志', variant: 'log', logEntries: () => buildPriceAdjustOperationLogs(currentRow) },
-        ],
+        tabs: ({ row: currentRow }) => buildOperationInfoTabs({ row: currentRow, buildLogs: buildPriceAdjustOperationLogs }),
       },
     ],
     // 调整单只有单价，不含数量和金额，不汇总价税合计、税额和金额（主PRD §4.1）。

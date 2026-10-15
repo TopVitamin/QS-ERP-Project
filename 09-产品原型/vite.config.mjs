@@ -5,6 +5,8 @@ import { fileURLToPath, URL } from "node:url";
 export default defineConfig({
   build: {
     outDir: "dist/client",
+    // 显式声明语法底线（ES2020/Safari 14+），与演示浏览器口径一致；不用 esbuild 自动 polyfill。
+    target: "es2020",
   },
   optimizeDeps: {
     include: ["react", "react-dom/client"],

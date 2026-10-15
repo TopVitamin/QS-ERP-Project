@@ -11,6 +11,7 @@ import { salesDeliveryNotices } from '../data/salesDeliveryNoticeData.js';
 import {
   buildSourceNoticeFilterOptions,
   buildSourceSalesOrderFilterOptions,
+  buildSourceOrderFilterOptions,
   salesOutboundColumns,
   salesOutbounds,
 } from '../data/salesOutboundData.js';
@@ -25,7 +26,8 @@ const initialFilters = {
   outboundNo: '',
   sourceNoticeNo: '',
   sourceOrderNo: '',
-  externalOrderNo: '',
+  sourceDomesticOrderNo: '',
+  sourceCrossborderOrderNo: '',
   sourceType: [],
   customer: '',
   warehouse: '',
@@ -38,10 +40,11 @@ const initialFilters = {
 function createFilterFields(rows) {
   return [
     { key: 'outboundNo', label: '单号', type: 'search', placeholder: '请输入销售出库单号' },
+    statusMultiSelectField('sourceType', '来源类型', sourceTypeLabels),
     { key: 'sourceNoticeNo', label: '来源销售发货通知单', type: 'select', options: buildSourceNoticeFilterOptions(rows) },
     { key: 'sourceOrderNo', label: '来源销售订单', type: 'select', options: buildSourceSalesOrderFilterOptions(rows) },
-    { key: 'externalOrderNo', label: '外部原始订单', type: 'search', placeholder: '请输入外部原始订单号' },
-    statusMultiSelectField('sourceType', '来源类型', sourceTypeLabels),
+    { key: 'sourceDomesticOrderNo', label: '来源国内电商订单', type: 'select', options: buildSourceOrderFilterOptions(rows, 'sourceDomesticOrderNo', '全部来源国内电商订单') },
+    { key: 'sourceCrossborderOrderNo', label: '来源跨境电商订单', type: 'select', options: buildSourceOrderFilterOptions(rows, 'sourceCrossborderOrderNo', '全部来源跨境电商订单') },
     { key: 'customer', label: '客户', type: 'select', options: [{ value: '', label: '全部客户' }, ...customerOptions] },
     statusMultiSelectField('auditStatus', '审核状态', auditStatusLabels),
     statusMultiSelectField('financeErpPushStatus', '推送财务ERP状态', financeErpPushStatusLabels),
@@ -58,12 +61,12 @@ function filterRows(row, filters) {
   const outboundNo = filters.outboundNo.trim().toLowerCase();
   const productCode = filters.productCode.trim().toLowerCase();
   const barcode = filters.barcode.trim().toLowerCase();
-  const externalOrderNo = filters.externalOrderNo.trim().toLowerCase();
 
   return (!outboundNo || String(row.outboundNo || '').toLowerCase().includes(outboundNo))
     && (!filters.sourceNoticeNo || row.sourceNoticeNo === filters.sourceNoticeNo)
     && (!filters.sourceOrderNo || row.sourceOrderNo === filters.sourceOrderNo)
-    && (!externalOrderNo || String(row.externalOrderNo || '').toLowerCase().includes(externalOrderNo))
+    && (!filters.sourceDomesticOrderNo || row.sourceDomesticOrderNo === filters.sourceDomesticOrderNo)
+    && (!filters.sourceCrossborderOrderNo || row.sourceCrossborderOrderNo === filters.sourceCrossborderOrderNo)
     && matchesMultiSelect(row.sourceType, filters.sourceType)
     && (!filters.customer || row.customer === filters.customer)
     && (!filters.warehouse || row.warehouse === filters.warehouse)

@@ -3,7 +3,7 @@ import { getSelectableCustomerOptions } from '../data/customerData.js';
 import { getSelectableLogicalWarehouseOptions } from '../data/warehouseData.js';
 import { salesOutbounds } from '../data/salesOutboundData.js';
 import { nextDocumentNo } from './documentNo.js';
-import { EMPTY_PLACEHOLDER } from './format.js';
+import { EMPTY_PLACEHOLDER, nowStamp } from './format.js';
 import { writeMockRows } from './mockStorage.js';
 import { loadAllOutbounds } from './salesOutboundLogic.js';
 import {
@@ -11,7 +11,6 @@ import {
   enrichSalesReturnLine,
   loadAllSalesReturns,
   normalizeSalesReturnRow,
-  nowStamp,
   SALES_RETURN_STORAGE_KEY,
 } from './salesReturnLogic.js';
 

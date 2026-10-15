@@ -93,11 +93,13 @@ export function buildPurchaseOrderOperationLogs(row) {
     });
   }
 
-  return mergeLogs(entries, row.operationLogs || []);
+  return mergeLogs(entries, row.operationLogs);
 }
 
 export function buildReceiptNoticeOperationLogs(row) {
   const entries = [];
+  const explicitLogs = row.operationLogs || [];
+  const hasExplicit = (actions) => explicitLogs.some((entry) => actions.includes(entry.action));
 
   pushEntry(entries, {
     time: row.createdAt,
@@ -115,7 +117,9 @@ export function buildReceiptNoticeOperationLogs(row) {
     });
   }
 
-  if (row.finalReceiveTime) {
+  // 人工确认执行结束的收货完成由「人工确认」条目承接，不再按系统回传重复推导
+  const manualFinish = row.confirmAt && row.finalReceiveTime && row.confirmAt === row.finalReceiveTime;
+  if (row.finalReceiveTime && !manualFinish && !hasExplicit(['收货完成'])) {
     pushEntry(entries, {
       time: row.finalReceiveTime,
       operator: '系统',
@@ -133,7 +137,16 @@ export function buildReceiptNoticeOperationLogs(row) {
     });
   }
 
-  return mergeLogs(entries, row.operationLogs || []);
+  if (row.confirmAt && !hasExplicit(['人工确认'])) {
+    pushEntry(entries, {
+      time: row.confirmAt,
+      operator: row.confirmBy,
+      action: '人工确认',
+      remark: row.confirmContent,
+    });
+  }
+
+  return mergeLogs(entries, row.operationLogs);
 }
 
 export function buildInboundOperationLogs(row) {
@@ -165,7 +178,7 @@ export function buildInboundOperationLogs(row) {
     });
   }
 
-  return mergeLogs(entries, row.operationLogs || []);
+  return mergeLogs(entries, row.operationLogs);
 }
 
 export function buildSalesOrderOperationLogs(row) {
@@ -232,11 +245,13 @@ export function buildSalesOrderOperationLogs(row) {
     });
   }
 
-  return mergeLogs(entries, row.operationLogs || []);
+  return mergeLogs(entries, row.operationLogs);
 }
 
 export function buildDeliveryNoticeOperationLogs(row) {
   const entries = [];
+  const explicitLogs = row.operationLogs || [];
+  const hasExplicit = (actions) => explicitLogs.some((entry) => actions.includes(entry.action));
 
   pushEntry(entries, {
     time: row.createdAt,
@@ -254,7 +269,9 @@ export function buildDeliveryNoticeOperationLogs(row) {
     });
   }
 
-  if (row.finalShipTime) {
+  // 人工确认执行结束的发货完成由「人工确认」条目承接，不再按系统回传重复推导
+  const manualFinish = row.confirmAt && row.finalShipTime && row.confirmAt === row.finalShipTime;
+  if (row.finalShipTime && !manualFinish && !hasExplicit(['发货完成'])) {
     pushEntry(entries, {
       time: row.finalShipTime,
       operator: '系统',
@@ -272,7 +289,16 @@ export function buildDeliveryNoticeOperationLogs(row) {
     });
   }
 
-  return mergeLogs(entries, row.operationLogs || []);
+  if (row.confirmAt && !hasExplicit(['人工确认'])) {
+    pushEntry(entries, {
+      time: row.confirmAt,
+      operator: row.confirmBy,
+      action: '人工确认',
+      remark: row.confirmContent,
+    });
+  }
+
+  return mergeLogs(entries, row.operationLogs);
 }
 
 export function buildSalesOutboundOperationLogs(row) {
@@ -304,7 +330,7 @@ export function buildSalesOutboundOperationLogs(row) {
     });
   }
 
-  return mergeLogs(entries, row.operationLogs || []);
+  return mergeLogs(entries, row.operationLogs);
 }
 
 /** 价格调整单操作日志：从创建、提交、驳回、审核字段推导（详情页 Demo PRD §3.4）。 */
@@ -346,5 +372,5 @@ export function buildPriceAdjustOperationLogs(row) {
     });
   }
 
-  return mergeLogs(entries, row.operationLogs || []);
+  return mergeLogs(entries, row.operationLogs);
 }

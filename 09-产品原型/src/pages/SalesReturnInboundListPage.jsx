@@ -7,10 +7,10 @@ import { customerOptions, logicalWarehouseOptions } from '../data/masterData.js'
 import { salesReturns } from '../data/salesReturnData.js';
 import { salesReturnNotices } from '../data/salesReturnNoticeData.js';
 import {
-  buildExternalOrderFilterOptions,
   buildProductFilterOptions,
   buildSourceNoticeFilterOptions,
   buildSourceReturnFilterOptions,
+  buildSourceOrderFilterOptions,
   salesReturnInboundColumns,
   salesReturnInbounds,
 } from '../data/salesReturnInboundData.js';
@@ -31,7 +31,8 @@ const initialFilters = {
   sourceType: [],
   sourceNoticeNo: '',
   sourceReturnNo: '',
-  externalOrderNo: '',
+  sourceDomesticOrderNo: '',
+  sourceCrossborderOrderNo: '',
   customer: '',
   warehouse: '',
   auditStatus: [],
@@ -47,7 +48,8 @@ function createFilterFields(rows) {
     statusMultiSelectField('sourceType', '来源类型', sourceTypeLabels),
     { key: 'sourceNoticeNo', label: '来源销退收货通知单', type: 'select', options: buildSourceNoticeFilterOptions(rows) },
     { key: 'sourceReturnNo', label: '来源销售退货单', type: 'select', options: buildSourceReturnFilterOptions(rows) },
-    { key: 'externalOrderNo', label: '外部原始订单', type: 'select', options: buildExternalOrderFilterOptions(rows) },
+    { key: 'sourceDomesticOrderNo', label: '来源国内电商订单', type: 'select', options: buildSourceOrderFilterOptions(rows, 'sourceDomesticOrderNo', '全部来源国内电商订单') },
+    { key: 'sourceCrossborderOrderNo', label: '来源跨境电商订单', type: 'select', options: buildSourceOrderFilterOptions(rows, 'sourceCrossborderOrderNo', '全部来源跨境电商订单') },
     { key: 'customer', label: '客户', type: 'select', options: [{ value: '', label: '全部客户' }, ...customerOptions] },
     { key: 'warehouse', label: '收货仓库', type: 'select', options: [{ value: '', label: '全部仓库' }, ...logicalWarehouseOptions] },
     statusMultiSelectField('auditStatus', '审核状态', auditStatusLabels),
@@ -70,7 +72,8 @@ function filterRows(row, filters) {
     && matchesMultiSelect(row.sourceType || 'notice', filters.sourceType)
     && (!filters.sourceNoticeNo || row.sourceNoticeNo === filters.sourceNoticeNo)
     && (!filters.sourceReturnNo || row.sourceReturnNo === filters.sourceReturnNo)
-    && (!filters.externalOrderNo || row.externalOrderNo === filters.externalOrderNo)
+    && (!filters.sourceDomesticOrderNo || row.sourceDomesticOrderNo === filters.sourceDomesticOrderNo)
+    && (!filters.sourceCrossborderOrderNo || row.sourceCrossborderOrderNo === filters.sourceCrossborderOrderNo)
     && (!filters.customer || row.customer === filters.customer)
     && (!filters.warehouse || row.warehouse === filters.warehouse)
     && matchesMultiSelect(row.auditStatus, filters.auditStatus)

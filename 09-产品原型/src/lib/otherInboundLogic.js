@@ -9,7 +9,8 @@
 import { skuOptions } from '../data/masterData.js';
 import { nextDocumentNo } from './documentNo.js';
 import { readMockRows, upsertMockRow, writeMockRows } from './mockStorage.js';
-import { ensureStockRow, getStockRow, nowStamp, postStockEntries } from './inventoryStockLogic.js';
+import { ensureStockRow, getStockRow, postStockEntries } from './inventoryStockLogic.js';
+import { nowStamp } from './format.js';
 
 export const OTHER_INBOUND_STORAGE_KEY = 'qs-erp:other-inbounds:v2';
 
