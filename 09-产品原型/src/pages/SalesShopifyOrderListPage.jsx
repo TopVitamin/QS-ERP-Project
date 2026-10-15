@@ -19,7 +19,7 @@ import {
   canSubmitShopifyOrder,
   canWithdrawShopifyOrder,
   loadAllShopifyOrders,
-  manualConfirmTypesForStatus,
+  manualConfirmTypesForOrder,
   normalizeShopifyRows,
   SHOPIFY_ORDER_STORAGE_KEY,
   validateShopifyOrderForSubmit,
@@ -34,7 +34,8 @@ import {
 const initialFilters = {
   orderNo: '',
   shopifyOrderNo: '',
-  status: [],
+  documentStatus: [],
+  warehouseStatus: [],
   warehouse: '',
   sourceType: '',
   productCode: '',
@@ -46,7 +47,8 @@ const initialFilters = {
 function filterRows(row, filters) {
   if (!matchesTextContains(row.orderNo, filters.orderNo)) return false;
   if (!matchesTextContains(row.shopifyOrderNo, filters.shopifyOrderNo)) return false;
-  if (!matchesMultiSelect(row.status, filters.status)) return false;
+  if (!matchesMultiSelect(row.documentStatus, filters.documentStatus)) return false;
+  if (!matchesMultiSelect(row.warehouseStatus, filters.warehouseStatus)) return false;
   if (filters.warehouse && row.warehouse !== filters.warehouse) return false;
   if (filters.sourceType && row.sourceType !== filters.sourceType) return false;
   if (filters.productCode && !(row.lines || []).some((line) => matchesTextContains(line.productCode, filters.productCode))) return false;
@@ -58,22 +60,65 @@ function filterRows(row, filters) {
 const initialVisibility = Object.fromEntries(shopifyOrderColumns.map((column) => [column.key, true]));
 const columnOptions = shopifyOrderColumns.map((column) => ({ key: column.key, label: column.label }));
 
-/** 行内操作按状态互斥展示（列表 Demo PRD §6.1；「编辑/提交/删除」等风险动作走模块弹窗二次确认）。 */
+/** 行内：状态特异或低频操作；待提交/待审核主流程走左上角批量区（列表 Demo PRD §3、§6）。 */
 const rowActions = [
-  { id: 'edit', label: '编辑', visibleWhen: canEditShopifyOrder },
-  { id: 'submit', label: '提交', visibleWhen: canSubmitShopifyOrder },
-  { id: 'delete', label: '删除', visibleWhen: canDeleteShopifyOrder, variant: 'danger' },
-  { id: 'approve', label: '审核', visibleWhen: canApproveShopifyOrder },
-  { id: 'withdraw', label: '撤回', visibleWhen: canWithdrawShopifyOrder },
+  { id: 'edit', label: '选仓选物流', visibleWhen: canEditShopifyOrder },
   { id: 'cancel-audit', label: '取消审核', visibleWhen: canCancelAuditShopifyOrder },
-  { id: 'retry-push', label: '重试推送', visibleWhen: canRetryPushShopifyOrder },
-  { id: 'mock-push', label: '模拟推送成功（Mock）', visibleWhen: canMockPushShopifyOrder },
+  { id: 'retry-push', label: '重试推仓', visibleWhen: canRetryPushShopifyOrder },
+  { id: 'mock-push', label: '模拟推仓（Mock）', visibleWhen: canMockPushShopifyOrder },
   { id: 'apply-cancel', label: '申请取消', visibleWhen: canApplyCancelShopifyOrder },
   { id: 'manual-confirm', label: '人工确认', visibleWhen: canManualConfirmShopifyOrder },
-  { id: 'mock-callback', label: '模拟回传（Mock）', visibleWhen: canMockCallbackShopifyOrder },
+  { id: 'mock-callback', label: '模拟仓回传（Mock）', visibleWhen: canMockCallbackShopifyOrder },
   { id: 'copy', label: '复制新单', visibleWhen: canCopyShopifyOrder },
   { id: 'rewrite', label: '重新回写', visibleWhen: canRewriteShopifyOrder },
 ];
+
+const toolbarActions = [
+  { id: 'batch-edit', label: '选仓选物流', requiresSelection: true },
+  { id: 'batch-submit', label: '提交', requiresSelection: true },
+  { id: 'batch-approve', label: '审核', requiresSelection: true },
+  { id: 'batch-withdraw', label: '撤回', requiresSelection: true },
+  { id: 'batch-delete', label: '删除', requiresSelection: true, variant: 'danger' },
+];
+
+function getBatchBlockReason(selected, actionId) {
+  if (!selected.length) return '请先勾选订单';
+  const allDraft = selected.every((row) => row.documentStatus === 'draft');
+  const allPending = selected.every((row) => row.documentStatus === 'pending');
+  switch (actionId) {
+    case 'batch-edit':
+      if (!allDraft || selected.some((row) => !canEditShopifyOrder(row))) {
+        return '选仓选物流仅支持待提交订单，请调整勾选';
+      }
+      return null;
+    case 'batch-submit':
+      if (!allDraft || selected.some((row) => !canSubmitShopifyOrder(row))) {
+        return '批量提交仅支持待提交订单，请调整勾选';
+      }
+      for (const row of selected) {
+        const block = validateShopifyOrderForSubmit(row);
+        if (block) return `${row.orderNo}：${block}`;
+      }
+      return null;
+    case 'batch-delete':
+      if (!allDraft || selected.some((row) => !canDeleteShopifyOrder(row))) {
+        return '批量删除仅支持待提交订单，请调整勾选';
+      }
+      return null;
+    case 'batch-approve':
+      if (!allPending || selected.some((row) => !canApproveShopifyOrder(row))) {
+        return '批量审核仅支持待审核订单，请调整勾选';
+      }
+      return null;
+    case 'batch-withdraw':
+      if (!allPending || selected.some((row) => !canWithdrawShopifyOrder(row))) {
+        return '批量撤回仅支持待审核订单，请调整勾选';
+      }
+      return null;
+    default:
+      return null;
+  }
+}
 
 export function SalesShopifyOrderListPage(props) {
   const [dialog, setDialog] = useState(null);
@@ -90,12 +135,12 @@ export function SalesShopifyOrderListPage(props) {
       return;
     }
     if (id === 'manual-confirm') {
-      const [confirmType] = manualConfirmTypesForStatus(row.status);
+      const [confirmType] = manualConfirmTypesForOrder(row);
       setDialog({ type: 'manual-confirm', confirmType, row });
       return;
     }
     if (id === 'mock-callback') {
-      setDialog(row.status === 'cancelling' ? { type: 'mock-cancel-result', row } : { type: 'mock-callback', row });
+      setDialog(row.warehouseStatus === 'cancelling' ? { type: 'mock-cancel-result', row } : { type: 'mock-callback', row });
       return;
     }
     setDialog({ type: id, row });
@@ -126,8 +171,8 @@ export function SalesShopifyOrderListPage(props) {
     defaultSort: { key: 'createdAt', direction: 'desc' },
     initialPinnedKeys: ['orderNo'],
     headerActions: [
-      { id: 'pull-orders', label: '拉取已付款订单（Mock）', variant: 'primary' },
-      { id: 'import-orders', label: '导入（Mock）', icon: Upload },
+      { id: 'pull-orders', label: '拉取已付款单（Mock）', variant: 'primary' },
+      { id: 'import-orders', label: '导入订单（Mock）', icon: Upload },
       {
         id: 'import-export',
         render: (ctx) => (
@@ -141,22 +186,24 @@ export function SalesShopifyOrderListPage(props) {
         ),
       },
     ],
-    toolbarActions: [{ id: 'batch-edit', label: '批量选仓选物流' }],
+    toolbarActions,
     rowActionsMaxVisible: 3,
     rowActions,
     onRowAction: openRowDialog,
     onToolbarAction: (id, context) => {
-      if (id !== 'batch-edit') return;
       const selected = context.getSelectedRows();
-      if (!selected.length) {
-        context.notify('请先勾选待提交订单', 'warning');
+      const block = getBatchBlockReason(selected, id);
+      if (block) {
+        context.notify(block, 'warning');
         return;
       }
-      if (selected.some((row) => row.status !== 'draft')) {
-        context.notify('批量选仓选物流仅支持待提交状态的订单，请调整勾选', 'warning');
+      if (id === 'batch-edit') {
+        setDialog({ type: 'batch-edit', rows: selected });
         return;
       }
-      setDialog({ type: 'batch-edit', rows: selected });
+      if (id === 'batch-submit' || id === 'batch-delete' || id === 'batch-approve' || id === 'batch-withdraw') {
+        setDialog({ type: id, rows: selected });
+      }
     },
     onHeaderAction: (id, context) => {
       if (id === 'pull-orders') setDialog({ type: 'pull-orders', loadSeed: context.state.rows });

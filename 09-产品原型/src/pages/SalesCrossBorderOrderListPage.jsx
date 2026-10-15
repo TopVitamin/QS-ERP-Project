@@ -9,6 +9,7 @@ import {
   crossBorderOrderInitialFilters,
   crossBorderOrderSeeds,
   filterCrossBorderOrderRows,
+  loadCrossBorderOrders,
   normalizeCrossBorderOrderRows,
 } from '../data/crossBorderOrderData.js';
 
@@ -30,6 +31,7 @@ export function SalesCrossBorderOrderListPage(props) {
     storageKey: CROSSBORDER_ORDER_STORAGE_KEY,
     normalizeRows: normalizeCrossBorderOrderRows,
     mergeSeedRows: true,
+    readRows: loadCrossBorderOrders,
     initialFilters: crossBorderOrderInitialFilters,
     filterRows: filterCrossBorderOrderRows,
     initialVisibility,

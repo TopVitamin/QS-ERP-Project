@@ -1,7 +1,7 @@
 /**
  * 国内电商订单 / 跨境电商订单详情共用视图（并列对象，结构一致；二版 B3）。
  *
- * 分区顺序按《页面骨架》：页头（标题＋履约状态标签＋返回列表）→ 订单基础信息 → 订单行快照 →
+ * 分区顺序按《页面骨架》：页头（标题＋回传状态标签＋返回列表）→ 订单基础信息 → 订单行快照 →
  * 关联结果单（胶囊Tab，始终展示）→ 异常回传记录（有记录时展示）→ 操作信息。
  * 本对象只读：页头无业务按钮，不提供重试、修复、改单入口（主PRD R02、§6.4）。
  */
@@ -75,7 +75,7 @@ function renderOrderLineCell(line, column) {
 
 /**
  * 订单相关数据订阅：结果单与异常记录变化（如结果处理 Mock 处理原记录）后即时刷新
- * 累计数量、履约状态与异常回传记录。
+ * 累计数量、回传状态与异常回传记录。
  */
 export function useOrderRelatedData(row, kind) {
   const [revision, setRevision] = useState(0);
@@ -114,7 +114,7 @@ function buildBaseInfoFields(order) {
     { key: 'currency', label: '币别', value: resolveOptionLabel(order.currency, currencyOptions) },
     { key: 'amount', label: '成交优惠后金额合计', value: formatChannelAmount(order.amount) },
     { key: 'returnAmount', label: '退货金额合计', value: formatChannelAmount(order.returnAmount) },
-    { key: 'fulfillmentStatus', label: '履约状态', value: orderFulfillmentStatusLabels[order.fulfillmentStatus] || order.fulfillmentStatus },
+    { key: 'fulfillmentStatus', label: '回传状态', value: orderFulfillmentStatusLabels[order.fulfillmentStatus] || order.fulfillmentStatus },
   ];
 }
 

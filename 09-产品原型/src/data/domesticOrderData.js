@@ -211,7 +211,7 @@ export const domesticOrderSeeds = [
   },
 ];
 
-/** 列表列（顺序按详细稿「列表展示=是」：订单编号、渠道单号、平台单号、平台、店铺、下单时间、履约状态、币别、金额、退货金额、最后更新时间）。 */
+/** 列表列（顺序按详细稿「列表展示=是」：订单编号、渠道单号、平台单号、平台、店铺、下单时间、回传状态、币别、金额、退货金额、最后更新时间）。 */
 export const domesticOrderColumns = [
   { key: 'orderNo', label: '订单编号', defaultWidth: 190, minWidth: 170, maxWidth: 240, ellipsis: true, link: true },
   { key: 'channelOrderNo', label: '渠道单号', defaultWidth: 160, minWidth: 140, maxWidth: 210, ellipsis: true },
@@ -219,7 +219,7 @@ export const domesticOrderColumns = [
   { key: 'platform', label: '平台', defaultWidth: 88, minWidth: 72, maxWidth: 120, ellipsis: true },
   { key: 'shop', label: '店铺', defaultWidth: 150, minWidth: 120, maxWidth: 220, ellipsis: true },
   { key: 'orderedAt', label: '下单时间', defaultWidth: 170, minWidth: 150, maxWidth: 210, ellipsis: true, sortable: true },
-  { key: 'fulfillmentStatus', label: '履约状态', defaultWidth: 96, minWidth: 88, maxWidth: 130, ellipsis: true, render: (value) => orderFulfillmentStatusLabels[value] || value, tone: (value) => orderFulfillmentStatusTextTones[value] || '' },
+  { key: 'fulfillmentStatus', label: '回传状态', defaultWidth: 96, minWidth: 88, maxWidth: 130, ellipsis: true, render: (value) => orderFulfillmentStatusLabels[value] || value, tone: (value) => orderFulfillmentStatusTextTones[value] || '' },
   { key: 'currency', label: '币别', defaultWidth: 112, minWidth: 96, maxWidth: 140, ellipsis: true, render: (value) => resolveOptionLabel(value, currencyOptions) },
   { key: 'amount', label: '成交优惠后金额合计', defaultWidth: 150, minWidth: 130, maxWidth: 200, ellipsis: true, align: 'right', sortable: true, render: (value) => (value === '' || value == null ? EMPTY_PLACEHOLDER : formatAmount(value)) },
   { key: 'returnAmount', label: '退货金额合计', defaultWidth: 128, minWidth: 110, maxWidth: 180, ellipsis: true, align: 'right', sortable: true, render: (value) => (value === '' || value == null ? EMPTY_PLACEHOLDER : formatAmount(value)) },
@@ -244,7 +244,7 @@ export const domesticOrderFilterFields = [
   { key: 'platformOrderNo', label: '平台单号', type: 'search', placeholder: '请输入平台单号' },
   { key: 'shop', label: '店铺', type: 'search', placeholder: '请输入店铺' },
   { key: 'platform', label: '平台', type: 'select', options: [{ value: '', label: '全部' }, ...domesticPlatformOptions.map((value) => ({ value, label: value }))] },
-  { key: 'fulfillmentStatus', label: '履约状态', type: 'multi-select', placeholder: '全部', options: Object.entries(orderFulfillmentStatusLabels).map(([value, label]) => ({ value, label })) },
+  { key: 'fulfillmentStatus', label: '回传状态', type: 'multi-select', placeholder: '全部', options: Object.entries(orderFulfillmentStatusLabels).map(([value, label]) => ({ value, label })) },
   { key: 'orderedAtRange', label: '下单时间', type: 'date-range', placeholder: '不限' },
   { key: 'productCode', label: '商品编码', type: 'search', placeholder: '请输入商品编码' },
   { key: 'platformSku', label: '平台商品编码', type: 'search', placeholder: '请输入平台商品编码' },

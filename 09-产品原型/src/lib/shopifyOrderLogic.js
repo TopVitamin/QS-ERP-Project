@@ -3,7 +3,8 @@
  * 仓库回传与人工确认、Shopify 回写与重新回写、复制新单与 Mock 拉取/导入。
  *
  * 口径依据：《独立站订单主PRD》§6.1～§6.5、R02～R23；《独立站订单前端Demo版PRD_弹窗与Mock》§2～§5。
- * 状态为单一字段（`status`），「草稿」在页面展示为「待提交」。
+ * 状态为三维：`documentStatus`（单据）、`warehouseStatus`（仓库执行）、`writeBackStatus`（Shopify 回写）。
+ * 兼容旧版单一 `status` 字段（加载时迁移）。「草稿」在页面展示为「待提交」。
  */
 import { skuOptions } from '../data/masterData.js';
 import { computeLineTaxMetrics, computeLinesTotals, nowStamp } from './format.js';
@@ -24,41 +25,107 @@ export const SHOPIFY_ORDER_STORAGE_KEY = 'qs-erp:shopify-orders:v1';
 /** 独立站统一使用跨境电商2C通用客户，不按消费者建档案（主 PRD R06）；单据按快照组合展示。 */
 export const SHOPIFY_GENERIC_CUSTOMER = { code: 'CUS000030', name: '跨境电商2C通用客户' };
 
-/** 单据状态标签：单一状态字段；「草稿」展示为「待提交」（SAL-FR08）。 */
-export const shopifyOrderStatusLabels = {
+/** 单据状态（维度一）；「草稿」展示为「待提交」（SAL-FR08）。 */
+export const shopifyDocumentStatusLabels = {
   draft: '待提交',
   pending: '待审核',
   approved: '已审核',
+  completed: '已完结',
+  cancelled: '已取消',
+};
+
+export const shopifyDocumentStatusTones = {
+  draft: 'text-erp-warning',
+  pending: 'text-erp-info',
+  approved: 'text-erp-info',
+  completed: 'text-erp-success',
+  cancelled: 'text-erp-danger',
+};
+
+export const shopifyDocumentStatusBadgeTones = {
+  draft: 'warning',
+  pending: 'info',
+  approved: 'info',
+  completed: 'success',
+  cancelled: 'danger',
+};
+
+/** 仓库执行状态（维度二）；与通知单推送/执行语义对齐。 */
+export const shopifyWarehouseStatusLabels = {
+  not_pushed: '未推送',
+  pushing: '推送中',
   push_failed: '推送失败',
   pending_ship: '待发货',
   cancelling: '取消中',
   shipped: '已发货',
-  cancelled: '已取消',
 };
 
-/** 列表状态列语义色文字（列表 Demo PRD §4.3）。 */
-export const shopifyOrderStatusTones = {
-  draft: 'text-erp-warning',
-  pending: 'text-erp-info',
-  approved: 'text-erp-info',
+export const shopifyWarehouseStatusTones = {
+  not_pushed: 'text-erp-muted',
+  pushing: 'text-erp-info',
   push_failed: 'text-erp-danger',
   pending_ship: 'text-erp-info',
   cancelling: 'text-erp-warning',
   shipped: 'text-erp-success',
-  cancelled: 'text-erp-danger',
 };
 
-/** 详情页头 StatusBadge tone（与列表语义一致）。 */
-export const shopifyOrderStatusBadgeTones = {
-  draft: 'warning',
-  pending: 'info',
-  approved: 'info',
+export const shopifyWarehouseStatusBadgeTones = {
+  not_pushed: 'neutral',
+  pushing: 'info',
   push_failed: 'danger',
   pending_ship: 'info',
   cancelling: 'warning',
   shipped: 'success',
-  cancelled: 'danger',
 };
+
+/** @deprecated 使用 shopifyDocumentStatusLabels；保留列表筛选项兼容。 */
+export const shopifyOrderStatusLabels = shopifyDocumentStatusLabels;
+export const shopifyOrderStatusTones = shopifyDocumentStatusTones;
+export const shopifyOrderStatusBadgeTones = shopifyDocumentStatusBadgeTones;
+
+const LEGACY_COMPOSITE_STATUS_MAP = {
+  draft: { documentStatus: 'draft', warehouseStatus: 'not_pushed' },
+  pending: { documentStatus: 'pending', warehouseStatus: 'not_pushed' },
+  approved: { documentStatus: 'approved', warehouseStatus: 'pushing' },
+  push_failed: { documentStatus: 'approved', warehouseStatus: 'push_failed' },
+  pending_ship: { documentStatus: 'approved', warehouseStatus: 'pending_ship' },
+  cancelling: { documentStatus: 'approved', warehouseStatus: 'cancelling' },
+  shipped: { documentStatus: 'completed', warehouseStatus: 'shipped' },
+  cancelled: { documentStatus: 'cancelled', warehouseStatus: 'not_pushed' },
+};
+
+const RETIRED_WAREHOUSE_STATUSES = new Set(['zero_exec', 'na']);
+
+export function resolveShopifyOrderStatuses(row = {}) {
+  let documentStatus;
+  let warehouseStatus;
+  if (row.documentStatus && row.warehouseStatus) {
+    documentStatus = row.documentStatus;
+    warehouseStatus = row.warehouseStatus;
+  } else {
+    const legacy = row.status;
+    const mapped = LEGACY_COMPOSITE_STATUS_MAP[legacy];
+    if (!mapped) {
+      documentStatus = legacy || 'draft';
+      warehouseStatus = 'not_pushed';
+    } else if (legacy === 'cancelled') {
+      documentStatus = 'cancelled';
+      warehouseStatus = 'not_pushed';
+    } else {
+      ({ documentStatus, warehouseStatus } = mapped);
+    }
+  }
+  if (documentStatus === 'cancelled') {
+    warehouseStatus = 'not_pushed';
+  } else if (RETIRED_WAREHOUSE_STATUSES.has(warehouseStatus)) {
+    warehouseStatus = 'not_pushed';
+  }
+  return { documentStatus, warehouseStatus };
+}
+
+function withShopifyStatuses(row, { documentStatus, warehouseStatus }) {
+  return { ...row, documentStatus, warehouseStatus, status: documentStatus };
+}
 
 export const shopifySourceTypeLabels = { api: '接口拉取', import: '人工导入', copy: '复制生成' };
 export const shopifyWriteBackStatusLabels = { unwritten: '未回写', written: '已回写', failed: '回写失败' };
@@ -106,9 +173,13 @@ export function normalizeShopifyOrderRow(row) {
   const lines = refreshShopifyOrderLines(row.lines || []);
   const totals = computeLinesTotals(lines);
   const totalShippedQty = lines.reduce((sum, line) => sum + Number(line.shippedQty || 0), 0);
+  const { documentStatus, warehouseStatus } = resolveShopifyOrderStatuses(row);
   return {
     ...row,
     lines,
+    documentStatus,
+    warehouseStatus,
+    status: documentStatus,
     amount: totals.grossAmount,
     taxAmount: totals.taxAmount,
     netAmount: totals.netAmount,
@@ -167,53 +238,63 @@ function buildLogEntry({ action, remark, time = nowStamp(), operator = '当前�
 // —— 状态—功能矩阵（主 PRD §6.4；页面按钮按此渲染，不满足直接不展示）——
 
 export function canEditShopifyOrder(row) {
-  return row.status === 'draft';
+  return row.documentStatus === 'draft';
 }
 
 export const canSubmitShopifyOrder = canEditShopifyOrder;
 export const canDeleteShopifyOrder = canEditShopifyOrder;
 
 export function canApproveShopifyOrder(row) {
-  return row.status === 'pending';
+  return row.documentStatus === 'pending';
 }
 
 export const canWithdrawShopifyOrder = canApproveShopifyOrder;
 
 export function canRetryPushShopifyOrder(row) {
-  return row.status === 'push_failed';
+  return row.documentStatus === 'approved' && row.warehouseStatus === 'push_failed';
 }
 
 export function canCancelAuditShopifyOrder(row) {
-  return row.status === 'approved' || row.status === 'push_failed';
+  if (row.documentStatus !== 'approved') return false;
+  return ['not_pushed', 'pushing', 'push_failed'].includes(row.warehouseStatus);
 }
 
 export function canApplyCancelShopifyOrder(row) {
-  return row.status === 'pending_ship';
+  return row.documentStatus === 'approved' && row.warehouseStatus === 'pending_ship';
 }
 
 export function canManualConfirmShopifyOrder(row) {
-  return row.status === 'approved' || row.status === 'pending_ship' || row.status === 'cancelling';
+  return manualConfirmTypesForOrder(row).length > 0;
 }
 
 export function canCopyShopifyOrder(row) {
-  return row.status === 'cancelled';
+  return row.documentStatus === 'cancelled';
 }
 
 export function canRewriteShopifyOrder(row) {
-  return (row.status === 'shipped' || row.status === 'cancelled') && row.writeBackStatus === 'failed';
+  return (row.documentStatus === 'completed' || row.documentStatus === 'cancelled') && row.writeBackStatus === 'failed';
 }
 
 /** Demo 入口：审核后未自动推进（演示开关关闭）时的「模拟推送成功（Mock）」。 */
 export function canMockPushShopifyOrder(row) {
-  return row.status === 'approved';
+  return row.documentStatus === 'approved' && ['not_pushed', 'pushing'].includes(row.warehouseStatus);
 }
 
 /** Demo 入口：待发货/取消中的「模拟仓库回传（Mock）」「模拟仓库回执（Mock）」。 */
 export function canMockCallbackShopifyOrder(row) {
-  return row.status === 'pending_ship' || row.status === 'cancelling';
+  return row.documentStatus === 'approved' && ['pending_ship', 'cancelling'].includes(row.warehouseStatus);
 }
 
-/** 人工确认弹窗可选类型：按当前状态限定（弹窗与Mock §4.2）。 */
+/** 人工确认弹窗可选类型（主 PRD §6.4；按单据+仓库执行维度）。 */
+export function manualConfirmTypesForOrder(row) {
+  if (row.documentStatus !== 'approved') return [];
+  if (['not_pushed', 'pushing', 'push_failed'].includes(row.warehouseStatus)) return ['accept'];
+  if (row.warehouseStatus === 'pending_ship') return ['finish'];
+  if (row.warehouseStatus === 'cancelling') return ['cancel_result'];
+  return [];
+}
+
+/** @deprecated 使用 manualConfirmTypesForOrder */
 export function manualConfirmTypesForStatus(status) {
   if (status === 'approved') return ['accept'];
   if (status === 'pending_ship') return ['finish'];
@@ -273,7 +354,7 @@ export function formatShopifyOrderShortageError(row, shortages = []) {
 }
 
 export function validateShopifyOrderForSubmit(row) {
-  if (row.status !== 'draft') return `当前单据状态为${shopifyOrderStatusLabels[row.status] || row.status}，不可提交`;
+  if (row.documentStatus !== 'draft') return `当前单据状态为${shopifyDocumentStatusLabels[row.documentStatus] || row.documentStatus}，不可提交`;
   if (!row.warehouse) return '请先选定发货仓库';
   if (!row.logisticsProduct) return '请先选定物流服务产品';
   if (!row.shopifyOrderNo || !row.lines?.length || !row.receiverName) return '单据来源内容不完整，请处理后重试';
@@ -336,27 +417,25 @@ export function applyBatchShopifyOrderWarehouseAndLogistics(rows = [], { warehou
 
 export function applySubmitShopifyOrder(row) {
   const stamp = nowStamp();
-  return persistShopifyOrder({
+  return persistShopifyOrder(withShopifyStatuses({
     ...row,
-    status: 'pending',
     submittedAt: stamp,
     submitter: '当前用户',
     updatedAt: stamp,
     updater: '当前用户',
-  });
+  }, { documentStatus: 'pending', warehouseStatus: 'not_pushed' }));
 }
 
 export function applyWithdrawShopifyOrder(row, returnComment) {
   const stamp = nowStamp();
-  return persistShopifyOrder({
+  return persistShopifyOrder(withShopifyStatuses({
     ...row,
-    status: 'draft',
     returnComment,
     returnedAt: stamp,
     returnOperator: '当前用户',
     updatedAt: stamp,
     updater: '当前用户',
-  });
+  }, { documentStatus: 'draft', warehouseStatus: 'not_pushed' }));
 }
 
 export function applyApproveShopifyOrder(row) {
@@ -377,16 +456,15 @@ export function applyApproveShopifyOrder(row) {
   }
   const stamp = nowStamp();
   return {
-    row: persistShopifyOrder({
+    row: persistShopifyOrder(withShopifyStatuses({
       ...row,
-      status: 'approved',
       auditor: '当前用户',
       auditTime: stamp,
       pushTime: stamp,
       lastProcessTime: stamp,
       updatedAt: stamp,
       updater: '当前用户',
-    }),
+    }, { documentStatus: 'approved', warehouseStatus: 'pushing' })),
   };
 }
 
@@ -394,39 +472,36 @@ export function applyApproveShopifyOrder(row) {
 
 export function applyPushSuccessShopifyOrder(row, { operator = '系统' } = {}) {
   const stamp = nowStamp();
-  return persistShopifyOrder(appendLogs({
+  return persistShopifyOrder(appendLogs(withShopifyStatuses({
     ...row,
-    status: 'pending_ship',
     lastProcessTime: stamp,
     updatedAt: stamp,
     updater: operator,
-  }, [buildLogEntry({ action: '推送仓库', remark: '推送成功，等待仓库发货结果', time: stamp, operator })]));
+  }, { documentStatus: 'approved', warehouseStatus: 'pending_ship' }), [buildLogEntry({ action: '推送仓库', remark: '推送成功，等待仓库发货结果', time: stamp, operator })]));
 }
 
 export function applyPushFailShopifyOrder(row) {
   const stamp = nowStamp();
-  return persistShopifyOrder(appendLogs({
+  return persistShopifyOrder(appendLogs(withShopifyStatuses({
     ...row,
-    status: 'push_failed',
     pushTime: stamp,
     pushFailReason: shopifyPushFailReasonMock,
     lastProcessTime: stamp,
     updatedAt: stamp,
     updater: '系统',
-  }, [buildLogEntry({ action: '推送失败', remark: shopifyPushFailReasonMock, time: stamp, operator: '系统' })]));
+  }, { documentStatus: 'approved', warehouseStatus: 'push_failed' }), [buildLogEntry({ action: '推送失败', remark: shopifyPushFailReasonMock, time: stamp, operator: '系统' })]));
 }
 
 export function applyRetryPushShopifyOrder(row, { shouldFail = false } = {}) {
   if (shouldFail) return applyPushFailShopifyOrder(row);
   const stamp = nowStamp();
-  return persistShopifyOrder(appendLogs({
+  return persistShopifyOrder(appendLogs(withShopifyStatuses({
     ...row,
-    status: 'pending_ship',
     pushFailReason: row.pushFailReason || '',
     lastProcessTime: stamp,
     updatedAt: stamp,
     updater: '当前用户',
-  }, [buildLogEntry({ action: '重试推送', remark: '人工重试推送成功', time: stamp })]));
+  }, { documentStatus: 'approved', warehouseStatus: 'pending_ship' }), [buildLogEntry({ action: '重试推送', remark: '人工重试推送成功', time: stamp })]));
 }
 
 /** 审核通过后约 1 秒自动模拟推送成功（弹窗与Mock §5.2；演示开关关闭时不调用）。 */
@@ -434,7 +509,7 @@ export function scheduleShopifyOrderMockPush(orderId, { delay = 1000, loadSeed =
   if (typeof window === 'undefined') return;
   window.setTimeout(() => {
     const latest = loadShopifyOrderById(orderId, loadSeed);
-    if (!latest || latest.status !== 'approved') return;
+    if (!latest || latest.documentStatus !== 'approved' || latest.warehouseStatus !== 'pushing') return;
     applyPushSuccessShopifyOrder(latest);
   }, delay);
 }
@@ -462,29 +537,27 @@ export function applyCancelAuditShopifyOrder(row, { purpose, reason }) {
 
   if (purpose === 'terminate') {
     return {
-      row: persistShopifyOrder({
+      row: persistShopifyOrder(withShopifyStatuses({
         ...base,
-        status: 'cancelled',
         cancelMethod: 'cancel_audit',
         cancelPurpose: '',
-      }),
+      }, { documentStatus: 'cancelled', warehouseStatus: 'not_pushed' })),
       released: release.released,
     };
   }
-  return { row: persistShopifyOrder({ ...base, status: 'draft' }), released: release.released };
+  return { row: persistShopifyOrder(withShopifyStatuses({ ...base }, { documentStatus: 'draft', warehouseStatus: 'not_pushed' })), released: release.released };
 }
 
 export function applyApplyCancelShopifyOrder(row, { purpose, reason }) {
   const stamp = nowStamp();
-  return persistShopifyOrder(appendLogs({
+  return persistShopifyOrder(appendLogs(withShopifyStatuses({
     ...row,
-    status: 'cancelling',
     cancelPurpose: purpose,
     cancelReason: reason,
     lastProcessTime: stamp,
     updatedAt: stamp,
     updater: '当前用户',
-  }, [buildLogEntry({
+  }, { documentStatus: 'approved', warehouseStatus: 'cancelling' }), [buildLogEntry({
     action: '申请取消',
     remark: `已向仓库申请取消（${shopifyCancelPurposeLabels[purpose] || purpose}）：${reason}`,
     time: stamp,
@@ -496,15 +569,14 @@ export function applyWarehouseCancelResultShopifyOrder(row, { agree, writeBackFa
   const stamp = nowStamp();
   if (!agree) {
     return {
-      row: persistShopifyOrder(appendLogs({
+      row: persistShopifyOrder(appendLogs(withShopifyStatuses({
         ...row,
-        status: 'pending_ship',
         cancelPurpose: '',
         cancelReason: '',
         lastProcessTime: stamp,
         updatedAt: stamp,
         updater: operator,
-      }, [buildLogEntry({ action: '仓库拒绝取消', remark: '仓库拒绝取消，恢复待发货继续执行', time: stamp, operator })])),
+      }, { documentStatus: 'approved', warehouseStatus: 'pending_ship' }), [buildLogEntry({ action: '仓库拒绝取消', remark: '仓库拒绝取消，恢复待发货继续执行', time: stamp, operator })])),
     };
   }
 
@@ -514,21 +586,19 @@ export function applyWarehouseCancelResultShopifyOrder(row, { agree, writeBackFa
 
   if (purpose === 're_execute') {
     return {
-      row: persistShopifyOrder(appendLogs({
+      row: persistShopifyOrder(appendLogs(withShopifyStatuses({
         ...row,
-        status: 'draft',
         cancelPurpose: '',
         lastProcessTime: stamp,
         updatedAt: stamp,
         updater: operator,
-      }, [buildLogEntry({ action: '仓库同意取消', remark: '仓库同意取消，按调整后重新执行回到待提交', time: stamp, operator })])),
+      }, { documentStatus: 'draft', warehouseStatus: 'not_pushed' }), [buildLogEntry({ action: '仓库同意取消', remark: '仓库同意取消，按调整后重新执行回到待提交', time: stamp, operator })])),
       released: release.released,
     };
   }
 
-  const cancelled = applyWriteBackToShopify({
+  const cancelled = applyWriteBackToShopify(withShopifyStatuses({
     ...row,
-    status: 'cancelled',
     cancelMethod: 'apply_cancel',
     cancelPurpose: '',
     cancelTime: stamp,
@@ -536,7 +606,7 @@ export function applyWarehouseCancelResultShopifyOrder(row, { agree, writeBackFa
     lastProcessTime: stamp,
     updatedAt: stamp,
     updater: operator,
-  }, { content: 'cancel', shouldFail: writeBackFailed, operator });
+  }, { documentStatus: 'cancelled', warehouseStatus: 'not_pushed' }), { content: 'cancel', shouldFail: writeBackFailed, operator });
 
   return {
     row: persistShopifyOrder(appendLogs(cancelled, [
@@ -575,7 +645,7 @@ export function applyWriteBackToShopify(row, { content, shouldFail = false, oper
 export function applyRewriteShopifyOrder(row, { shouldFail = false } = {}) {
   if (row.writeBackStatus !== 'failed') return { error: '仅回写失败的订单可重新回写' };
   const next = applyWriteBackToShopify(row, {
-    content: row.writeBackContent || (row.status === 'cancelled' ? 'cancel' : 'shipment'),
+    content: row.writeBackContent || (row.documentStatus === 'cancelled' ? 'cancel' : 'shipment'),
     shouldFail,
     operator: '当前用户',
   });
@@ -648,16 +718,15 @@ export function applyWholeOrderShippedShopifyOrder(row, { waybillNo, writeBackFa
   }
   if (outbound?.error) return outbound;
 
-  const next = applyWriteBackToShopify({
+  const next = applyWriteBackToShopify(withShopifyStatuses({
     ...row,
     lines,
-    status: 'shipped',
     waybillNo: waybillNo || row.waybillNo || SHOPIFY_MOCK_WAYBILL_NO,
     finalShipConfirmTime: stamp,
     lastProcessTime: stamp,
     updatedAt: stamp,
     updater: operator,
-  }, { content: 'shipment', shouldFail: writeBackFailed, operator });
+  }, { documentStatus: 'completed', warehouseStatus: 'shipped' }), { content: 'shipment', shouldFail: writeBackFailed, operator });
 
   return { row: persistShopifyOrder(appendLogs(next, [buildLogEntry({
     action: '执行确认',
@@ -776,10 +845,9 @@ export function applyZeroExecutionShopifyOrder(row, { writeBackFailed = false, o
     diffQty: Number(line.quantity || 0),
   }));
 
-  const next = applyWriteBackToShopify({
+  const next = applyWriteBackToShopify(withShopifyStatuses({
     ...row,
     lines,
-    status: 'cancelled',
     cancelMethod: 'zero_execution',
     cancelReason: '',
     cancelTime: stamp,
@@ -788,7 +856,7 @@ export function applyZeroExecutionShopifyOrder(row, { writeBackFailed = false, o
     lastProcessTime: stamp,
     updatedAt: stamp,
     updater: operator,
-  }, { content: 'cancel', shouldFail: writeBackFailed, operator });
+  }, { documentStatus: 'cancelled', warehouseStatus: 'not_pushed' }), { content: 'cancel', shouldFail: writeBackFailed, operator });
 
   return {
     row: persistShopifyOrder(appendLogs(next, [buildLogEntry({
@@ -804,16 +872,15 @@ export function applyZeroExecutionShopifyOrder(row, { writeBackFailed = false, o
 /** 人工确认·确认接单（R23）：视同仓库已接收，转待发货，不生成结果单。 */
 export function applyManualConfirmAccept(row, { note = '' } = {}) {
   const stamp = nowStamp();
-  return persistShopifyOrder(appendLogs({
+  return persistShopifyOrder(appendLogs(withShopifyStatuses({
     ...row,
-    status: 'pending_ship',
     confirmBy: '当前用户',
     confirmAt: stamp,
     confirmContent: `${manualConfirmTypeLabels.accept}${note ? `：${note}` : ''}`,
     lastProcessTime: stamp,
     updatedAt: stamp,
     updater: '当前用户',
-  }, [buildLogEntry({ action: '人工确认', remark: `${manualConfirmTypeLabels.accept}（演示数据）${note ? `：${note}` : ''}`, time: stamp })]));
+  }, { documentStatus: 'approved', warehouseStatus: 'pending_ship' }), [buildLogEntry({ action: '人工确认', remark: `${manualConfirmTypeLabels.accept}（演示数据）${note ? `：${note}` : ''}`, time: stamp })]));
 }
 
 // —— 复制新单、拉取与人工导入（R02～R05、R17）——
@@ -822,11 +889,10 @@ export function copyShopifyOrder(row, { creator = '当前用户' } = {}) {
   const stamp = nowStamp();
   const existingNos = loadAllShopifyOrders([]).map((item) => item.orderNo);
   const orderNo = nextDocumentNo('XSDD', stamp.slice(0, 10), existingNos);
-  return persistShopifyOrder({
+  return persistShopifyOrder(withShopifyStatuses({
     ...row,
     id: `shopify-order-copy-${row.id}-${Date.now()}`,
     orderNo,
-    status: 'draft',
     sourceType: 'copy',
     warehouse: '',
     warehouseNameSnapshot: '',
@@ -869,14 +935,15 @@ export function copyShopifyOrder(row, { creator = '当前用户' } = {}) {
       shippedQty: 0,
       diffQty: Number(line.quantity || 0),
     })),
-  });
+  }, { documentStatus: 'draft', warehouseStatus: 'not_pushed' }));
 }
 
 function buildPulledOrder({ id, shopifyOrderNo, lines, receiver, createdAt, creator = '系统' }) {
   return normalizeShopifyOrderRow({
     id,
     orderNo: '',
-    status: 'draft',
+    documentStatus: 'draft',
+    warehouseStatus: 'not_pushed',
     customer: SHOPIFY_GENERIC_CUSTOMER.code,
     customerNameSnapshot: SHOPIFY_GENERIC_CUSTOMER.name,
     currency: '人民币',
@@ -1031,7 +1098,7 @@ export function buildShopifyOrderOperationLogs(row) {
     pushEntry(entries, { time: row.finalShipConfirmTime, operator: row.updater, action: '执行确认', remark: row.cancelMethod === 'zero_execution' ? '仓库最终回传整单零执行' : '整单发出结果确认' });
   }
   if (row.cancelTime && !hasExplicit(['取消审核', '申请取消', '仓库同意取消', '仓库拒绝取消'])) {
-    pushEntry(entries, { time: row.cancelTime, operator: row.cancelOperator || row.updater, action: row.status === 'cancelled' ? '取消' : '取消用途', remark: `${shopifyCancelMethodLabels[row.cancelMethod] || shopifyCancelPurposeLabels[row.cancelPurpose] || '取消'}${row.cancelReason ? `：${row.cancelReason}` : ''}` });
+    pushEntry(entries, { time: row.cancelTime, operator: row.cancelOperator || row.updater, action: row.documentStatus === 'cancelled' ? '取消' : '取消用途', remark: `${shopifyCancelMethodLabels[row.cancelMethod] || shopifyCancelPurposeLabels[row.cancelPurpose] || '取消'}${row.cancelReason ? `：${row.cancelReason}` : ''}` });
   }
   if (row.writeBackTime && !hasExplicit(['回写Shopify'])) {
     pushEntry(entries, {

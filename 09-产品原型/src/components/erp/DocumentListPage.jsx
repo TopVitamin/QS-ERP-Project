@@ -20,6 +20,7 @@ export function DocumentListPage({ onFeedback, onOpenPage, config }) {
     initialPinnedKeys: config.initialPinnedKeys,
     normalizeRows: config.normalizeRows,
     mergeSeedRows: config.mergeSeedRows,
+    readRows: config.readRows,
   });
   // 跨页跳转预填：调用方把要预填的筛选项交给 presetFilters，本页收到后立即生效（如库存查询跳转库存流水）。
   const presetFilters = config.presetFilters;

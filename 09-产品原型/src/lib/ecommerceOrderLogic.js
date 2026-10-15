@@ -1,6 +1,6 @@
 /**
  * 国内电商订单 / 跨境电商订单（二版 B3，并列只读对象）共享逻辑：
- * 履约进度派生、关联结果单与异常回传记录读取、关联简表与跳转解析。
+ * 回传状态派生、关联结果单与异常回传记录读取、关联简表与跳转解析。
  *
  * 口径依据：《国内电商订单主PRD》《跨境电商订单主PRD》（F02～F04、R06～R10、§6.2）；
  * 《结果处理规则（二版）》§二、§四（来源订单「分两张」）与 §八 Mock 要点；
@@ -9,8 +9,8 @@
  * 演示说明：
  * - 订单与结果单为本地 Mock（localStorage）；订单行累计数量按关联结果单实时派生，
  *   保证「订单行累计＝结果单数量合计」可连续核对；
- * - 履约状态为派生值：存在未处理异常→异常；否则按累计实际出库是否覆盖订购数量
- *   派生 待归集／部分归集／已归集（主PRD §6.2、§6.5）。
+ * - 回传状态为派生值：存在未处理异常→异常；否则按累计实际出库是否覆盖订购数量
+ *   派生 待回传／已回传（主PRD §6.2、§6.5）；分次出库只增加关联结果单与行累计数量，未收齐前仍为待回传。
  */
 import { EMPTY_PLACEHOLDER } from './format.js';
 import { skuOptions } from '../data/masterData.js';
@@ -52,18 +52,16 @@ export const ecommerceOrderKindConfig = {
   },
 };
 
-/** 履约状态（本对象唯一状态维度，系统派生、只读展示；主PRD §6.1）。 */
+/** 回传状态（本对象唯一状态维度，系统派生、只读展示；主PRD §6.1）。 */
 export const orderFulfillmentStatusLabels = {
-  pending: '待归集',
-  partial: '部分归集',
-  fulfilled: '已归集',
+  pending: '待回传',
+  fulfilled: '已回传',
   exception: '异常',
 };
 
 /** 详情页头 StatusBadge 语义色（详情 Demo PRD §2.1）。 */
 export const orderFulfillmentStatusTones = {
   pending: 'neutral',
-  partial: 'warning',
   fulfilled: 'success',
   exception: 'danger',
 };
@@ -71,7 +69,6 @@ export const orderFulfillmentStatusTones = {
 /** 列表状态列语义色文字（列表页 Demo PRD §4.3）。 */
 export const orderFulfillmentStatusTextTones = {
   pending: '',
-  partial: 'text-erp-warning',
   fulfilled: 'text-erp-success',
   exception: 'text-erp-danger',
 };
@@ -125,7 +122,7 @@ function sumDocProductQty(docs, product) {
 }
 
 /**
- * 按关联结果单派生订单行累计数量与履约状态（主PRD R07、§6.2、§6.5）。
+ * 按关联结果单派生订单行累计数量与回传状态（主PRD R07、§6.2、§6.5）。
  * 订单行商品未匹配（product 为空）时累计为 0，匹配可在异常恢复后补齐（R09）。
  */
 export function refreshEcommerceOrderRow(row, kind) {
@@ -157,8 +154,7 @@ export function refreshEcommerceOrderRow(row, kind) {
 
   let fulfillmentStatus = 'pending';
   if (pendingExceptionCount > 0) fulfillmentStatus = 'exception';
-  else if (totalShippedQty > 0 && covered) fulfillmentStatus = 'fulfilled';
-  else if (totalShippedQty > 0) fulfillmentStatus = 'partial';
+  else if (covered) fulfillmentStatus = 'fulfilled';
 
   return {
     ...row,

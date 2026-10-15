@@ -182,7 +182,7 @@ export function SalesShopifyOrderActionDialogs({ dialog, onClose, onComplete, on
   if (type === 'edit' || type === 'batch-edit') {
     const isBatch = type === 'batch-edit';
     const batchRows = dialog.rows || [];
-    const label = isBatch ? '批量选仓选物流' : `选仓选物流 · ${row.orderNo}`;
+    const label = isBatch ? `选仓选物流 · 已选 ${batchRows.length} 张` : `选仓选物流 · ${row.orderNo}`;
     const description = isBatch
       ? `将对已选 ${batchRows.length} 张待提交订单统一设置发货仓库与物流服务产品；不含备注。`
       : '一单一仓、整单履约，提交审核前须选定仓库与物流。';
@@ -342,8 +342,132 @@ export function SalesShopifyOrderActionDialogs({ dialog, onClose, onComplete, on
     );
   }
 
+  if (type === 'batch-delete') {
+    const batchRows = dialog.rows || [];
+    return (
+      <ConfirmDialog
+        open
+        onOpenChange={(open) => { if (!open) onClose?.(); }}
+        title={`删除 ${batchRows.length} 张独立站订单？`}
+        description="仅删除待提交订单；删除后记录不可恢复，不向Shopify发起任何操作。"
+        confirmLabel="确认删除"
+        confirmVariant="danger"
+        onConfirm={() => {
+          batchRows.forEach((item) => deleteShopifyOrderById(item.id));
+          finish(`已删除 ${batchRows.length} 张独立站订单`, 'success');
+        }}
+      />
+    );
+  }
+
+  if (type === 'batch-submit') {
+    const batchRows = dialog.rows || [];
+    return (
+      <ConfirmDialog
+        open
+        onOpenChange={(open) => { if (!open) onClose?.(); }}
+        title={`确认提交 ${batchRows.length} 张独立站订单？`}
+        description="提交后进入待审核；审核通过后系统自动推送仓库。提交前请确认所选订单均已选定发货仓库与物流服务产品。"
+        confirmLabel="确认提交"
+        onConfirm={() => {
+          batchRows.forEach((item) => applySubmitShopifyOrder(item));
+          finish(`已提交 ${batchRows.length} 张独立站订单`, 'success');
+        }}
+      />
+    );
+  }
+
+  if (type === 'batch-approve') {
+    const batchRows = dialog.rows || [];
+    return (
+      <SimpleDialog
+        open
+        onOpenChange={(open) => { if (!open) onClose?.(); }}
+        title={`审核 ${batchRows.length} 张独立站订单`}
+        description="审核后将占用发货仓库库存；审核通过后系统自动推送仓库。若某单库存不足，该单审核失败，其余单据仍按结果处理。"
+        footer={(
+          <>
+            <Button variant="outline" size="compact" onClick={onClose}>取消</Button>
+            <Button
+              variant="primary"
+              size="compact"
+              onClick={() => {
+                let approved = 0;
+                const failures = [];
+                batchRows.forEach((item) => {
+                  const result = applyApproveShopifyOrder(item);
+                  if (result.error) {
+                    failures.push(`${item.orderNo}：${result.error}`);
+                    return;
+                  }
+                  approved += 1;
+                  if (autoPush) scheduleShopifyOrderMockPush(result.row.id, { delay: 1000 });
+                });
+                if (failures.length === 1 && approved === 0) {
+                  finish(failures[0], 'warning');
+                  return;
+                }
+                const summary = approved
+                  ? `已审核 ${approved} 张独立站订单${autoPush ? '，已安排自动推仓' : ''}`
+                  : '所选订单均未审核通过';
+                const detail = failures.length ? `${summary}；${failures.slice(0, 2).join('；')}${failures.length > 2 ? `等 ${failures.length} 条失败` : ''}` : summary;
+                finish(detail, failures.length && !approved ? 'warning' : 'success');
+              }}
+            >
+              确认审核
+            </Button>
+          </>
+        )}
+      >
+        <MockSwitch
+          id="shopify-batch-approve-auto-push"
+          checked={autoPush}
+          onCheckedChange={setAutoPush}
+          label="审核后约 1 秒自动模拟推仓成功（Demo 开关，默认开）"
+        />
+      </SimpleDialog>
+    );
+  }
+
+  if (type === 'batch-withdraw') {
+    const batchRows = dialog.rows || [];
+    return (
+      <SimpleDialog
+        open
+        onOpenChange={(open) => { if (!open) onClose?.(); }}
+        title={`撤回 ${batchRows.length} 张独立站订单`}
+        description="请填写撤回意见；撤回后回到待提交，可修改后重新提交。同一意见将写入每张订单的操作记录。"
+        footer={(
+          <>
+            <Button variant="outline" size="compact" onClick={onClose}>取消</Button>
+            <Button
+              variant="primary"
+              size="compact"
+              disabled={!returnComment.trim()}
+              onClick={() => {
+                const comment = returnComment.trim();
+                batchRows.forEach((item) => applyWithdrawShopifyOrder(item, comment));
+                finish(`已撤回 ${batchRows.length} 张独立站订单，请修改后重新提交`, 'success');
+              }}
+            >
+              确认撤回
+            </Button>
+          </>
+        )}
+      >
+        <Textarea
+          value={returnComment}
+          rows={4}
+          placeholder="请输入撤回意见"
+          aria-label="撤回意见"
+          onChange={(event) => setReturnComment(event.target.value)}
+        />
+      </SimpleDialog>
+    );
+  }
+
   if (type === 'cancel-audit') {
-    const needsWarehouseConfirm = row.status === 'push_failed';
+    const needsWarehouseConfirm = row.warehouseStatus === 'push_failed';
     return (
       <SimpleDialog
         open
@@ -464,7 +588,7 @@ export function SalesShopifyOrderActionDialogs({ dialog, onClose, onComplete, on
 
   // —— 执行结束（模拟仓库回传 / 人工确认）——
 
-  const isFinishForm = type === 'mock-callback' && row.status === 'pending_ship';
+  const isFinishForm = type === 'mock-callback' && row.warehouseStatus === 'pending_ship';
   const isFinishConfirm = type === 'manual-confirm' && dialog.confirmType === 'finish';
 
   if (isFinishForm || isFinishConfirm) {
@@ -683,7 +807,7 @@ export function SalesShopifyOrderActionDialogs({ dialog, onClose, onComplete, on
   }
 
   if (type === 'rewrite') {
-    const content = row.writeBackContent || (row.status === 'cancelled' ? 'cancel' : 'shipment');
+    const content = row.writeBackContent || (row.documentStatus === 'cancelled' ? 'cancel' : 'shipment');
     return (
       <SimpleDialog
         open
@@ -793,7 +917,7 @@ export function SalesShopifyOrderDetailHeaderActions({ row, onAction }) {
   const actions = [];
 
   if (canEditShopifyOrder(row)) {
-    actions.push({ id: 'edit', label: '编辑', variant: 'primary' });
+    actions.push({ id: 'edit', label: '选仓选物流', variant: 'primary' });
   }
   if (canSubmitShopifyOrder(row)) {
     actions.push({ id: 'submit', label: '提交', variant: 'primary' });
@@ -811,10 +935,10 @@ export function SalesShopifyOrderDetailHeaderActions({ row, onAction }) {
     actions.push({ id: 'cancel-audit', label: '取消审核', variant: 'outline' });
   }
   if (canMockPushShopifyOrder(row)) {
-    actions.push({ id: 'mock-push', label: '模拟推送成功（Mock）', variant: 'outline' });
+    actions.push({ id: 'mock-push', label: '模拟推仓（Mock）', variant: 'outline' });
   }
   if (canRetryPushShopifyOrder(row)) {
-    actions.push({ id: 'retry-push', label: '重试推送', variant: 'outline' });
+    actions.push({ id: 'retry-push', label: '重试推仓', variant: 'outline' });
   }
   if (canApplyCancelShopifyOrder(row)) {
     actions.push({ id: 'apply-cancel', label: '申请取消', variant: 'outline' });
@@ -822,7 +946,7 @@ export function SalesShopifyOrderDetailHeaderActions({ row, onAction }) {
   if (canMockCallbackShopifyOrder(row)) {
     actions.push({
       id: 'mock-callback',
-      label: row.status === 'cancelling' ? '模拟仓库回执（Mock）' : '模拟仓库回传（Mock）',
+      label: row.warehouseStatus === 'cancelling' ? '模拟仓回执（Mock）' : '模拟仓回传（Mock）',
       variant: 'outline',
     });
   }

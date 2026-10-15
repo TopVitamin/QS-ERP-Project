@@ -15,13 +15,15 @@ import { buildShopifyOrderRelatedDocumentSections } from '../lib/shopifyOrderRel
 import {
   buildShopifyOrderOperationLogs,
   loadShopifyOrderById,
-  manualConfirmTypesForStatus,
+  manualConfirmTypesForOrder,
   refreshShopifyOrderLines,
   SHOPIFY_ORDER_STORAGE_KEY,
   shopifyCancelMethodLabels,
-  shopifyOrderStatusBadgeTones,
-  shopifyOrderStatusLabels,
+  shopifyDocumentStatusBadgeTones,
+  shopifyDocumentStatusLabels,
   shopifySourceTypeLabels,
+  shopifyWarehouseStatusBadgeTones,
+  shopifyWarehouseStatusLabels,
   shopifyWriteBackContentLabels,
   shopifyWriteBackStatusLabels,
   validateShopifyOrderForSubmit,
@@ -52,7 +54,11 @@ const orderDetailConfig = {
   lineVariant: 'shopify-order',
   getDetail: getOrderDetail,
   title: (detail) => `独立站订单详情${detail.orderNo ? ` · ${detail.orderNo}` : ''}`,
-  getStatusBadges: (row) => [{ label: shopifyOrderStatusLabels[row.status] || row.status, tone: shopifyOrderStatusBadgeTones[row.status] || 'neutral' }],
+  getStatusBadges: (row) => [
+    { label: `单据：${shopifyDocumentStatusLabels[row.documentStatus] || row.documentStatus}`, tone: shopifyDocumentStatusBadgeTones[row.documentStatus] || 'neutral' },
+    { label: `仓库：${shopifyWarehouseStatusLabels[row.warehouseStatus] || row.warehouseStatus}`, tone: shopifyWarehouseStatusBadgeTones[row.warehouseStatus] || 'neutral' },
+    { label: `回写：${shopifyWriteBackStatusLabels[row.writeBackStatus] || row.writeBackStatus}`, tone: row.writeBackStatus === 'failed' ? 'danger' : row.writeBackStatus === 'written' ? 'success' : 'neutral' },
+  ],
   rowKey: (detail) => detail.orderNo,
   sections: [
     {
@@ -98,7 +104,7 @@ const orderDetailConfig = {
   ],
   renderAfterLines: ({ row, onOpenPage }) => {
     const sections = buildShopifyOrderRelatedDocumentSections(row);
-    const hasResultDocument = row.status === 'shipped' || row.status === 'cancelled'
+    const hasResultDocument = row.documentStatus === 'completed' || row.documentStatus === 'cancelled'
       || sections.some((section) => section.rows?.length);
     if (!hasResultDocument) return null;
     return <RelatedDocumentsCard sections={sections} onOpenPage={onOpenPage} />;
@@ -136,7 +142,7 @@ const orderDetailConfig = {
     },
     {
       title: '终止信息',
-      visibleWhen: ({ row }) => row.status === 'cancelled',
+      visibleWhen: ({ row }) => row.documentStatus === 'cancelled',
       fields: ({ row }) => [
         { key: 'cancelMethod', label: '取消方式', value: shopifyCancelMethodLabels[row.cancelMethod] || row.cancelMethod },
         { key: 'cancelReason', label: '取消原因', value: row.cancelReason },
@@ -224,12 +230,12 @@ export function SalesShopifyOrderDetailPage({ onFeedback, onOpenPage, context })
             return;
           }
           if (id === 'manual-confirm') {
-            const [confirmType] = manualConfirmTypesForStatus(actionRow.status);
+            const [confirmType] = manualConfirmTypesForOrder(actionRow);
             setDialog({ type: 'manual-confirm', confirmType, row: actionRow });
             return;
           }
           if (id === 'mock-callback') {
-            setDialog(actionRow.status === 'cancelling' ? { type: 'mock-cancel-result', row: actionRow } : { type: 'mock-callback', row: actionRow });
+            setDialog(actionRow.warehouseStatus === 'cancelling' ? { type: 'mock-cancel-result', row: actionRow } : { type: 'mock-callback', row: actionRow });
             return;
           }
           setDialog({ type: id, row: actionRow });

@@ -7,7 +7,7 @@
  *
  * 演示说明：
  * - 种子为虚构值，订单编号前缀 KJDS 已定（2026-10-15 用户确认固化，主PRD Q01 已确认）；跨境仅自发货，不生成FBA数据；
- * - 平台枚举待联调核验（主PRD Q03），Mock 与筛选不预填具体平台，列表按「（待确认）」占位展示；
+ * - 平台枚举按《跨境电商订单（详细稿）》与主PRD Q03（2026-10-15 已确认）；
  * - 订单行累计实际出库／退回数量按关联结果单实时派生，与「来源跨境电商订单」字段的种子互跳。
  */
 import { EMPTY_PLACEHOLDER, formatAmount } from '../lib/format.js';
@@ -21,7 +21,7 @@ import {
 } from '../lib/ecommerceOrderLogic.js';
 import { currencyOptions } from './masterData.js';
 
-export const CROSSBORDER_ORDER_STORAGE_KEY = 'qs-erp:sales-crossborder-orders:v1';
+export const CROSSBORDER_ORDER_STORAGE_KEY = 'qs-erp:sales-crossborder-orders:v3';
 
 export {
   orderFulfillmentStatusLabels as crossBorderOrderStatusLabels,
@@ -29,8 +29,16 @@ export {
   orderFulfillmentStatusTones as crossBorderOrderStatusTones,
 };
 
-/** 平台取值待联调核验：不预填具体平台（主PRD Q03），页面按「（待确认）」占位展示。 */
-export const CROSSBORDER_PLATFORM_PLACEHOLDER = '（待确认）';
+/** 平台枚举按《跨境电商订单（详细稿）》：Temu、eBay、Shopee、Ozon、Walmart、Etsy、MercadoLibre。 */
+export const crossBorderPlatformOptions = [
+  'Temu',
+  'eBay',
+  'Shopee',
+  'Ozon',
+  'Walmart',
+  'Etsy',
+  'MercadoLibre',
+];
 
 export const crossBorderOrderSeeds = [
   {
@@ -39,7 +47,7 @@ export const crossBorderOrderSeeds = [
     sourceSystem: 'lingxing',
     channelOrderNo: 'LX20260918001',
     platformOrderNo: 'PLT-20260918-0000123',
-    platform: CROSSBORDER_PLATFORM_PLACEHOLDER,
+    platform: 'Temu',
     shop: '示例跨境店铺A',
     orderedAt: '2026-09-18 08:12:05',
     customer: 'CUS000005',
@@ -61,7 +69,7 @@ export const crossBorderOrderSeeds = [
     sourceSystem: 'lingxing',
     channelOrderNo: 'LX20261014002',
     platformOrderNo: 'PLT-20261014-0000124',
-    platform: CROSSBORDER_PLATFORM_PLACEHOLDER,
+    platform: 'eBay',
     shop: '示例跨境店铺B',
     orderedAt: '2026-10-14 09:40:27',
     customer: 'CUS000005',
@@ -82,7 +90,7 @@ export const crossBorderOrderSeeds = [
     sourceSystem: 'lingxing',
     channelOrderNo: 'LX20261013001',
     platformOrderNo: 'PLT-20261013-0000122',
-    platform: CROSSBORDER_PLATFORM_PLACEHOLDER,
+    platform: 'Shopee',
     shop: '示例跨境店铺A',
     orderedAt: '2026-10-13 16:20:00',
     customer: 'CUS000005',
@@ -103,7 +111,7 @@ export const crossBorderOrderSeeds = [
     sourceSystem: 'lingxing',
     channelOrderNo: 'LX20261014004',
     platformOrderNo: 'PLT-20261014-0000126',
-    platform: CROSSBORDER_PLATFORM_PLACEHOLDER,
+    platform: 'Ozon',
     shop: '示例跨境店铺B',
     orderedAt: '2026-10-14 12:05:41',
     customer: 'CUS000005',
@@ -125,7 +133,7 @@ export const crossBorderOrderSeeds = [
     sourceSystem: 'lingxing',
     channelOrderNo: 'LX20261014005',
     platformOrderNo: 'PLT-20261014-0000127',
-    platform: CROSSBORDER_PLATFORM_PLACEHOLDER,
+    platform: 'Walmart',
     shop: '示例跨境店铺A',
     orderedAt: '2026-10-14 13:22:18',
     customer: 'CUS000005',
@@ -147,7 +155,7 @@ export const crossBorderOrderSeeds = [
     sourceSystem: 'lingxing',
     channelOrderNo: 'LX20261014006',
     platformOrderNo: 'PLT-20261014-0000128',
-    platform: CROSSBORDER_PLATFORM_PLACEHOLDER,
+    platform: 'MercadoLibre',
     shop: '示例跨境店铺B',
     orderedAt: '2026-10-14 15:47:02',
     customer: 'CUS000005',
@@ -172,7 +180,7 @@ export const crossBorderOrderColumns = [
   { key: 'platform', label: '平台', defaultWidth: 96, minWidth: 84, maxWidth: 140, ellipsis: true },
   { key: 'shop', label: '店铺', defaultWidth: 150, minWidth: 120, maxWidth: 220, ellipsis: true },
   { key: 'orderedAt', label: '下单时间', defaultWidth: 170, minWidth: 150, maxWidth: 210, ellipsis: true, sortable: true },
-  { key: 'fulfillmentStatus', label: '履约状态', defaultWidth: 96, minWidth: 88, maxWidth: 130, ellipsis: true, render: (value) => orderFulfillmentStatusLabels[value] || value, tone: (value) => orderFulfillmentStatusTextTones[value] || '' },
+  { key: 'fulfillmentStatus', label: '回传状态', defaultWidth: 96, minWidth: 88, maxWidth: 130, ellipsis: true, render: (value) => orderFulfillmentStatusLabels[value] || value, tone: (value) => orderFulfillmentStatusTextTones[value] || '' },
   { key: 'currency', label: '币别', defaultWidth: 112, minWidth: 96, maxWidth: 140, ellipsis: true, render: (value) => resolveOptionLabel(value, currencyOptions) },
   { key: 'amount', label: '成交优惠后金额合计', defaultWidth: 150, minWidth: 130, maxWidth: 200, ellipsis: true, align: 'right', sortable: true, render: (value) => (value === '' || value == null ? EMPTY_PLACEHOLDER : formatAmount(value)) },
   { key: 'returnAmount', label: '退货金额合计', defaultWidth: 128, minWidth: 110, maxWidth: 180, ellipsis: true, align: 'right', sortable: true, render: (value) => (value === '' || value == null ? EMPTY_PLACEHOLDER : formatAmount(value)) },
@@ -196,9 +204,8 @@ export const crossBorderOrderFilterFields = [
   { key: 'channelOrderNo', label: '渠道单号', type: 'search', placeholder: '请输入渠道单号' },
   { key: 'platformOrderNo', label: '平台单号', type: 'search', placeholder: '请输入平台单号' },
   { key: 'shop', label: '店铺', type: 'search', placeholder: '请输入店铺' },
-  // 跨境自发货平台选项待联调核验（主PRD Q03），当前不预填具体平台
-  { key: 'platform', label: '平台', type: 'select', options: [{ value: '', label: '全部' }] },
-  { key: 'fulfillmentStatus', label: '履约状态', type: 'multi-select', placeholder: '全部', options: Object.entries(orderFulfillmentStatusLabels).map(([value, label]) => ({ value, label })) },
+  { key: 'platform', label: '平台', type: 'select', options: [{ value: '', label: '全部' }, ...crossBorderPlatformOptions.map((value) => ({ value, label: value }))] },
+  { key: 'fulfillmentStatus', label: '回传状态', type: 'multi-select', placeholder: '全部', options: Object.entries(orderFulfillmentStatusLabels).map(([value, label]) => ({ value, label })) },
   { key: 'orderedAtRange', label: '下单时间', type: 'date-range', placeholder: '不限' },
   { key: 'productCode', label: '商品编码', type: 'search', placeholder: '请输入商品编码' },
   { key: 'platformSku', label: '平台商品编码', type: 'search', placeholder: '请输入平台商品编码' },
@@ -244,6 +251,27 @@ export function normalizeCrossBorderOrderRows(rows = []) {
   return rows.map(normalizeCrossBorderOrderRow);
 }
 
+/** 演示种子上的渠道快照字段：本地缓存升级时与种子对齐（避免仍显示历史占位「（待确认）」）。 */
+const CROSSBORDER_PLATFORM_PLACEHOLDER = '（待确认）';
+
+function applyCrossBorderSeedSnapshot(row) {
+  const seed = crossBorderOrderSeeds.find((item) => item.id === row.id);
+  if (!seed) {
+    if (row.platform === CROSSBORDER_PLATFORM_PLACEHOLDER) {
+      return { ...row, platform: crossBorderPlatformOptions[0] };
+    }
+    return row;
+  }
+  const platform = row.platform === CROSSBORDER_PLATFORM_PLACEHOLDER || !row.platform
+    ? seed.platform
+    : row.platform;
+  return {
+    ...row,
+    platform,
+    shop: seed.shop,
+  };
+}
+
 /** 读取本地订单集合：已落库记录 + 缺失种子补齐（列表与详情共用同一份数据）。 */
 export function loadCrossBorderOrders() {
   const stored = readMockRows(CROSSBORDER_ORDER_STORAGE_KEY, null);
@@ -251,9 +279,12 @@ export function loadCrossBorderOrders() {
     writeMockRows(CROSSBORDER_ORDER_STORAGE_KEY, crossBorderOrderSeeds);
     return normalizeCrossBorderOrderRows(crossBorderOrderSeeds);
   }
-  const missingSeeds = crossBorderOrderSeeds.filter((seed) => !stored.some((row) => row.id === seed.id));
-  const merged = missingSeeds.length ? [...stored, ...missingSeeds] : stored;
-  if (missingSeeds.length) writeMockRows(CROSSBORDER_ORDER_STORAGE_KEY, merged);
+  const synced = stored.map(applyCrossBorderSeedSnapshot);
+  const missingSeeds = crossBorderOrderSeeds.filter((seed) => !synced.some((row) => row.id === seed.id));
+  const merged = missingSeeds.length ? [...synced, ...missingSeeds] : synced;
+  const needsPersist = missingSeeds.length
+    || synced.some((row, index) => row.platform !== stored[index]?.platform || row.shop !== stored[index]?.shop);
+  if (needsPersist) writeMockRows(CROSSBORDER_ORDER_STORAGE_KEY, merged);
   return normalizeCrossBorderOrderRows(merged);
 }
 

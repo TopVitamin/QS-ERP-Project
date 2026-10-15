@@ -11,12 +11,17 @@ function compareValues(a, b) {
   return String(a ?? '').localeCompare(String(b ?? ''), 'zh-CN', { numeric: true });
 }
 
-export function useListPageState({ initialRows, initialFilters, filterRows, initialVisibility, storageKey, columns = [], initialSort = null, initialPinnedKeys = [], normalizeRows = null, mergeSeedRows = false }) {
+export function useListPageState({ initialRows, initialFilters, filterRows, initialVisibility, storageKey, columns = [], initialSort = null, initialPinnedKeys = [], normalizeRows = null, mergeSeedRows = false, readRows = null }) {
   const [rows, setRows] = useState(() => {
-    const storedRows = readMockRows(storageKey, null);
-    const sourceRows = Array.isArray(storedRows) && mergeSeedRows
-      ? [...storedRows, ...initialRows.filter((seed) => !storedRows.some((row) => row.id === seed.id))]
-      : (Array.isArray(storedRows) ? storedRows : initialRows);
+    const sourceRows = readRows
+      ? readRows()
+      : (() => {
+        const storedRows = readMockRows(storageKey, null);
+        if (Array.isArray(storedRows) && mergeSeedRows) {
+          return [...storedRows, ...initialRows.filter((seed) => !storedRows.some((row) => row.id === seed.id))];
+        }
+        return Array.isArray(storedRows) ? storedRows : initialRows;
+      })();
     return normalizeRows ? normalizeRows(sourceRows) : sourceRows;
   });
   const skipPersistRef = useRef(false);
@@ -67,13 +72,14 @@ export function useListPageState({ initialRows, initialFilters, filterRows, init
     // 订阅外部写库（其他页面/标签页）。写库会同步派发事件，必须区分「外部数据」与
     // 「本页刚写库的回声」，否则回声置位的 skip 标志会吞掉下一次本地变更的持久化。
     return subscribeMockRows(storageKey, (nextRows) => {
-      if (nextRows === lastWrittenRef.current) return;
-      const next = normalizeRows ? normalizeRows(nextRows) : nextRows;
+      if (!readRows && nextRows === lastWrittenRef.current) return;
+      const raw = readRows ? readRows() : nextRows;
+      const next = normalizeRows ? normalizeRows(raw) : raw;
       if (next === rowsRef.current) return;
       skipPersistRef.current = true;
       setRows(next);
     });
-  }, [storageKey, normalizeRows]);
+  }, [storageKey, normalizeRows, readRows]);
 
   useEffect(() => {
     if (!storageKey) return;
