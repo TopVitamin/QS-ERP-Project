@@ -22,6 +22,7 @@ export const IMPLEMENTED_PAGE_IDS = new Set([
   'base-logistics-carrier',
   'base-logistics-carrier-detail',
   'base-logistics-product',
+  'base-logistics-delivery-rule',
   'base-auxiliary',
   'purchase-order',
   'purchase-order-create',

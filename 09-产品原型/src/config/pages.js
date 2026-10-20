@@ -34,6 +34,7 @@ import { ProductListPage } from '../pages/ProductListPage.jsx';
 import { LogisticsCarrierListPage } from '../pages/LogisticsCarrierListPage.jsx';
 import { LogisticsProductListPage } from '../pages/LogisticsProductListPage.jsx';
 import { LogisticsCarrierDetailPage } from '../pages/LogisticsCarrierDetailPage.jsx';
+import { LogisticsDeliveryRuleListPage } from '../pages/LogisticsDeliveryRuleListPage.jsx';
 import { AuxiliaryListPage } from '../pages/AuxiliaryListPage.jsx';
 import { SalesOrderCreatePage, SalesOrderEditPage } from '../pages/SalesOrderFormPage.jsx';
 import { SalesOrderDetailPage } from '../pages/SalesOrderDetailPage.jsx';
@@ -556,6 +557,12 @@ export const PAGE_REGISTRY = {
     title: '物流商详情',
     navId: 'base',
     component: LogisticsCarrierDetailPage,
+  },
+  'base-logistics-delivery-rule': {
+    id: 'base-logistics-delivery-rule',
+    title: '物流配送规则',
+    navId: 'base',
+    component: LogisticsDeliveryRuleListPage,
   },
   'base-auxiliary': {
     id: 'base-auxiliary',

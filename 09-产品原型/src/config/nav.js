@@ -28,6 +28,7 @@ export const defaultNavItems = [
           { label: '逻辑仓', pageId: 'warehouse-logical' },
           { label: '物流商', pageId: 'base-logistics-carrier' },
           { label: '物流服务产品', pageId: 'base-logistics-product' },
+          { label: '物流配送规则', pageId: 'base-logistics-delivery-rule' },
           { label: '辅助资料', pageId: 'base-auxiliary' },
         ],
       },

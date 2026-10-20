@@ -264,6 +264,42 @@ const purchaseInboundFields = [
   { key: 'pushFailReason', label: '推送失败原因' },
 ];
 
+/** 销售发货通知单：列按《销售发货通知单（详细稿）》「列表展示=是」与列表页 Demo PRD §4.2 */
+const salesDeliveryNoticeFields = [
+  { key: 'noticeNo', label: '单号' },
+  { key: 'sourceOrderNo', label: '来源销售订单' },
+  { key: 'customer', label: '客户' },
+  { key: 'warehouse', label: '发货仓库' },
+  { key: 'deliveryMode', label: '发货处理方式', options: toOptions(deliveryModeLabels) },
+  { key: 'status', label: '单据状态', options: toOptions(salesNoticeStatusLabels) },
+  { key: 'totalNotifyQty', label: '通知数量' },
+  { key: 'totalShippedQty', label: '实出数量' },
+  { key: 'totalShortQty', label: '缺出数量' },
+  { key: 'createdAt', label: '创建时间' },
+];
+
+/** 销售出库单：列按《销售出库单（详细稿）》「列表展示=是」+ 可筛选的来源国内/跨境电商订单 */
+const salesOutboundFields = [
+  { key: 'outboundNo', label: '单号' },
+  { key: 'businessDate', label: '业务日期' },
+  { key: 'sourceType', label: '来源类型', options: toOptions(sourceTypeLabels) },
+  { key: 'sourceNoticeNo', label: '来源销售发货通知单' },
+  { key: 'sourceOrderNo', label: '来源销售订单' },
+  { key: 'sourceDomesticOrderNo', label: '来源国内电商订单' },
+  { key: 'sourceCrossborderOrderNo', label: '来源跨境电商订单' },
+  { key: 'customer', label: '客户' },
+  { key: 'currency', label: '币别' },
+  { key: 'warehouse', label: '出库仓库' },
+  { key: 'auditStatus', label: '审核状态', options: toOptions(auditStatusLabels) },
+  { key: 'financeErpPushStatus', label: '推送财务ERP状态', options: toOptions(financeErpPushStatusLabels) },
+  { key: 'totalOutboundQty', label: '实际出库数量' },
+  { key: 'amount', label: '价税合计' },
+  { key: 'taxAmount', label: '税额' },
+  { key: 'netAmount', label: '金额' },
+  { key: 'createdAt', label: '创建时间' },
+  { key: 'updatedAt', label: '最后更新时间' },
+];
+
 /** 采购退货单：列按《采购退货单（详细稿）》「列表展示=是」与列表页 Demo PRD §4.2 */
 const purchaseReturnFields = [
   { key: 'returnNo', label: '单号' },
@@ -869,19 +905,7 @@ export const transferTargets = [
     keyField: 'noticeNo',
     keyLabel: '单号',
     importable: false,
-    fields: [
-      { key: 'noticeNo', label: '单号' },
-      { key: 'sourceOrderNo', label: '来源销售订单' },
-      { key: 'customer', label: '客户' },
-      { key: 'warehouse', label: '发货仓库' },
-      { key: 'deliveryMode', label: '发货处理方式', options: toOptions(deliveryModeLabels) },
-      { key: 'status', label: '单据状态', options: toOptions(salesNoticeStatusLabels) },
-      { key: 'totalNotifyQty', label: '通知数量' },
-      { key: 'totalShippedQty', label: '实出数量' },
-      { key: 'totalShortQty', label: '缺出数量' },
-      { key: 'createdAt', label: '创建时间' },
-      { key: 'updatedAt', label: '最后更新时间' },
-    ],
+    fields: salesDeliveryNoticeFields,
   },
   {
     id: 'sales-outbound',
@@ -892,26 +916,7 @@ export const transferTargets = [
     keyField: 'outboundNo',
     keyLabel: '出库单号',
     importable: false,
-    fields: [
-      { key: 'outboundNo', label: '单号' },
-      { key: 'sourceType', label: '来源类型', options: toOptions(sourceTypeLabels) },
-      { key: 'sourceNoticeNo', label: '来源销售发货通知单' },
-      { key: 'sourceOrderNo', label: '来源销售订单' },
-      { key: 'customer', label: '客户' },
-      { key: 'currency', label: '币别' },
-      { key: 'warehouse', label: '出库仓库' },
-      { key: 'auditStatus', label: '审核状态', options: toOptions(auditStatusLabels) },
-      { key: 'financeErpPushStatus', label: '推送财务ERP状态', options: toOptions(financeErpPushStatusLabels) },
-      { key: 'businessDate', label: '业务日期' },
-      { key: 'actualOutboundTime', label: '实际出库时间' },
-      { key: 'totalOutboundQty', label: '实际出库数量' },
-      { key: 'amount', label: '价税合计' },
-      { key: 'taxAmount', label: '税额' },
-      { key: 'pushTime', label: '推送财务ERP时间' },
-      { key: 'pushFailReason', label: '推送失败原因' },
-      { key: 'createdAt', label: '创建时间' },
-      { key: 'updatedAt', label: '最后更新时间' },
-    ],
+    fields: salesOutboundFields,
   },
   {
     id: 'sales-domestic-order',
